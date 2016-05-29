@@ -2,13 +2,14 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:LandscapeClassifier"
+             xmlns:viewModel="clr-namespace:LandscapeClassifier.ViewModel"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/Selen.Wpf.SystemStyles;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-
+            <viewModel:ViewModel x:Key="MainViewModel"></viewModel:ViewModel>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

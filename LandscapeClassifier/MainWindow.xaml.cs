@@ -26,10 +26,8 @@ namespace LandscapeClassifier
 
         public MainWindow()
         {
-            _viewModel = new ViewModel.ViewModel();
-            DataContext = _viewModel;
-
             InitializeComponent();
+            _viewModel = (ViewModel.ViewModel) DataContext;
         }
 
 
@@ -134,7 +132,8 @@ namespace LandscapeClassifier
                 ColorLabel.Background = new SolidColorBrush(color);
 
                 // Luma
-                LumaLabel.Content = (int)(_viewModel.GetLuminance(position));
+                var luma = _viewModel.GetLuminance(position);
+                LumaLabel.Content = (int)luma;
 
                 if (_viewModel.AscFile != null)
                 {
@@ -146,6 +145,12 @@ namespace LandscapeClassifier
                     var aspectSlope = _viewModel.GetSlopeAndAspectAt(position);
                     AspectLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Aspect), 2) + "°";
                     SlopeLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Slope), 2) + "°";
+
+                    // TODO prediction test
+                    if (_viewModel.IsTrained)
+                    {
+                        Console.WriteLine(_viewModel.Predict(new FeatureVector(altitude, luma, color, aspectSlope.Aspect, aspectSlope.Slope)));
+                    }
                 }
             }
 
@@ -193,15 +198,13 @@ namespace LandscapeClassifier
             {
                 var position = e.GetPosition(OrthoImage);
 
-                var lv95X = (int) (position.X*_viewModel.WorldFile.PixelSizeX + _viewModel.WorldFile.X);
-                var lv95Y = (int) (position.Y*_viewModel.WorldFile.PixelSizeY + _viewModel.WorldFile.Y);
                 var color = _viewModel.GetColorAt(position);
                 var luma = _viewModel.GetLuminance(position);
                 var altitude = _viewModel.GetAscDataAt(position);
                 var landCoverType = _viewModel.SelectedLandCoverType;
                 var slopeAspect = _viewModel.GetSlopeAndAspectAt(position);
 
-                _viewModel.Features.Add(new FeatureVector(landCoverType, altitude, luma, color, slopeAspect.Aspect, slopeAspect.Slope));
+                _viewModel.Features.Add(new ClassifiedFeatureVector(landCoverType, new FeatureVector(altitude, luma, color, slopeAspect.Aspect, slopeAspect.Slope)));
             }
         }
 

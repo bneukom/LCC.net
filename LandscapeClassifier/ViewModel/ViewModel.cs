@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -10,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Annotations;
+using LandscapeClassifier.Classifier;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
@@ -23,7 +25,9 @@ namespace LandscapeClassifier.ViewModel
         private WorldFile _worldFile;
         private BitmapImage _bitmapImage;
         private byte[] _imageData;
-        private FeatureVector _selectedFeatureVector;
+        private ClassifiedFeatureVector _selectedFeatureVector;
+        private ILandCoverClassifier _classifier;
+        private bool _isTrained;
 
         /// <summary>
         /// Export command.
@@ -36,14 +40,35 @@ namespace LandscapeClassifier.ViewModel
         public ICommand ExitCommand { set; get; }
 
         /// <summary>
-        /// Exit command.
+        /// Remove selected command.
         /// </summary>
         public ICommand RemoveSelectedFeatureVectorCommand { set; get; }
 
         /// <summary>
-        /// 
+        /// Train command.
         /// </summary>
-        public FeatureVector SelectedFeatureVector
+        public ICommand TrainCommand { set; get; }
+
+        /// <summary>
+        /// True if the classifier has been trained.
+        /// </summary>
+        public bool IsTrained
+        {
+            get { return _isTrained; }
+            set
+            {
+                if (value != _isTrained)
+                {
+                    _isTrained = value;
+                    NotifyPropertyChanged("IsTrained");
+                }
+            }
+        }
+
+        /// <summary>
+        /// The currently selected feature vector.
+        /// </summary>
+        public ClassifiedFeatureVector SelectedFeatureVector
         {
             get { return _selectedFeatureVector;  }
             set
@@ -114,7 +139,7 @@ namespace LandscapeClassifier.ViewModel
         /// <summary>
         /// Feature vectors.
         /// </summary>
-        public ObservableCollection<FeatureVector> Features { get; set; }
+        public ObservableCollection<ClassifiedFeatureVector> Features { get; set; }
 
         /// <summary>
         /// Possible land cover types.
@@ -136,16 +161,31 @@ namespace LandscapeClassifier.ViewModel
         /// </summary>
         public Mode Mode { get; set; }
 
+
+
         public ViewModel()
         {
+            _classifier = new BayesLandCoverClassifier();
+
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
             ModeTypesEnumerable = Enum.GetNames(typeof(Mode));
 
-            Features = new ObservableCollection<FeatureVector>();
+            Features = new ObservableCollection<ClassifiedFeatureVector>();
 
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
             ExportCommand = new RelayCommand(Export, CanExport);
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
+            TrainCommand = new RelayCommand(Train, CanTrain);
+        }
+
+        /// <summary>
+        /// Predicts the land cover type with the given feature vector.
+        /// </summary>
+        /// <param name="feature"></param>
+        /// <returns></returns>
+        public LandcoverType Predict(FeatureVector feature)
+        {
+            return _classifier.Predict(feature);
         }
 
         /// <summary>
@@ -200,7 +240,7 @@ namespace LandscapeClassifier.ViewModel
         {
             if (_bitmapImage == null) throw new InvalidOperationException();
 
-
+            // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
             if (position.Y < 0 || position.Y < 0 || position.X >= _bitmapImage.Width ||
                 position.Y >= _bitmapImage.Height)
                 return Colors.Black;
@@ -245,8 +285,8 @@ namespace LandscapeClassifier.ViewModel
             int positionX = (int) (position.X - left);
             int positionY = (int) (position.Y - topScreenCoordinates);
 
-            if (positionX - 1 < 0 || positionX + 1 > _ascFile.Ncols || positionY - 1 < 0 ||
-                positionY + 1 > _ascFile.Nrows)
+            if (positionX - 1 < 0 || positionX + 1 >= _ascFile.Ncols || positionY - 1 < 0 ||
+                positionY + 1 >= _ascFile.Nrows)
             {
                 return new AspectSlope(0, 0);
             }
@@ -317,7 +357,7 @@ namespace LandscapeClassifier.ViewModel
                 {
                     foreach (var feature in Features)
                     {
-                        outputStreamWriter.WriteLine(feature.Type + ";" + feature.Altitude + ";" + feature.Aspect + ";" + feature.Slope + ";" + feature.Luma);
+                        outputStreamWriter.WriteLine(feature.Type + ";" + feature.FeatureVector.Altitude + ";" + feature.FeatureVector.Aspect + ";" + feature.FeatureVector.Slope + ";" + feature.FeatureVector.Luma);
                     }
                 }
 
@@ -325,6 +365,17 @@ namespace LandscapeClassifier.ViewModel
                 // File.Copy();
 
             }
+        }
+
+        private void Train()
+        {
+            _classifier.Train(Features.ToList());
+            IsTrained = true;
+        }
+
+        private bool CanTrain()
+        {
+            return Features.Count > 0 && Features.GroupBy(f => f.Type).Count() >= 2;
         }
 
         private bool CanExport()

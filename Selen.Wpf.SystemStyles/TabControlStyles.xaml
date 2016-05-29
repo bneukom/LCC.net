@@ -16,7 +16,7 @@
                             <Grid Background="{TemplateBinding Background}" SnapsToDevicePixels="true" Height="23">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="25"/>
+                                    <ColumnDefinition Width="0"/>
                                 </Grid.ColumnDefinitions>
                                 <ContentPresenter ContentSource="Header" Margin="10,0,10,0" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <ContentPresenter.Resources>
