@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LandscapeClassifier", "OrthoImageDEMViewer\LandscapeClassifier.csproj", "{7CD36126-B9F8-4733-BDAC-C2A74D5C0C6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LandscapeClassifier", "LandscapeClassifier\LandscapeClassifier.csproj", "{7CD36126-B9F8-4733-BDAC-C2A74D5C0C6B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Selen.Wpf.Core", "Selen.Wpf.Core\Selen.Wpf.Core.csproj", "{C94C1BDD-11F9-4A3F-8929-86B1B67AE1D5}"
 EndProject

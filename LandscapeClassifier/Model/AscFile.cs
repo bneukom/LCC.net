@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.IO;
 using LandscapeClassifier.Extensions;
+using static System.IO.Path;
 
 namespace LandscapeClassifier.Model
 {
@@ -15,9 +16,9 @@ namespace LandscapeClassifier.Model
 
         public short[,] Data { get; }
 
-        private readonly string _fileName;
+        public readonly string Path;
 
-        public AscFile(int ncols, int nrows, float xllcorner, float yllcorner, int cellsize, short noDataValue, short[,] data, string fileName)
+        public AscFile(int ncols, int nrows, float xllcorner, float yllcorner, int cellsize, short noDataValue, short[,] data, string path)
         {
             Ncols = ncols;
             Nrows = nrows;
@@ -26,7 +27,7 @@ namespace LandscapeClassifier.Model
             Cellsize = cellsize;
             NoDataValue = noDataValue;
             Data = data;
-            _fileName = fileName;
+            Path = path;
         }
 
         public static AscFile FromFile(string path)
@@ -56,13 +57,9 @@ namespace LandscapeClassifier.Model
 
             }
 
-            return new AscFile(ncols, nrows, xllcorner, yllcorner, cellsize, noDataValue, data, Path.GetFileName(path));
+            return new AscFile(ncols, nrows, xllcorner, yllcorner, cellsize, noDataValue, data, path);
         }
 
-        public override string ToString()
-        {
-            return _fileName;
-        }
-
+        public override string ToString() => GetFileName(Path);
     }
 }

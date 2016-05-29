@@ -10,8 +10,7 @@ namespace LandscapeClassifier.Model
         public float PixelSizeY { get; }
         public float X { get; }
         public float Y { get; }
-
-        private readonly string _fileName;
+        public readonly string FileName;
 
         public WorldFile(float pixelSizeX, float rotationY, float rotationX, float pixelSizeY, float x, float y, string fileName)
         {
@@ -21,7 +20,7 @@ namespace LandscapeClassifier.Model
             PixelSizeY = pixelSizeY;
             X = x;
             Y = y;
-            _fileName = fileName;
+            FileName = fileName;
         }
 
         public static WorldFile FromFile(string path)
@@ -40,7 +39,7 @@ namespace LandscapeClassifier.Model
 
         public override string ToString()
         {
-            return _fileName;
+            return FileName;
         }
     }
 }

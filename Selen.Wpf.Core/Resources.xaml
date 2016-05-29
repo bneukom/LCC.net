@@ -6,6 +6,7 @@
 
     <!--Foreground-->
     <SolidColorBrush x:Key="Foreground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BlackBrush" Color="#000000"/>
 
     <!--General-->
     <SolidColorBrush x:Key="BackgroundHighlighted" Color="#54545C"/>

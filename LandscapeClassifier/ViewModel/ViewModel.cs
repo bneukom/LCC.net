@@ -2,12 +2,18 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Annotations;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.Util;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace LandscapeClassifier.ViewModel
 {
@@ -17,6 +23,38 @@ namespace LandscapeClassifier.ViewModel
         private WorldFile _worldFile;
         private BitmapImage _bitmapImage;
         private byte[] _imageData;
+        private FeatureVector _selectedFeatureVector;
+
+        /// <summary>
+        /// Export command.
+        /// </summary>
+        public ICommand ExportCommand { set; get; }
+
+        /// <summary>
+        /// Exit command.
+        /// </summary>
+        public ICommand ExitCommand { set; get; }
+
+        /// <summary>
+        /// Exit command.
+        /// </summary>
+        public ICommand RemoveSelectedFeatureVectorCommand { set; get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public FeatureVector SelectedFeatureVector
+        {
+            get { return _selectedFeatureVector;  }
+            set
+            {
+                if (value != _selectedFeatureVector)
+                {
+                    _selectedFeatureVector = value;
+                    NotifyPropertyChanged("SelectedFeatureVector");
+                }
+            }
+        }
 
         /// <summary>
         /// World file to the ortho image.
@@ -28,6 +66,7 @@ namespace LandscapeClassifier.ViewModel
             {
                 if (value != _worldFile)
                 {
+
                     _worldFile = value;
                     NotifyPropertyChanged("WorldFile");
                 }
@@ -87,10 +126,26 @@ namespace LandscapeClassifier.ViewModel
         /// </summary>
         public LandcoverType SelectedLandCoverType { get; set; }
 
+        /// <summary>
+        /// Possible modes.
+        /// </summary>
+        public IEnumerable<string> ModeTypesEnumerable { get; set; }
+
+        /// <summary>
+        /// The current mode.
+        /// </summary>
+        public Mode Mode { get; set; }
+
         public ViewModel()
         {
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
+            ModeTypesEnumerable = Enum.GetNames(typeof(Mode));
+
             Features = new ObservableCollection<FeatureVector>();
+
+            ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
+            ExportCommand = new RelayCommand(Export, CanExport);
+            RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
         }
 
         /// <summary>
@@ -145,6 +200,7 @@ namespace LandscapeClassifier.ViewModel
         {
             if (_bitmapImage == null) throw new InvalidOperationException();
 
+
             if (position.Y < 0 || position.Y < 0 || position.X >= _bitmapImage.Width ||
                 position.Y >= _bitmapImage.Height)
                 return Colors.Black;
@@ -171,6 +227,121 @@ namespace LandscapeClassifier.ViewModel
             return 0.2126f*color.R + 0.7152f*color.G + 0.0722f*color.B;
         }
 
+        /// <summary>
+        /// Returns the slope at the given position or 0 if not available.
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        public AspectSlope GetSlopeAndAspectAt(Point position)
+        {
+            var left = (_ascFile.Xllcorner - _worldFile.X) / _worldFile.PixelSizeX;
+
+            var topWorldCoordinates = _ascFile.Yllcorner +
+                                      _ascFile.Cellsize * _ascFile.Nrows;
+
+            var topScreenCoordinates = (topWorldCoordinates - _worldFile.Y) /
+                                       _worldFile.PixelSizeY;
+
+            int positionX = (int) (position.X - left);
+            int positionY = (int) (position.Y - topScreenCoordinates);
+
+            if (positionX - 1 < 0 || positionX + 1 > _ascFile.Ncols || positionY - 1 < 0 ||
+                positionY + 1 > _ascFile.Nrows)
+            {
+                return new AspectSlope(0, 0);
+            }
+
+            float Z1 = _ascFile.Data[positionY - 1, positionX - 1];
+            float Z2 = _ascFile.Data[positionY - 1, positionX];
+            float Z3 = _ascFile.Data[positionY - 1, positionX + 1];
+
+            float Z4 = _ascFile.Data[positionY, positionX - 1];
+            float Z5 = _ascFile.Data[positionY, positionX];
+            float Z6 = _ascFile.Data[positionY, positionX + 1];
+
+            float Z7 = _ascFile.Data[positionY + 1, positionX - 1];
+            float Z8 = _ascFile.Data[positionY + 1, positionX];
+            float Z9 = _ascFile.Data[positionY + 1, positionX + 1];
+
+
+            float b = (Z3 + 2*Z6 + Z9 - Z1 - 2*Z4 - Z7)/(8*_ascFile.Cellsize);
+            float c = (Z1 + 2 * Z2 + Z3 - Z7 - 2 * Z8 - Z9) / (8 * _ascFile.Cellsize);
+
+            float slope = (float)Math.Atan(Math.Sqrt(b*b + c*c));
+            double aspect;
+
+            if (MoreMath.AlmostZero(c))
+            {
+                aspect = 0;
+            }
+            else
+            {
+                aspect = (float)Math.Atan(b / c);
+
+                if (c > 0)
+                {
+                    aspect += Math.PI;
+                }
+                else if (c < 0 && b > 0)
+                {
+                    aspect += (2 * Math.PI);
+                }
+            }
+
+            return new AspectSlope(slope, (float)aspect);
+        }
+
+        private void Export()
+        {
+            var chooseFolderDialog = new CommonOpenFileDialog
+            {
+                Title = "Choose Training Data Folder",
+                IsFolderPicker = true,
+                AddToMostRecentlyUsedList = false,
+                AllowNonFileSystemItems = false,
+                EnsureFileExists = true,
+                EnsurePathExists = true,
+                EnsureReadOnly = false,
+                EnsureValidNames = true,
+                Multiselect = false,
+                ShowPlacesList = true
+            };
+
+            if (chooseFolderDialog.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                var folder = chooseFolderDialog.FileName;
+
+                // Write CSV Path
+                var csvPath = Path.Combine(folder, Path.ChangeExtension(_worldFile.FileName, ".csv"));
+                using (var outputStreamWriter = new StreamWriter(csvPath))
+                {
+                    foreach (var feature in Features)
+                    {
+                        outputStreamWriter.WriteLine(feature.Type + ";" + feature.Altitude + ";" + feature.Aspect + ";" + feature.Slope + ";" + feature.Luma);
+                    }
+                }
+
+                // Copy ASC file
+                // File.Copy();
+
+            }
+        }
+
+        private bool CanExport()
+        {
+            return _ascFile != null && _bitmapImage != null;
+        }
+
+        private void RemoveSelectedFeature()
+        {
+            Features.Remove(SelectedFeatureVector);
+        }
+
+        private bool CanRemoveSelectedFeature()
+        {
+            return SelectedFeatureVector != null;
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
@@ -183,5 +354,8 @@ namespace LandscapeClassifier.ViewModel
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
         }
+
+
+
     }
 }

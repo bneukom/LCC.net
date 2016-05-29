@@ -2,6 +2,6 @@
 {
     public enum LandcoverType
     {
-        Gravel, Rock, Grass, Tree
+        Grass, Gravel, Rock, Snow, Tree
     }
 }

@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.Util;
 using MahApps.Metro.Controls;
 using Microsoft.Win32;
 using Xceed.Wpf.Toolkit.PropertyGrid;
@@ -130,7 +131,7 @@ namespace LandscapeClassifier
                 // Color
                 var color = _viewModel.GetColorAt(position);
                 ColorLabel.Content = color;
-                ColorLabel.Foreground = new SolidColorBrush(color);
+                ColorLabel.Background = new SolidColorBrush(color);
 
                 // Luma
                 LumaLabel.Content = (int)(_viewModel.GetLuminance(position));
@@ -141,7 +142,10 @@ namespace LandscapeClassifier
                     var altitude = _viewModel.GetAscDataAt(position);
                     AltitudeLabel.Content = (altitude != _viewModel.AscFile.NoDataValue) ? altitude + "m" : "???";
 
-                    // TODO Slope
+                    // Slope and Aspect
+                    var aspectSlope = _viewModel.GetSlopeAndAspectAt(position);
+                    AspectLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Aspect), 2) + "°";
+                    SlopeLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Slope), 2) + "°";
                 }
             }
 
@@ -180,7 +184,6 @@ namespace LandscapeClassifier
             ImageScrollViewer.Cursor = Cursors.Arrow;
             ImageScrollViewer.ReleaseMouseCapture();
 
-
             _lastDragPoint = null;
         }
 
@@ -196,8 +199,9 @@ namespace LandscapeClassifier
                 var luma = _viewModel.GetLuminance(position);
                 var altitude = _viewModel.GetAscDataAt(position);
                 var landCoverType = _viewModel.SelectedLandCoverType;
+                var slopeAspect = _viewModel.GetSlopeAndAspectAt(position);
 
-                _viewModel.Features.Add(new FeatureVector(landCoverType, new Point(lv95X, lv95Y), altitude, luma, 0, 0));
+                _viewModel.Features.Add(new FeatureVector(landCoverType, altitude, luma, color, slopeAspect.Aspect, slopeAspect.Slope));
             }
         }
 
@@ -205,5 +209,7 @@ namespace LandscapeClassifier
         {
 
         }
+
+
     }
 }

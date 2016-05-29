@@ -1,0 +1,140 @@
+﻿<controls:MetroWindow x:Class="LandscapeClassifier.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:local="clr-namespace:LandscapeClassifier"
+        xmlns:converter="clr-namespace:LandscapeClassifier.Converter"
+        xmlns:controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+        mc:Ignorable="d"
+        Title="OrthoImage DEM Viewer" Icon="Resources/Icons/Icon128_3.png" WindowTitleBrush="#DDDDDD" Height="768" Width="1024" UseLayoutRounding="True">
+    <DockPanel Background="#2D2D30">
+        <Menu Height="20" DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Export Training Data" Command="{Binding ExportCommand}"/>
+                <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+        </Menu>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <Button x:Name="OpenOrthoImage" Height="25" Content="Open Ortho Image" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="0" Click="OpenOrthoImage_Click"/>
+            <Button x:Name="OpenDEM" IsEnabled="False" Height="25" Content="Open DEM" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="1" Click="OpenDEM_Click"/>
+            <Label x:Name="OrthoImagePath" Foreground="LightGray"  Content="None" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch"  Margin="5,4,5,5"  VerticalAlignment="Center"/>
+            <Label x:Name="DEMPath" Foreground="LightGray" Content="None" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch"  Margin="5,5,5,4"  VerticalAlignment="Center"/>
+            <ScrollViewer x:Name="ImageScrollViewer" RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  Grid.ColumnSpan="2" Grid.Row="2  " Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="ImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="ImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
+
+                <Grid Background="Black" Name="grid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
+                    <Grid.LayoutTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="ScaleTransform"/>
+                            <MatrixTransform x:Name="MatrixTransform"/>
+                        </TransformGroup>
+                    </Grid.LayoutTransform>
+                    <Canvas Width="14000" Height="9480"  x:Name="ImageCanvas" Grid.Column="0" Grid.Row="0" >
+                        <Image Source="{Binding OrthoImage}" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor" x:Name="OrthoImage" Width="14000" Height="9480"></Image>
+                        <Rectangle Fill="Black" Width="14000" Height="9480" Opacity="0.7">
+                            <Rectangle.Clip>
+                                <CombinedGeometry GeometryCombineMode="Exclude">
+                                    <CombinedGeometry.Geometry1>
+                                        <RectangleGeometry Rect="0,0,14000,9480"/>
+                                    </CombinedGeometry.Geometry1>
+                                    <CombinedGeometry.Geometry2>
+                                        <RectangleGeometry x:Name="ExcludeGeometry" Rect="0,0,0,0"/>
+                                    </CombinedGeometry.Geometry2>
+                                </CombinedGeometry>
+                               
+                            </Rectangle.Clip>
+                        </Rectangle>
+                    </Canvas>
+                </Grid>
+            </ScrollViewer>
+
+            <Grid Grid.Row="2 " Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <ListBox x:Name="FeaturesListBox"  Grid.Row="0" HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedFeatureVector}" ItemsSource="{Binding Features}" >
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DataTemplate.Resources>
+                                <converter:ColorToBrushConverter x:Key="ColorToBrushConverter" />
+                            </DataTemplate.Resources>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Foreground="{Binding Color, Converter={StaticResource ColorToBrushConverter}}" Text="{Binding Type}"></TextBlock>
+                                <TextBlock Foreground="White" Text=" "></TextBlock>
+                                <TextBlock Foreground="White" Text="{Binding Altitude}"></TextBlock>
+                                <TextBlock Foreground="White" Text="m "></TextBlock>
+                                <TextBlock Foreground="White" Text="{Binding Aspect}"></TextBlock>
+                                <TextBlock Foreground="White" Text="° "></TextBlock>
+                                <TextBlock Foreground="White" Text="{Binding Slope}"></TextBlock>
+                                <TextBlock Foreground="White" Text="° "></TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="RemoveButton" Command="{Binding RemoveSelectedFeatureVectorCommand}" Grid.Column="0" Content="Remove " Margin="5,5,5,0"></Button>
+                    <Button Grid.Column="1" Content="Clear All " Margin="5,5,5,0"></Button>
+                </Grid>
+            </Grid>
+            
+            
+            <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">
+                <Label Content="Pixel Position:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="PixelPosition" Content="(0, 0)" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label Content="LV95:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="LV95Position" Content="(0, 0)" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label Content="Altitude:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="AltitudeLabel" Content="???" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label Content="Color:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="ColorLabel" Content="#FFFFFFFF"  Width="80"  HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label Content="Luma:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="LumaLabel" Content="0" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label Content="Aspect:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="AspectLabel" Content="0°" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label Content="Slope:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                <Label x:Name="SlopeLabel" Content="0°" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Grid.Column="2" Grid.Row="0" HorizontalAlignment="Right">
+                <Label  Content="Mode"  Foreground="White"  Margin="5,5,5,5" VerticalAlignment="Center"/>
+                <ComboBox Width="125" SelectedIndex="0" SelectedValue="{Binding Mode}" ItemsSource="{Binding ModeTypesEnumerable}"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Grid.Column="2" Grid.Row="1" HorizontalAlignment="Right">
+                <Label x:Name="ComboInfo" Content="Landcover Type"  Foreground="White"  Margin="5,5,5,5" VerticalAlignment="Center"/>
+                <ComboBox Width="125" SelectedIndex="0" SelectedValue="{Binding SelectedLandCoverType}" ItemsSource="{Binding LandCoverTypesEnumerable}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!--
+            <xctk:PropertyGrid HorizontalAlignment="Stretch" ShowSortOptions="False" Background="White" x:Name="PropertyGrid" Margin="5,0" Width="0"  AutoGenerateProperties="True" ShowSearchBox="False" SelectedObject="{Binding Path=., Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="300" Grid.Column="2" Grid.Row="2">
+            </xctk:PropertyGrid> -->
+        </Grid>
+    </DockPanel>
+    
+    <controls:MetroWindow.Resources>
+        <Style BasedOn="{StaticResource {x:Type Label}}" TargetType="Label">
+            <Setter Property="Foreground" Value="{StaticResource Foreground}"/>
+        </Style>
+        <Style BasedOn="{StaticResource {x:Type TextBlock}}" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Foreground}"/>
+        </Style>
+    </controls:MetroWindow.Resources>
+</controls:MetroWindow>
+
