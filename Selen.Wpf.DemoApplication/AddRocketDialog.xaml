@@ -1,0 +1,8 @@
+﻿<Controls:MetroWindow x:Class="Selen.Wpf.DemoApplication.AddRocketDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" Title="Buy a weapon" Height="600" Width="800" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <TreeView Style="{StaticResource AppTree}" ItemsSource="{Binding Children}"/>
+    </Grid>
+</Controls:MetroWindow>
