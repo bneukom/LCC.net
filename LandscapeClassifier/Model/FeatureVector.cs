@@ -4,19 +4,19 @@ using LandscapeClassifier.Util;
 
 namespace LandscapeClassifier.Model
 {
-    public class FeatureVector
+    public struct FeatureVector
     {
         public float Altitude { get; }
-        public float Luma { get; }
+        public Color AverageNeighbourhoodColor { get; }
         public Color Color { get; }
         public float Aspect { get; }
         public float Slope { get; }
 
-        public FeatureVector(float altitude, float luma, Color color, float aspect, float slope)
+        public FeatureVector(float altitude, Color color, Color averageNeighbourhoodColor, float aspect, float slope)
         {
             Altitude = altitude;
-            Luma = luma;
             Color = color;
+            AverageNeighbourhoodColor = averageNeighbourhoodColor;
             Aspect = aspect;
             Slope = slope;
         }

@@ -18,7 +18,7 @@ namespace LandscapeClassifier.Classifier
         
         private NormalBayesClassifier classifier;
 
-        private const int NumFeatures = 6;
+        private const int FeaturesPerVector = 6;
 
         public BayesLandCoverClassifier()
         {
@@ -26,10 +26,11 @@ namespace LandscapeClassifier.Classifier
         }
 
         // TODO http://www.emgu.com/wiki/index.php/Normal_Bayes_Classifier_in_CSharp
+        // TODO http://www.bytefish.de/pdf/machinelearning.pdf
         public void Train(List<ClassifiedFeatureVector> samples)
         {
 
-            Matrix<float> trainData = new Matrix<float>(samples.Count, NumFeatures);
+            Matrix<float> trainData = new Matrix<float>(samples.Count, FeaturesPerVector);
             Matrix<int> trainClasses = new Matrix<int>(samples.Count, 1);
 
             trainData.Data[0, 0] = 3;
@@ -57,7 +58,7 @@ namespace LandscapeClassifier.Classifier
 
         public LandcoverType Predict(FeatureVector feature)
         {
-            Matrix<float> sampleMat = new Matrix<float>(1, NumFeatures)
+            Matrix<float> sampleMat = new Matrix<float>(1, FeaturesPerVector)
             {
                 Data =
                 {
@@ -73,6 +74,39 @@ namespace LandscapeClassifier.Classifier
 
             int result = (int)classifier.Predict(sampleMat, null);
             return (LandcoverType)result;
+        }
+
+        public LandcoverType[,] Predict(FeatureVector[,] features)
+        {
+            var dimensionY = features.GetLength(0);
+            var dimensionX = features.GetLength(1);
+
+            Matrix<float> sampleMat = new Matrix<float>(dimensionX * dimensionY, FeaturesPerVector);
+            for (var y = 0; y < dimensionY; ++y)
+            {
+                for (var x = 0; x < dimensionX; ++x)
+                {
+                    var feature = features[y, x];
+                    var featureIndex = y*dimensionX + x;
+                    sampleMat.Data[featureIndex, 0] = feature.Altitude;
+                    sampleMat.Data[featureIndex, 1] = feature.Color.R;
+                    sampleMat.Data[featureIndex, 2] = feature.Color.G;
+                    sampleMat.Data[featureIndex, 3] = feature.Color.B;
+                    sampleMat.Data[featureIndex, 4] = feature.Aspect;
+                    sampleMat.Data[featureIndex, 5] = feature.Slope;
+                }
+            }
+
+            LandcoverType[,] predictions = new LandcoverType[dimensionY, dimensionX];
+            for (var row = 0; row < sampleMat.Rows; row++)
+            {
+                var prediction = (int)classifier.Predict(sampleMat.GetRow(row));
+                var y = row / dimensionX;
+                var x = row % dimensionX;
+                predictions[y, x] = (LandcoverType) prediction;
+            }
+
+            return predictions;
         }
     }
 }

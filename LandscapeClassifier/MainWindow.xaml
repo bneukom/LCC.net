@@ -12,9 +12,9 @@
     <DockPanel Background="#2D2D30">
         <Menu Height="20" DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_Export Training Set" Command="{Binding ExportCommand}"/>
-                <MenuItem Header="_Import Training Set"/>
-                <MenuItem Header="_Classify All"/>
+                <MenuItem Header="_Export Training Features" Command="{Binding ExportFeaturesCommand}"/>
+                <MenuItem Header="_Import Training Features" Command="{Binding ImportFeatureCommand}"/>
+                <MenuItem Header="_Export Predictions" Command="{Binding ExportPredictionsCommand}"/>
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
         </Menu>
@@ -46,16 +46,13 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="auto"/>
                         </Grid.ColumnDefinitions>
-                        <ScrollViewer x:Name="ImageScrollViewer" RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="ImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="ImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
-                            <Grid Background="Black" Name="grid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
+                        <ScrollViewer RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="TrainingImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="TrainingImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
+                            <Grid Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
                                 <Grid.LayoutTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform x:Name="ScaleTransform"/>
-                                        <MatrixTransform x:Name="MatrixTransform"/>
-                                    </TransformGroup>
+                                    <MatrixTransform x:Name="MatrixTransform"/>
                                 </Grid.LayoutTransform>
                                 <Canvas Width="14000" Height="9480"  x:Name="ImageCanvas" Grid.Column="0" Grid.Row="0" >
-                                    <Image Source="{Binding OrthoImage}" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor" x:Name="OrthoImage" Width="14000" Height="9480"></Image>
+                                    <Image x:Name="TrainingOrthoImage" Source="{Binding OrthoImage}" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor"  Width="14000" Height="9480"></Image>
                                     <Rectangle Fill="Black" Width="14000" Height="9480" Opacity="0.7">
                                         <Rectangle.Clip>
                                             <CombinedGeometry GeometryCombineMode="Exclude">
@@ -63,7 +60,7 @@
                                                     <RectangleGeometry Rect="0,0,14000,9480"/>
                                                 </CombinedGeometry.Geometry1>
                                                 <CombinedGeometry.Geometry2>
-                                                    <RectangleGeometry x:Name="ExcludeGeometry" Rect="0,0,0,0"/>
+                                                    <RectangleGeometry Rect="{Binding ExcludeGeometryRect}"/>
                                                 </CombinedGeometry.Geometry2>
                                             </CombinedGeometry>
 
@@ -77,6 +74,8 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -105,8 +104,10 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <Button Grid.Column="0" Grid.Row="2" x:Name="RemoveButton" Command="{Binding RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="3" Content="Remove All Features" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="4" Content="Train Features" Command="{Binding TrainCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="3" Command="{Binding RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="4" Content="Export Features" Command="{Binding ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="5" Content="Import Features" Command="{Binding ImportFeatureCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="6" Content="Train Features" Command="{Binding TrainCommand}" Margin="5,5,5,0"></Button>
                         </Grid>
 
 
@@ -119,7 +120,7 @@
                             <Label x:Name="AltitudeLabel" Content="???" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label Content="Color:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label x:Name="ColorLabel" Content="#FFFFFFFF"  Width="80"  HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                            <Label Content="Luma:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                            <Label Content="AverageNeighbourhoodColor:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label x:Name="LumaLabel" Content="0" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label Content="Aspect:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label x:Name="AspectLabel" Content="0°" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
@@ -130,12 +131,53 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="Prediction" IsEnabled="{Binding IsTrained}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal"  HorizontalAlignment="Stretch"  VerticalAlignment="Stretch">
+                            <Button Height="25" Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictAllCommand}"></Button>
+                            <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Overlay Transparency:"></TextBlock>
+                            <TextBox Margin="0,5,5,5" VerticalAlignment="Center" Text="125" Width="50"></TextBox>
+                            <Button Height="25" Content="Export Predictions" Command="{Binding ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
+                        </StackPanel>
+
+                        <ScrollViewer RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="PredictionImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="PredictionImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
+                            <Grid Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
+                                <Grid.LayoutTransform>
+                                    <MatrixTransform/>
+                                </Grid.LayoutTransform>
+                                <Canvas Width="14000" Height="9480" Grid.Column="0" Grid.Row="0" >
+                                    <Image x:Name="PredictionOrthoImage"  Source="{Binding OrthoImage}" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor" Width="14000" Height="9480"></Image>
+                                    <Rectangle Fill="Black" Width="14000" Height="9480" Opacity="0.7">
+                                        <Rectangle.Clip>
+                                            <CombinedGeometry GeometryCombineMode="Exclude">
+                                                <CombinedGeometry.Geometry1>
+                                                    <RectangleGeometry Rect="0,0,14000,9480"/>
+                                                </CombinedGeometry.Geometry1>
+                                                <CombinedGeometry.Geometry2>
+                                                    <RectangleGeometry Rect="{Binding ExcludeGeometryRect}"/>
+                                                </CombinedGeometry.Geometry2>
+                                            </CombinedGeometry>
+
+                                        </Rectangle.Clip>
+                                    </Rectangle>
+                                </Canvas>
+                            </Grid>
+                        </ScrollViewer>
+
+        
+                        <StackPanel Grid.Row="2" Orientation="Horizontal"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">
+                            <Label Content="Pixel Prediction:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                            <Label x:Name="LandcoverPredictionLabel" Content="???" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                        </StackPanel>
+ 
+                    </Grid>
                 </TabItem>
             </TabControl>
-
-            <!--
-            <xctk:PropertyGrid HorizontalAlignment="Stretch" ShowSortOptions="False" Background="White" x:Name="PropertyGrid" Margin="5,0" Width="0"  AutoGenerateProperties="True" ShowSearchBox="False" SelectedObject="{Binding Path=., Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="300" Grid.Column="2" Grid.Row="2">
-            </xctk:PropertyGrid> -->
         </Grid>
     </DockPanel>
     

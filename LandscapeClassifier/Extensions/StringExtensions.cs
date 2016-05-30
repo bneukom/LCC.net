@@ -1,4 +1,6 @@
+using System;
 using System.Text.RegularExpressions;
+using System.Windows.Media;
 
 namespace LandscapeClassifier.Extensions
 {
@@ -8,5 +10,7 @@ namespace LandscapeClassifier.Extensions
         {
             return Regex.Replace(value, @"\s+", " ");
         }
+
+
     }
 }

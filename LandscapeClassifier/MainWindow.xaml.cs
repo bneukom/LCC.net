@@ -18,6 +18,7 @@ namespace LandscapeClassifier
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
+        // Dragging points shared for training and prediction scroll viewers
         private Point? _lastCenterPositionOnTarget;
         private Point? _lastDragPoint;
         private Point? _lastMousePositionOnTarget;
@@ -51,6 +52,7 @@ namespace LandscapeClassifier
 
                 _viewModel.AscFile = AscFile.FromFile(openFileDialog.FileName);
 
+                // @TODO transformation matrix
                 var left = (_viewModel.AscFile.Xllcorner - _viewModel.WorldFile.X) / _viewModel.WorldFile.PixelSizeX;
 
                 var topWorldCoordinates = _viewModel.AscFile.Yllcorner +
@@ -62,7 +64,7 @@ namespace LandscapeClassifier
                 var width = _viewModel.AscFile.Ncols;
                 var height = _viewModel.AscFile.Nrows;
 
-                ExcludeGeometry.Rect = new Rect(new Point(left, topScreenCoordinates), new Size(width, height));
+                _viewModel.ExcludeGeometryRect = new Rect(new Point(left, topScreenCoordinates), new Size(width, height));
             }
         }
 
@@ -98,32 +100,37 @@ namespace LandscapeClassifier
 
         private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            _lastMousePositionOnTarget = Mouse.GetPosition(grid);
+            var scrollViewer =  (ScrollViewer) sender;
+            _lastMousePositionOnTarget = Mouse.GetPosition(scrollViewer);
 
-            var centerOfViewport = new Point(ImageScrollViewer.ViewportWidth / 2, ImageScrollViewer.ViewportHeight / 2);
-            _lastCenterPositionOnTarget = ImageScrollViewer.TranslatePoint(centerOfViewport, grid);
+            var centerOfViewport = new Point(scrollViewer.ViewportWidth / 2, scrollViewer.ViewportHeight / 2);
+            _lastCenterPositionOnTarget = scrollViewer.TranslatePoint(centerOfViewport, scrollViewer);
 
-            var position = e.GetPosition(grid);
-            var transform = MatrixTransform;
+            var position = e.GetPosition(scrollViewer);
+            var transform = MatrixTransform; // TODO get transform from Image
             var matrix = transform.Matrix;
             var scale = e.Delta >= 0 ? 1.1 : 1.0/1.1;
-            matrix.ScaleAtPrepend(scale, scale, 5000, 5000);
+           
+            matrix.Scale(scale, scale);
             transform.Matrix = matrix;
+
 
             e.Handled = true;
         }
 
-        private void ImageScrollViewer_MouseMove(object sender, MouseEventArgs e)
+        private void TrainingImageScrollViewer_MouseMove(object sender, MouseEventArgs e)
         {
+            var scrollViewer = (ScrollViewer)sender;
+
             // Update info label
             if (_viewModel.WorldFile != null)
             {
-                var position = e.GetPosition(OrthoImage);
+                var position = e.GetPosition(TrainingOrthoImage);
                 PixelPosition.Content = "(" + (int)position.X + ", " + (int)position.Y + ")";
 
                 // Position in LV95 coordinate system
-                var lv95X = (int) (position.X * _viewModel.WorldFile.PixelSizeX + _viewModel.WorldFile.X);
-                var lv95Y = (int) (position.Y * _viewModel.WorldFile.PixelSizeY + _viewModel.WorldFile.Y);
+                var lv95X = (int)(position.X * _viewModel.WorldFile.PixelSizeX + _viewModel.WorldFile.X);
+                var lv95Y = (int)(position.Y * _viewModel.WorldFile.PixelSizeY + _viewModel.WorldFile.Y);
                 LV95Position.Content = "(" + lv95X + ", " + lv95Y + ")";
 
                 // Color
@@ -131,7 +138,7 @@ namespace LandscapeClassifier
                 ColorLabel.Content = color;
                 ColorLabel.Background = new SolidColorBrush(color);
 
-                // Luma
+                // AverageNeighbourhoodColor
                 var luma = _viewModel.GetLuminance(position);
                 LumaLabel.Content = (int)luma;
 
@@ -145,74 +152,99 @@ namespace LandscapeClassifier
                     var aspectSlope = _viewModel.GetSlopeAndAspectAt(position);
                     AspectLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Aspect), 2) + "°";
                     SlopeLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Slope), 2) + "°";
-
-                    // TODO prediction test
-                    if (_viewModel.IsTrained)
-                    {
-                        Console.WriteLine(_viewModel.Predict(new FeatureVector(altitude, luma, color, aspectSlope.Aspect, aspectSlope.Slope)));
-                    }
                 }
             }
 
+            Drag(e, scrollViewer);
+        }
 
+ 
+
+        private void PredictionImageScrollViewer_MouseMove(object sender, MouseEventArgs e)
+        {
+            var scrollViewer = (ScrollViewer)sender;
+
+            // Prediction at position
+            if (_viewModel.WorldFile != null && _viewModel.AscFile != null && _viewModel.IsTrained)
+            {
+                var position = e.GetPosition(PredictionOrthoImage);
+
+                var altitude = _viewModel.GetAscDataAt(position);
+                var averageNeighborhoodColor = _viewModel.GetAverageNeighborhoodColor(position);
+                var color = _viewModel.GetColorAt(position);
+                var aspectSlope = _viewModel.GetSlopeAndAspectAt(position);
+                var prediciton = _viewModel.Predict(new FeatureVector(altitude, color, averageNeighborhoodColor, aspectSlope.Aspect, aspectSlope.Slope));
+                LandcoverPredictionLabel.Content = prediciton;
+            }
+
+            Drag(e, scrollViewer);
+        }
+
+        private void Drag(MouseEventArgs e, ScrollViewer scrollViewer)
+        {
             // Drag
             if (_lastDragPoint.HasValue)
             {
-                var posNow = e.GetPosition(ImageScrollViewer);
+                var posNow = e.GetPosition(scrollViewer);
 
                 var dX = posNow.X - _lastDragPoint.Value.X;
                 var dY = posNow.Y - _lastDragPoint.Value.Y;
 
                 _lastDragPoint = posNow;
 
-                ImageScrollViewer.Cursor = Cursors.SizeAll;
+                scrollViewer.Cursor = Cursors.SizeAll;
 
-                ImageScrollViewer.ScrollToHorizontalOffset(ImageScrollViewer.HorizontalOffset - dX);
-                ImageScrollViewer.ScrollToVerticalOffset(ImageScrollViewer.VerticalOffset - dY);
+                scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - dX);
+                scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - dY);
             }
         }
 
         private void ImageScrollViewer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            var mousePos = e.GetPosition(ImageScrollViewer);
-            if (mousePos.X <= ImageScrollViewer.ViewportWidth && mousePos.Y < ImageScrollViewer.ViewportHeight) //make sure we still can use the scrollbars
+            var scrollViewer = (ScrollViewer)sender;
+
+            var mousePos = e.GetPosition(scrollViewer);
+            if (mousePos.X <= scrollViewer.ViewportWidth && mousePos.Y < scrollViewer.ViewportHeight) //make sure we still can use the scrollbars
             {
-                
                 _lastDragPoint = mousePos;
-                Mouse.Capture(ImageScrollViewer);
+                Mouse.Capture(scrollViewer);
             }
         }
 
         private void ImageScrollViewer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            var scrollViewer = (ScrollViewer)sender;
 
-            ImageScrollViewer.Cursor = Cursors.Arrow;
-            ImageScrollViewer.ReleaseMouseCapture();
+            scrollViewer.Cursor = Cursors.Arrow;
+            scrollViewer.ReleaseMouseCapture();
 
             _lastDragPoint = null;
         }
 
-        private void ImageScrollViewer_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void TrainingImageScrollViewer_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
+            // Add feature
             if (_viewModel.WorldFile != null && _viewModel.AscFile != null)
             {
-                var position = e.GetPosition(OrthoImage);
+                var position = e.GetPosition(TrainingOrthoImage);
 
                 var color = _viewModel.GetColorAt(position);
-                var luma = _viewModel.GetLuminance(position);
+                var averageNeighborhoodColor = _viewModel.GetAverageNeighborhoodColor(position);
                 var altitude = _viewModel.GetAscDataAt(position);
                 var landCoverType = _viewModel.SelectedLandCoverType;
                 var slopeAspect = _viewModel.GetSlopeAndAspectAt(position);
 
-                _viewModel.Features.Add(new ClassifiedFeatureVector(landCoverType, new FeatureVector(altitude, luma, color, slopeAspect.Aspect, slopeAspect.Slope)));
+                _viewModel.Features.Add(new ClassifiedFeatureVector(landCoverType, new FeatureVector(altitude, color, averageNeighborhoodColor, slopeAspect.Aspect, slopeAspect.Slope)));
             }
+        }
+
+        private void PredictionImageScrollViewer_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
         }
 
         private void ImageScrollViewer_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
 
         }
-
-
     }
 }

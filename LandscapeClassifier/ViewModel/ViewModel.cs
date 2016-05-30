@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -15,24 +16,36 @@ using LandscapeClassifier.Classifier;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
+using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace LandscapeClassifier.ViewModel
 {
     public class ViewModel : INotifyPropertyChanged
     {
+        private readonly ILandCoverClassifier _classifier;
+
         private AscFile _ascFile;
         private WorldFile _worldFile;
+
         private BitmapImage _bitmapImage;
         private byte[] _imageData;
+        private Rect _excludeGeometryRect;
+
         private ClassifiedFeatureVector _selectedFeatureVector;
-        private ILandCoverClassifier _classifier;
         private bool _isTrained;
+        
+        private LandcoverType[,] _predictedLandcoverTypes;
+
+        /// <summary>
+        /// Export predictions.
+        /// </summary>
+        public ICommand ExportPredictionsCommand { set; get; }
 
         /// <summary>
         /// Export command.
         /// </summary>
-        public ICommand ExportCommand { set; get; }
+        public ICommand ExportFeaturesCommand { set; get; }
 
         /// <summary>
         /// Exit command.
@@ -45,9 +58,24 @@ namespace LandscapeClassifier.ViewModel
         public ICommand RemoveSelectedFeatureVectorCommand { set; get; }
 
         /// <summary>
+        /// Remove all features command.
+        /// </summary>
+        public ICommand RemoveAllFeaturesCommand { set; get; }
+
+        /// <summary>
         /// Train command.
         /// </summary>
         public ICommand TrainCommand { set; get; }
+
+        /// <summary>
+        /// Import features command.
+        /// </summary>
+        public ICommand ImportFeatureCommand { set; get; }
+
+        /// <summary>
+        /// Predict all.
+        /// </summary>
+        public object PredictAllCommand { set; get; }
 
         /// <summary>
         /// True if the classifier has been trained.
@@ -64,6 +92,7 @@ namespace LandscapeClassifier.ViewModel
                 }
             }
         }
+
 
         /// <summary>
         /// The currently selected feature vector.
@@ -115,6 +144,22 @@ namespace LandscapeClassifier.ViewModel
         }
 
         /// <summary>
+        /// Geometry rect for the viewport of the orthoimage.
+        /// </summary>
+        public Rect ExcludeGeometryRect
+        {
+            get { return _excludeGeometryRect; }
+            set
+            {
+                if (value != _excludeGeometryRect)
+                {
+                    _excludeGeometryRect = value;
+                    NotifyPropertyChanged("ExcludeGeometryRect");
+                }
+            }
+        }
+
+        /// <summary>
         /// The OrthoImage map.
         /// </summary>
         public BitmapImage OrthoImage
@@ -129,12 +174,27 @@ namespace LandscapeClassifier.ViewModel
                     var stride = (int) _bitmapImage.PixelWidth*(_bitmapImage.Format.BitsPerPixel/8);
                     _imageData = new byte[(int) _bitmapImage.PixelHeight*stride];
 
+                    // @TODO waste of memory!
                     _bitmapImage.CopyPixels(_imageData, stride, 0);
 
                     NotifyPropertyChanged("OrthoImage");
                 }
             }
         }
+
+        public LandcoverType[,] PredictedLandcoverTypes
+        {
+            get { return _predictedLandcoverTypes; }
+            set
+            {
+                if (value != _predictedLandcoverTypes)
+                {
+                    _predictedLandcoverTypes = value;
+                    NotifyPropertyChanged("PredictedLandcoverTypes");
+                }
+            }
+        }
+
 
         /// <summary>
         /// Feature vectors.
@@ -151,16 +211,6 @@ namespace LandscapeClassifier.ViewModel
         /// </summary>
         public LandcoverType SelectedLandCoverType { get; set; }
 
-        /// <summary>
-        /// Possible modes.
-        /// </summary>
-        public IEnumerable<string> ModeTypesEnumerable { get; set; }
-
-        /// <summary>
-        /// The current mode.
-        /// </summary>
-        public Mode Mode { get; set; }
-
 
 
         public ViewModel()
@@ -168,15 +218,22 @@ namespace LandscapeClassifier.ViewModel
             _classifier = new BayesLandCoverClassifier();
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
-            ModeTypesEnumerable = Enum.GetNames(typeof(Mode));
 
             Features = new ObservableCollection<ClassifiedFeatureVector>();
 
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
-            ExportCommand = new RelayCommand(Export, CanExport);
+            ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
+            ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
+            RemoveAllFeaturesCommand = new RelayCommand(() => Features.Clear(), () => Features.Count > 0);
+
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
             TrainCommand = new RelayCommand(Train, CanTrain);
+
+            PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
+            ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
         }
+
+        #region Model Accessers
 
         /// <summary>
         /// Predicts the land cover type with the given feature vector.
@@ -188,6 +245,7 @@ namespace LandscapeClassifier.ViewModel
             return _classifier.Predict(feature);
         }
 
+        // @TODO coordinate system?
         /// <summary>
         /// Returns whether the given position is within the bounds of the ASC file.
         /// </summary>
@@ -205,6 +263,7 @@ namespace LandscapeClassifier.ViewModel
                    lv95Y > _ascFile.Yllcorner && lv95Y < _ascFile.Yllcorner + _ascFile.Nrows*_ascFile.Cellsize;
         }
 
+        // @TODO coordinate system?
         /// <summary>
         /// Returns the data from the ASC file at the given position.
         /// </summary>
@@ -257,6 +316,39 @@ namespace LandscapeClassifier.ViewModel
         }
 
         /// <summary>
+        /// Returns the average color of the eight neighborhood surrounding the pixel at the given position.
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        public Color GetAverageNeighborhoodColor(Point position)
+        {
+            if (_bitmapImage == null) throw new InvalidOperationException();
+
+            // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
+            if (position.Y < 1 || position.Y < 1 
+                || position.X >= _bitmapImage.Width - 1 
+                || position.Y >= _bitmapImage.Height - 1)
+                return Colors.Black;
+
+            byte R = 0, G = 0, B = 0, A = 0;
+            for (var x = -1; x <= 1; ++x)
+            {
+                for (var y = -1; y <= 1; ++y)
+                {
+                    var stride = (int)_bitmapImage.PixelWidth * (_bitmapImage.Format.BitsPerPixel / 8);
+                    var index = ((int)position.Y + y) * stride + _bitmapImage.Format.BitsPerPixel / 8 * ((int)position.X + x);
+
+                    B += _imageData[index];
+                    G += _imageData[index + 1];
+                    R += _imageData[index + 2];
+                    A += _imageData[index + 3];
+                }
+            }
+
+            return Color.FromArgb((byte) (A / 8), (byte)(R / 8), (byte)(G / 8), (byte)(B / 8));
+        }
+
+        /// <summary>
         /// Returns the luminance at the given pixel position.
         /// </summary>
         /// <param name="position"></param>
@@ -267,6 +359,7 @@ namespace LandscapeClassifier.ViewModel
             return 0.2126f*color.R + 0.7152f*color.G + 0.0722f*color.B;
         }
 
+        // @TODO coordinate system?
         /// <summary>
         /// Returns the slope at the given position or 0 if not available.
         /// </summary>
@@ -331,6 +424,91 @@ namespace LandscapeClassifier.ViewModel
             return new AspectSlope(slope, (float)aspect);
         }
 
+#endregion
+        
+        #region Command Implementations
+        private void ExportTrainingSet()
+        {
+            // Create an instance of the open file dialog box.
+            var saveFileDialog = new SaveFileDialog()
+            {
+                Filter = "CSV Files (.csv)|*.csv",
+                FilterIndex = 1,
+            };
+
+            // Call the ShowDialog method to show the dialog box.
+            var userClickedOk = saveFileDialog.ShowDialog();
+
+            // Process input if the user clicked OK.
+            if (userClickedOk == true)
+            {
+                // Write CSV Path
+                var csvPath = saveFileDialog.FileName;
+                using (var outputStreamWriter = new StreamWriter(csvPath))
+                {
+                    foreach (var feature in Features)
+                    {
+
+                        outputStreamWriter.WriteLine(
+                            feature.Type + ";" + 
+                            feature.FeatureVector.Color +  ";" + 
+                            feature.FeatureVector.AverageNeighbourhoodColor + ";" + 
+                            feature.FeatureVector.Altitude + ";" + 
+                            feature.FeatureVector.Aspect + ";" + 
+                            feature.FeatureVector.Slope);
+                    }
+                }
+            }
+        }
+
+        private bool CanExportTrainingSet()
+        {
+            return _ascFile != null && _bitmapImage != null && Features.Count > 0;
+        }
+
+        private void ImportTrainingSet()
+        {
+            // Create an instance of the open file dialog box.
+            var openFileDialog = new OpenFileDialog()
+            {
+                Filter = "CSV Files (.csv)|*.csv",
+                FilterIndex = 1,
+            };
+
+            // Call the ShowDialog method to show the dialog box.
+            var userClickedOk = openFileDialog.ShowDialog();
+
+
+
+            // Process input if the user clicked OK.
+            if (userClickedOk == true)
+            {
+                Features.Clear();
+
+                var path = openFileDialog.FileName;
+                var lines = File.ReadAllLines(path);
+                foreach (var line in lines.Select(line => line.Split(';')))
+                {
+                    LandcoverType type;
+                    Enum.TryParse<LandcoverType>(line[0], true, out type);
+                    var color = (Color) ColorConverter.ConvertFromString(line[1]);
+                    var averageNeighbourhoodColor = (Color) ColorConverter.ConvertFromString(line[2]);
+                    var altitude = float.Parse(line[3]);
+                    var aspect = float.Parse(line[4]);
+                    var slope = float.Parse(line[5]);
+
+                    Features.Add(new ClassifiedFeatureVector(type, new FeatureVector(altitude, color, averageNeighbourhoodColor, aspect, slope)));
+                }
+
+
+            }
+        }
+
+        private bool CanImportTrainingSet()
+        {
+            return true;
+        }
+
         private void Export()
         {
             var chooseFolderDialog = new CommonOpenFileDialog
@@ -357,7 +535,7 @@ namespace LandscapeClassifier.ViewModel
                 {
                     foreach (var feature in Features)
                     {
-                        outputStreamWriter.WriteLine(feature.Type + ";" + feature.FeatureVector.Altitude + ";" + feature.FeatureVector.Aspect + ";" + feature.FeatureVector.Slope + ";" + feature.FeatureVector.Luma);
+                        outputStreamWriter.WriteLine(feature.Type + ";" + feature.FeatureVector.Altitude + ";" + feature.FeatureVector.Aspect + ";" + feature.FeatureVector.Slope + ";" + feature.FeatureVector.AverageNeighbourhoodColor);
                     }
                 }
 
@@ -378,11 +556,6 @@ namespace LandscapeClassifier.ViewModel
             return Features.Count > 0 && Features.GroupBy(f => f.Type).Count() >= 2;
         }
 
-        private bool CanExport()
-        {
-            return _ascFile != null && _bitmapImage != null;
-        }
-
         private void RemoveSelectedFeature()
         {
             Features.Remove(SelectedFeatureVector);
@@ -393,6 +566,56 @@ namespace LandscapeClassifier.ViewModel
             return SelectedFeatureVector != null;
         }
 
+        private void ExportPredictions()
+        {
+           
+        }
+
+        private bool CanExportPredictions()
+        {
+            return PredictedLandcoverTypes != null;
+        }
+
+        private void PredictAll()
+        {
+            // @TODO create transformation matrix
+            var left = (AscFile.Xllcorner - WorldFile.X) / WorldFile.PixelSizeX;
+            var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize * AscFile.Nrows;
+            var topScreenCoordinates = (topWorldCoordinates - WorldFile.Y) / WorldFile.PixelSizeY;
+
+            // @TODO only works because AscFile#CellSize == WorldFile#CellSize
+            var width = AscFile.Ncols;
+            var height = AscFile.Nrows;
+
+            // Create features
+            FeatureVector[,] features = new FeatureVector[height, width];
+            for (int y = 0; y < height; ++y)
+            {
+                for (int x = 0; x < width; ++x)
+                {
+                    var position = new Point(x + left, y + topScreenCoordinates);
+                    var altitude = GetAscDataAt(position);
+                    var color = GetColorAt(position);
+                    var averageNeighborhoodColor = GetAverageNeighborhoodColor(position);
+                    var slopeAndAspectAt = GetSlopeAndAspectAt(position);
+                    features[y, x] = new FeatureVector(altitude, color, averageNeighborhoodColor,
+                        slopeAndAspectAt.Aspect, slopeAndAspectAt.Slope);
+                }
+            }
+
+            // Predict
+            var prediction = _classifier.Predict(features);
+            PredictedLandcoverTypes = prediction;
+        }
+
+        private bool CanPredictAll()
+        {
+            return IsTrained;
+        }
+
+#endregion
+
+        #region Property Change Support
         public event PropertyChangedEventHandler PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
@@ -405,8 +628,7 @@ namespace LandscapeClassifier.ViewModel
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
         }
-
-
+#endregion
 
     }
 }

@@ -21,5 +21,12 @@ namespace LandscapeClassifier.Classifier
         /// <param name="feature"></param>
         /// <returns></returns>
         LandcoverType Predict(FeatureVector feature);
+
+        /// <summary>
+        /// Predicts all land cover types for the given feature vectors. <see cref="Train"/> must be called first.
+        /// </summary>
+        /// <param name="features"></param>
+        /// <returns></returns>
+        LandcoverType[,] Predict(FeatureVector[,] features);
     }
 }
