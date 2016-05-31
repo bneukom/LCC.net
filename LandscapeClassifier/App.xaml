@@ -3,13 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:LandscapeClassifier"
              xmlns:viewModel="clr-namespace:LandscapeClassifier.ViewModel"
-             StartupUri="MainWindow.xaml">
+             xmlns:validationRules="clr-namespace:LandscapeClassifier.View.ValidationRules"
+             StartupUri="View/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/Selen.Wpf.SystemStyles;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            <viewModel:ViewModel x:Key="MainViewModel"></viewModel:ViewModel>
+            <viewModel:MainWindowViewModel x:Key="MainViewModel"></viewModel:MainWindowViewModel>
+            <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -21,21 +21,25 @@ using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace LandscapeClassifier.ViewModel
 {
-    public class ViewModel : INotifyPropertyChanged
+    public class MainWindowViewModel : INotifyPropertyChanged
     {
         private readonly ILandCoverClassifier _classifier;
 
         private AscFile _ascFile;
         private WorldFile _worldFile;
 
-        private BitmapImage _bitmapImage;
+        private BitmapSource _bitmapImage;
         private byte[] _imageData;
-        private Rect _excludeGeometryRect;
+        private Rect _viewportRect;
 
-        private ClassifiedFeatureVector _selectedFeatureVector;
+        private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
         private bool _isTrained;
-        
-        private LandcoverType[,] _predictedLandcoverTypes;
+
+        private BitmapSource _predictedLandcoverImage;
+        private double _overlayOpacity = 0.5d;
+        private string _trainingStatusText;
+        private SolidColorBrush _trainingStatusBrush;
+        private bool _isAllPredicted;
 
         /// <summary>
         /// Export predictions.
@@ -97,9 +101,9 @@ namespace LandscapeClassifier.ViewModel
         /// <summary>
         /// The currently selected feature vector.
         /// </summary>
-        public ClassifiedFeatureVector SelectedFeatureVector
+        public ClassifiedFeatureVectorViewModel SelectedFeatureVector
         {
-            get { return _selectedFeatureVector;  }
+            get { return _selectedFeatureVector; }
             set
             {
                 if (value != _selectedFeatureVector)
@@ -120,7 +124,6 @@ namespace LandscapeClassifier.ViewModel
             {
                 if (value != _worldFile)
                 {
-
                     _worldFile = value;
                     NotifyPropertyChanged("WorldFile");
                 }
@@ -144,17 +147,17 @@ namespace LandscapeClassifier.ViewModel
         }
 
         /// <summary>
-        /// Geometry rect for the viewport of the orthoimage.
+        /// Viewport rectangle which contains all data (asc and orthoimage) used for classification.
         /// </summary>
-        public Rect ExcludeGeometryRect
+        public Rect ViewportRect
         {
-            get { return _excludeGeometryRect; }
+            get { return _viewportRect; }
             set
             {
-                if (value != _excludeGeometryRect)
+                if (value != _viewportRect)
                 {
-                    _excludeGeometryRect = value;
-                    NotifyPropertyChanged("ExcludeGeometryRect");
+                    _viewportRect = value;
+                    NotifyPropertyChanged("ViewportRect");
                 }
             }
         }
@@ -162,7 +165,7 @@ namespace LandscapeClassifier.ViewModel
         /// <summary>
         /// The OrthoImage map.
         /// </summary>
-        public BitmapImage OrthoImage
+        public BitmapSource OrthoImage
         {
             get { return _bitmapImage; }
             set
@@ -182,15 +185,82 @@ namespace LandscapeClassifier.ViewModel
             }
         }
 
-        public LandcoverType[,] PredictedLandcoverTypes
+        /// <summary>
+        /// Prediction bitmap overlay.
+        /// </summary>
+        public BitmapSource PredictedLandcoverImage
         {
-            get { return _predictedLandcoverTypes; }
+            get { return _predictedLandcoverImage; }
             set
             {
-                if (value != _predictedLandcoverTypes)
+                if (value != _predictedLandcoverImage)
                 {
-                    _predictedLandcoverTypes = value;
-                    NotifyPropertyChanged("PredictedLandcoverTypes");
+                    _predictedLandcoverImage = value;
+                    NotifyPropertyChanged("PredictedLandcoverImage");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Opacity overlay.
+        /// </summary>
+        public double OverlayOpacity
+        {
+            get { return _overlayOpacity; }
+            set
+            {
+                if (value != _overlayOpacity)
+                {
+                    _overlayOpacity = value;
+                    NotifyPropertyChanged("OverlayOpacity");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Status text for the training tab.
+        /// </summary>
+        public string TrainingStatusText
+        {
+            get { return _trainingStatusText; }
+            set
+            {
+                if (value != _trainingStatusText)
+                {
+                    _trainingStatusText = value;
+                    NotifyPropertyChanged("TrainingStatusText");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Brush used for the training status label.
+        /// </summary>
+        public SolidColorBrush TrainingStatusBrush
+        {
+            get { return _trainingStatusBrush; }
+            set
+            {
+                if (value != _trainingStatusBrush)
+                {
+                    _trainingStatusBrush = value;
+                    NotifyPropertyChanged("TrainingStatusBrush");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns if all pixels in the prediction tab have been predicted by the classifier.
+        /// </summary>
+        public bool IsAllPredicted
+        {
+            get { return _isAllPredicted; }
+            set
+            {
+                if (value != _isAllPredicted)
+                {
+                    _isAllPredicted = value;
+                    NotifyPropertyChanged("IsAllPredicted");
                 }
             }
         }
@@ -199,7 +269,7 @@ namespace LandscapeClassifier.ViewModel
         /// <summary>
         /// Feature vectors.
         /// </summary>
-        public ObservableCollection<ClassifiedFeatureVector> Features { get; set; }
+        public ObservableCollection<ClassifiedFeatureVectorViewModel> Features { get; set; }
 
         /// <summary>
         /// Possible land cover types.
@@ -212,14 +282,13 @@ namespace LandscapeClassifier.ViewModel
         public LandcoverType SelectedLandCoverType { get; set; }
 
 
-
-        public ViewModel()
+        public MainWindowViewModel()
         {
             _classifier = new BayesLandCoverClassifier();
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
 
-            Features = new ObservableCollection<ClassifiedFeatureVector>();
+            Features = new ObservableCollection<ClassifiedFeatureVectorViewModel>();
 
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
@@ -231,6 +300,10 @@ namespace LandscapeClassifier.ViewModel
 
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
             ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
+
+            Features.CollectionChanged += (sender, args) => { MarkClassifierNotTrained(); };
+
+            MarkClassifierNotTrained();
         }
 
         #region Model Accessers
@@ -325,8 +398,8 @@ namespace LandscapeClassifier.ViewModel
             if (_bitmapImage == null) throw new InvalidOperationException();
 
             // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
-            if (position.Y < 1 || position.Y < 1 
-                || position.X >= _bitmapImage.Width - 1 
+            if (position.Y < 1 || position.Y < 1
+                || position.X >= _bitmapImage.Width - 1
                 || position.Y >= _bitmapImage.Height - 1)
                 return Colors.Black;
 
@@ -335,8 +408,9 @@ namespace LandscapeClassifier.ViewModel
             {
                 for (var y = -1; y <= 1; ++y)
                 {
-                    var stride = (int)_bitmapImage.PixelWidth * (_bitmapImage.Format.BitsPerPixel / 8);
-                    var index = ((int)position.Y + y) * stride + _bitmapImage.Format.BitsPerPixel / 8 * ((int)position.X + x);
+                    var stride = (int) _bitmapImage.PixelWidth*(_bitmapImage.Format.BitsPerPixel/8);
+                    var index = ((int) position.Y + y)*stride +
+                                _bitmapImage.Format.BitsPerPixel/8*((int) position.X + x);
 
                     B += _imageData[index];
                     G += _imageData[index + 1];
@@ -345,7 +419,7 @@ namespace LandscapeClassifier.ViewModel
                 }
             }
 
-            return Color.FromArgb((byte) (A / 8), (byte)(R / 8), (byte)(G / 8), (byte)(B / 8));
+            return Color.FromArgb((byte) (A/8), (byte) (R/8), (byte) (G/8), (byte) (B/8));
         }
 
         /// <summary>
@@ -367,12 +441,12 @@ namespace LandscapeClassifier.ViewModel
         /// <returns></returns>
         public AspectSlope GetSlopeAndAspectAt(Point position)
         {
-            var left = (_ascFile.Xllcorner - _worldFile.X) / _worldFile.PixelSizeX;
+            var left = (_ascFile.Xllcorner - _worldFile.X)/_worldFile.PixelSizeX;
 
             var topWorldCoordinates = _ascFile.Yllcorner +
-                                      _ascFile.Cellsize * _ascFile.Nrows;
+                                      _ascFile.Cellsize*_ascFile.Nrows;
 
-            var topScreenCoordinates = (topWorldCoordinates - _worldFile.Y) /
+            var topScreenCoordinates = (topWorldCoordinates - _worldFile.Y)/
                                        _worldFile.PixelSizeY;
 
             int positionX = (int) (position.X - left);
@@ -398,9 +472,9 @@ namespace LandscapeClassifier.ViewModel
 
 
             float b = (Z3 + 2*Z6 + Z9 - Z1 - 2*Z4 - Z7)/(8*_ascFile.Cellsize);
-            float c = (Z1 + 2 * Z2 + Z3 - Z7 - 2 * Z8 - Z9) / (8 * _ascFile.Cellsize);
+            float c = (Z1 + 2*Z2 + Z3 - Z7 - 2*Z8 - Z9)/(8*_ascFile.Cellsize);
 
-            float slope = (float)Math.Atan(Math.Sqrt(b*b + c*c));
+            float slope = (float) Math.Atan(Math.Sqrt(b*b + c*c));
             double aspect;
 
             if (MoreMath.AlmostZero(c))
@@ -409,7 +483,7 @@ namespace LandscapeClassifier.ViewModel
             }
             else
             {
-                aspect = (float)Math.Atan(b / c);
+                aspect = (float) Math.Atan(b/c);
 
                 if (c > 0)
                 {
@@ -417,16 +491,17 @@ namespace LandscapeClassifier.ViewModel
                 }
                 else if (c < 0 && b > 0)
                 {
-                    aspect += (2 * Math.PI);
+                    aspect += (2*Math.PI);
                 }
             }
 
-            return new AspectSlope(slope, (float)aspect);
+            return new AspectSlope(slope, (float) aspect);
         }
 
-#endregion
-        
+        #endregion
+
         #region Command Implementations
+
         private void ExportTrainingSet()
         {
             // Create an instance of the open file dialog box.
@@ -446,15 +521,14 @@ namespace LandscapeClassifier.ViewModel
                 var csvPath = saveFileDialog.FileName;
                 using (var outputStreamWriter = new StreamWriter(csvPath))
                 {
-                    foreach (var feature in Features)
+                    foreach (var feature in Features.Select(f => f.ClassifiedFeatureVector))
                     {
-
                         outputStreamWriter.WriteLine(
-                            feature.Type + ";" + 
-                            feature.FeatureVector.Color +  ";" + 
-                            feature.FeatureVector.AverageNeighbourhoodColor + ";" + 
-                            feature.FeatureVector.Altitude + ";" + 
-                            feature.FeatureVector.Aspect + ";" + 
+                            feature.Type + ";" +
+                            feature.FeatureVector.Color + ";" +
+                            feature.FeatureVector.AverageNeighbourhoodColor + ";" +
+                            feature.FeatureVector.Altitude + ";" +
+                            feature.FeatureVector.Aspect + ";" +
                             feature.FeatureVector.Slope);
                     }
                 }
@@ -479,7 +553,6 @@ namespace LandscapeClassifier.ViewModel
             var userClickedOk = openFileDialog.ShowDialog();
 
 
-
             // Process input if the user clicked OK.
             if (userClickedOk == true)
             {
@@ -497,10 +570,9 @@ namespace LandscapeClassifier.ViewModel
                     var aspect = float.Parse(line[4]);
                     var slope = float.Parse(line[5]);
 
-                    Features.Add(new ClassifiedFeatureVector(type, new FeatureVector(altitude, color, averageNeighbourhoodColor, aspect, slope)));
+                    Features.Add(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type,
+                        new FeatureVector(altitude, color, averageNeighbourhoodColor, aspect, slope))));
                 }
-
-
             }
         }
 
@@ -509,11 +581,35 @@ namespace LandscapeClassifier.ViewModel
             return true;
         }
 
-        private void Export()
+        private void Train()
+        {
+            _classifier.Train(Features.Select(f => f.ClassifiedFeatureVector).ToList());
+            IsTrained = true;
+
+            MarkClassifierTrained();
+        }
+
+
+        private bool CanTrain()
+        {
+            return Features.Count > 0 && Features.GroupBy(f => f.ClassifiedFeatureVector.Type).Count() >= 2;
+        }
+
+        private void RemoveSelectedFeature()
+        {
+            Features.Remove(SelectedFeatureVector);
+        }
+
+        private bool CanRemoveSelectedFeature()
+        {
+            return SelectedFeatureVector != null;
+        }
+
+        private void ExportPredictions()
         {
             var chooseFolderDialog = new CommonOpenFileDialog
             {
-                Title = "Choose Training Data Folder",
+                Title = "Choose Export Folder",
                 IsFolderPicker = true,
                 AddToMostRecentlyUsedList = false,
                 AllowNonFileSystemItems = false,
@@ -529,59 +625,96 @@ namespace LandscapeClassifier.ViewModel
             {
                 var folder = chooseFolderDialog.FileName;
 
-                // Write CSV Path
-                var csvPath = Path.Combine(folder, Path.ChangeExtension(_worldFile.FileName, ".csv"));
-                using (var outputStreamWriter = new StreamWriter(csvPath))
+                // Write prediction image
+                using (var fileStream = new FileStream(Path.Combine(folder, "classification.png"), FileMode.Create))
                 {
-                    foreach (var feature in Features)
+                    BitmapEncoder encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(PredictedLandcoverImage));
+                    encoder.Save(fileStream);
+                }
+
+                // Write Layer
+                var layerData = new List<byte[]>();
+
+                var width = AscFile.Ncols;
+                var height = AscFile.Nrows;
+                var dpi = 96d;
+
+                var stride = width*4; // 4 bytes per pixel
+
+                for (var layerIndex = 0; layerIndex < Enum.GetValues(typeof(LandcoverType)).Length; ++layerIndex)
+                {
+                    var pixelData = new byte[stride*height];
+                    layerData.Add(pixelData);
+                }
+
+                byte[] predictionImageData = new byte[stride*height];
+                _predictedLandcoverImage.CopyPixels(predictionImageData, stride, 0);
+
+                for (int dataIndex = 0; dataIndex < predictionImageData.Length; dataIndex += 4)
+                {
+                    var b = predictionImageData[dataIndex + 0];
+                    var g = predictionImageData[dataIndex + 1];
+                    var r = predictionImageData[dataIndex + 2];
+                    var a = predictionImageData[dataIndex + 3];
+                    var color = Color.FromArgb(a, r, g, b);
+
+                    int layerIndex = (from type in Enum.GetValues(typeof(LandcoverType)).Cast<LandcoverType>()
+                        where color == type.GetColor()
+                        select (int) type).FirstOrDefault();
+
+                    layerData[layerIndex][dataIndex + 0] = b;
+                    layerData[layerIndex][dataIndex + 1] = g;
+                    layerData[layerIndex][dataIndex + 2] = r;
+                    layerData[layerIndex][dataIndex + 3] = a;
+                }
+
+                for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
+                {
+                    byte[] data = layerData[layerIndex];
+                    var bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
+                        stride);
+
+                    using (
+                        var fileStream = new FileStream(Path.Combine(folder, "layer" + layerIndex + ".png"),
+                            FileMode.Create))
                     {
-                        outputStreamWriter.WriteLine(feature.Type + ";" + feature.FeatureVector.Altitude + ";" + feature.FeatureVector.Aspect + ";" + feature.FeatureVector.Slope + ";" + feature.FeatureVector.AverageNeighbourhoodColor);
+                        BitmapEncoder encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
+                        encoder.Save(fileStream);
                     }
                 }
 
-                // Copy ASC file
-                // File.Copy();
 
+                // Write ortho image
+                byte[] orthoImageData = new byte[stride*height];
+                Int32Rect sourceRect = new Int32Rect((int) ViewportRect.X, (int) ViewportRect.Y,
+                    (int) ViewportRect.Width, (int) ViewportRect.Height);
+                OrthoImage.CopyPixels(sourceRect, orthoImageData, stride, 0);
+
+                // Write prediction image
+                using (var fileStream = new FileStream(Path.Combine(folder, "orthophoto.png"), FileMode.Create))
+                {
+                    var encoder = new PngBitmapEncoder();
+                    var orthoImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null,
+                        orthoImageData, stride);
+                    encoder.Frames.Add(BitmapFrame.Create(orthoImage));
+                    encoder.Save(fileStream);
+                }
             }
-        }
-
-        private void Train()
-        {
-            _classifier.Train(Features.ToList());
-            IsTrained = true;
-        }
-
-        private bool CanTrain()
-        {
-            return Features.Count > 0 && Features.GroupBy(f => f.Type).Count() >= 2;
-        }
-
-        private void RemoveSelectedFeature()
-        {
-            Features.Remove(SelectedFeatureVector);
-        }
-
-        private bool CanRemoveSelectedFeature()
-        {
-            return SelectedFeatureVector != null;
-        }
-
-        private void ExportPredictions()
-        {
-           
         }
 
         private bool CanExportPredictions()
         {
-            return PredictedLandcoverTypes != null;
+            return PredictedLandcoverImage != null;
         }
 
         private void PredictAll()
         {
             // @TODO create transformation matrix
-            var left = (AscFile.Xllcorner - WorldFile.X) / WorldFile.PixelSizeX;
-            var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize * AscFile.Nrows;
-            var topScreenCoordinates = (topWorldCoordinates - WorldFile.Y) / WorldFile.PixelSizeY;
+            var left = (AscFile.Xllcorner - WorldFile.X)/WorldFile.PixelSizeX;
+            var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize*AscFile.Nrows;
+            var topScreenCoordinates = (topWorldCoordinates - WorldFile.Y)/WorldFile.PixelSizeY;
 
             // @TODO only works because AscFile#CellSize == WorldFile#CellSize
             var width = AscFile.Ncols;
@@ -602,10 +735,9 @@ namespace LandscapeClassifier.ViewModel
                         slopeAndAspectAt.Aspect, slopeAndAspectAt.Slope);
                 }
             }
-
             // Predict
             var prediction = _classifier.Predict(features);
-            PredictedLandcoverTypes = prediction;
+            PredictedLandcoverImage = prediction;
         }
 
         private bool CanPredictAll()
@@ -613,9 +745,10 @@ namespace LandscapeClassifier.ViewModel
             return IsTrained;
         }
 
-#endregion
+        #endregion
 
         #region Property Change Support
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
@@ -628,7 +761,21 @@ namespace LandscapeClassifier.ViewModel
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
         }
-#endregion
 
+        private void MarkClassifierNotTrained()
+        {
+            TrainingStatusText = "Classifier is NOT trained";
+            TrainingStatusBrush = new SolidColorBrush(Colors.DarkRed);
+            IsTrained = false;
+            PredictedLandcoverImage = null;
+        }
+
+        private void MarkClassifierTrained()
+        {
+            TrainingStatusText = "Classifier is trained";
+            TrainingStatusBrush = new SolidColorBrush(Colors.White);
+        }
+
+        #endregion
     }
 }

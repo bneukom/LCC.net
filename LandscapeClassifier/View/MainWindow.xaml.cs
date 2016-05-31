@@ -7,11 +7,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
+using LandscapeClassifier.ViewModel;
 using MahApps.Metro.Controls;
 using Microsoft.Win32;
-using Xceed.Wpf.Toolkit.PropertyGrid;
 
-namespace LandscapeClassifier
+namespace LandscapeClassifier.View
 {
     /// <summary>
     ///     Interaction logic for MainWindow.xaml
@@ -23,14 +23,13 @@ namespace LandscapeClassifier
         private Point? _lastDragPoint;
         private Point? _lastMousePositionOnTarget;
 
-        private readonly ViewModel.ViewModel _viewModel;
+        private readonly ViewModel.MainWindowViewModel _mainWindowViewModel;
 
         public MainWindow()
         {
             InitializeComponent();
-            _viewModel = (ViewModel.ViewModel) DataContext;
+            _mainWindowViewModel = (ViewModel.MainWindowViewModel) DataContext;
         }
-
 
         private void OpenDEM_Click(object sender, RoutedEventArgs e)
         {
@@ -50,21 +49,21 @@ namespace LandscapeClassifier
             {
                 DEMPath.Content = openFileDialog.FileName;
 
-                _viewModel.AscFile = AscFile.FromFile(openFileDialog.FileName);
+                _mainWindowViewModel.AscFile = AscFile.FromFile(openFileDialog.FileName);
 
                 // @TODO transformation matrix
-                var left = (_viewModel.AscFile.Xllcorner - _viewModel.WorldFile.X) / _viewModel.WorldFile.PixelSizeX;
+                var left = (_mainWindowViewModel.AscFile.Xllcorner - _mainWindowViewModel.WorldFile.X) / _mainWindowViewModel.WorldFile.PixelSizeX;
 
-                var topWorldCoordinates = _viewModel.AscFile.Yllcorner +
-                                          _viewModel.AscFile.Cellsize * _viewModel.AscFile.Nrows;
+                var topWorldCoordinates = _mainWindowViewModel.AscFile.Yllcorner +
+                                          _mainWindowViewModel.AscFile.Cellsize * _mainWindowViewModel.AscFile.Nrows;
 
-                var topScreenCoordinates = (topWorldCoordinates - _viewModel.WorldFile.Y) /
-                                           _viewModel.WorldFile.PixelSizeY;
+                var topScreenCoordinates = (topWorldCoordinates - _mainWindowViewModel.WorldFile.Y) /
+                                           _mainWindowViewModel.WorldFile.PixelSizeY;
 
-                var width = _viewModel.AscFile.Ncols;
-                var height = _viewModel.AscFile.Nrows;
+                var width = _mainWindowViewModel.AscFile.Ncols;
+                var height = _mainWindowViewModel.AscFile.Nrows;
 
-                _viewModel.ExcludeGeometryRect = new Rect(new Point(left, topScreenCoordinates), new Size(width, height));
+                _mainWindowViewModel.ViewportRect = new Rect(new Point(left, topScreenCoordinates), new Size(width, height));
             }
         }
 
@@ -88,13 +87,36 @@ namespace LandscapeClassifier
                 var directoryName = Path.GetDirectoryName(openFileDialog.FileName);
                 OrthoImagePath.Content = openFileDialog.FileName;
 
-                _viewModel.OrthoImage = new BitmapImage(new Uri(openFileDialog.FileName));
+                // var sourceImage = new BitmapImage(new Uri(openFileDialog.FileName));
+
+                var sourceImage = new BitmapImage();
+                using (var stream = File.OpenRead(openFileDialog.FileName))
+                {
+                    sourceImage.BeginInit();
+                    sourceImage.CacheOption = BitmapCacheOption.OnLoad;
+                    sourceImage.StreamSource = stream;
+                    sourceImage.EndInit();
+                }
+
+                var dpi = 96d;
+                var width = sourceImage.PixelWidth;
+                var height = sourceImage.PixelHeight;
+
+                var stride = width * 4; // 4 bytes per pixel
+                byte[] pixelData = new byte[stride * height];
+                sourceImage.CopyPixels(pixelData, stride, 0);
+
+                var scaledImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, pixelData, stride);
+                
+                // _mainWindowViewModel.OrthoImage = new BitmapImage(new Uri(openFileDialog.FileName));
+                _mainWindowViewModel.OrthoImage = scaledImage;
 
                 var worldFilePath = directoryName + "\\" + Path.GetFileNameWithoutExtension(openFileDialog.FileName) +
                                     ".tfw";
 
-                _viewModel.WorldFile = WorldFile.FromFile(worldFilePath);
+                _mainWindowViewModel.WorldFile = WorldFile.FromFile(worldFilePath);
                 OpenDEM.IsEnabled = true;
+
             }
         }
 
@@ -123,33 +145,33 @@ namespace LandscapeClassifier
             var scrollViewer = (ScrollViewer)sender;
 
             // Update info label
-            if (_viewModel.WorldFile != null)
+            if (_mainWindowViewModel.WorldFile != null)
             {
                 var position = e.GetPosition(TrainingOrthoImage);
                 PixelPosition.Content = "(" + (int)position.X + ", " + (int)position.Y + ")";
 
                 // Position in LV95 coordinate system
-                var lv95X = (int)(position.X * _viewModel.WorldFile.PixelSizeX + _viewModel.WorldFile.X);
-                var lv95Y = (int)(position.Y * _viewModel.WorldFile.PixelSizeY + _viewModel.WorldFile.Y);
+                var lv95X = (int)(position.X * _mainWindowViewModel.WorldFile.PixelSizeX + _mainWindowViewModel.WorldFile.X);
+                var lv95Y = (int)(position.Y * _mainWindowViewModel.WorldFile.PixelSizeY + _mainWindowViewModel.WorldFile.Y);
                 LV95Position.Content = "(" + lv95X + ", " + lv95Y + ")";
 
                 // Color
-                var color = _viewModel.GetColorAt(position);
+                var color = _mainWindowViewModel.GetColorAt(position);
                 ColorLabel.Content = color;
                 ColorLabel.Background = new SolidColorBrush(color);
 
                 // AverageNeighbourhoodColor
-                var luma = _viewModel.GetLuminance(position);
+                var luma = _mainWindowViewModel.GetLuminance(position);
                 LumaLabel.Content = (int)luma;
 
-                if (_viewModel.AscFile != null)
+                if (_mainWindowViewModel.AscFile != null)
                 {
                     // Altitude
-                    var altitude = _viewModel.GetAscDataAt(position);
-                    AltitudeLabel.Content = (altitude != _viewModel.AscFile.NoDataValue) ? altitude + "m" : "???";
+                    var altitude = _mainWindowViewModel.GetAscDataAt(position);
+                    AltitudeLabel.Content = (altitude != _mainWindowViewModel.AscFile.NoDataValue) ? altitude + "m" : "???";
 
                     // Slope and Aspect
-                    var aspectSlope = _viewModel.GetSlopeAndAspectAt(position);
+                    var aspectSlope = _mainWindowViewModel.GetSlopeAndAspectAt(position);
                     AspectLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Aspect), 2) + "°";
                     SlopeLabel.Content = Math.Round(MoreMath.ToDegrees(aspectSlope.Slope), 2) + "°";
                 }
@@ -165,15 +187,15 @@ namespace LandscapeClassifier
             var scrollViewer = (ScrollViewer)sender;
 
             // Prediction at position
-            if (_viewModel.WorldFile != null && _viewModel.AscFile != null && _viewModel.IsTrained)
+            if (_mainWindowViewModel.WorldFile != null && _mainWindowViewModel.AscFile != null && _mainWindowViewModel.IsTrained)
             {
                 var position = e.GetPosition(PredictionOrthoImage);
 
-                var altitude = _viewModel.GetAscDataAt(position);
-                var averageNeighborhoodColor = _viewModel.GetAverageNeighborhoodColor(position);
-                var color = _viewModel.GetColorAt(position);
-                var aspectSlope = _viewModel.GetSlopeAndAspectAt(position);
-                var prediciton = _viewModel.Predict(new FeatureVector(altitude, color, averageNeighborhoodColor, aspectSlope.Aspect, aspectSlope.Slope));
+                var altitude = _mainWindowViewModel.GetAscDataAt(position);
+                var averageNeighborhoodColor = _mainWindowViewModel.GetAverageNeighborhoodColor(position);
+                var color = _mainWindowViewModel.GetColorAt(position);
+                var aspectSlope = _mainWindowViewModel.GetSlopeAndAspectAt(position);
+                var prediciton = _mainWindowViewModel.Predict(new FeatureVector(altitude, color, averageNeighborhoodColor, aspectSlope.Aspect, aspectSlope.Slope));
                 LandcoverPredictionLabel.Content = prediciton;
             }
 
@@ -224,17 +246,17 @@ namespace LandscapeClassifier
         private void TrainingImageScrollViewer_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             // Add feature
-            if (_viewModel.WorldFile != null && _viewModel.AscFile != null)
+            if (_mainWindowViewModel.WorldFile != null && _mainWindowViewModel.AscFile != null)
             {
                 var position = e.GetPosition(TrainingOrthoImage);
 
-                var color = _viewModel.GetColorAt(position);
-                var averageNeighborhoodColor = _viewModel.GetAverageNeighborhoodColor(position);
-                var altitude = _viewModel.GetAscDataAt(position);
-                var landCoverType = _viewModel.SelectedLandCoverType;
-                var slopeAspect = _viewModel.GetSlopeAndAspectAt(position);
+                var color = _mainWindowViewModel.GetColorAt(position);
+                var averageNeighborhoodColor = _mainWindowViewModel.GetAverageNeighborhoodColor(position);
+                var altitude = _mainWindowViewModel.GetAscDataAt(position);
+                var landCoverType = _mainWindowViewModel.SelectedLandCoverType;
+                var slopeAspect = _mainWindowViewModel.GetSlopeAndAspectAt(position);
 
-                _viewModel.Features.Add(new ClassifiedFeatureVector(landCoverType, new FeatureVector(altitude, color, averageNeighborhoodColor, slopeAspect.Aspect, slopeAspect.Slope)));
+                _mainWindowViewModel.Features.Add(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(landCoverType, new FeatureVector(altitude, color, averageNeighborhoodColor, slopeAspect.Aspect, slopeAspect.Slope))));
             }
         }
 

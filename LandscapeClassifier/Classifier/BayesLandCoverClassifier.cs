@@ -4,12 +4,15 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.ML;
 using Emgu.CV.ML.MlEnum;
 using Emgu.CV.Structure;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.ViewModel;
 
 namespace LandscapeClassifier.Classifier
 {
@@ -18,18 +21,18 @@ namespace LandscapeClassifier.Classifier
         
         private NormalBayesClassifier classifier;
 
-        private const int FeaturesPerVector = 6;
+        private const int FeaturesPerVector = 5;
 
         public BayesLandCoverClassifier()
         {
-            classifier = new NormalBayesClassifier();
+            
         }
 
         // TODO http://www.emgu.com/wiki/index.php/Normal_Bayes_Classifier_in_CSharp
         // TODO http://www.bytefish.de/pdf/machinelearning.pdf
         public void Train(List<ClassifiedFeatureVector> samples)
         {
-
+            classifier = new NormalBayesClassifier();
             Matrix<float> trainData = new Matrix<float>(samples.Count, FeaturesPerVector);
             Matrix<int> trainClasses = new Matrix<int>(samples.Count, 1);
 
@@ -42,11 +45,16 @@ namespace LandscapeClassifier.Classifier
                 trainClasses[featureIndex, 0] = (int) classifiedFeature.Type;
 
                 trainData[featureIndex, 0] = classifiedFeature.FeatureVector.Altitude;
-                trainData[featureIndex, 1] = classifiedFeature.FeatureVector.Color.R;
-                trainData[featureIndex, 2] = classifiedFeature.FeatureVector.Color.G;
-                trainData[featureIndex, 3] = classifiedFeature.FeatureVector.Color.B;
-                trainData[featureIndex, 4] = classifiedFeature.FeatureVector.Aspect;
-                trainData[featureIndex, 5] = classifiedFeature.FeatureVector.Slope;
+                trainData[featureIndex, 1] = (classifiedFeature.FeatureVector.Color.A << 24) 
+                                            | (classifiedFeature.FeatureVector.Color.R << 16) 
+                                            | (classifiedFeature.FeatureVector.Color.G << 8) 
+                                            | classifiedFeature.FeatureVector.Color.B;
+                trainData[featureIndex, 2] = (classifiedFeature.FeatureVector.AverageNeighbourhoodColor.A << 24) 
+                    | (classifiedFeature.FeatureVector.AverageNeighbourhoodColor.R << 16) 
+                    | (classifiedFeature.FeatureVector.AverageNeighbourhoodColor.G << 8) 
+                    | classifiedFeature.FeatureVector.AverageNeighbourhoodColor.B;
+                trainData[featureIndex, 3] = classifiedFeature.FeatureVector.Aspect;
+                trainData[featureIndex, 4] = classifiedFeature.FeatureVector.Slope;
             }
 
             using (TrainData data = new TrainData(trainData, DataLayoutType.RowSample, trainClasses))
@@ -63,11 +71,16 @@ namespace LandscapeClassifier.Classifier
                 Data =
                 {
                     [0, 0] = feature.Altitude,
-                    [0, 1] = feature.Color.R,
-                    [0, 2] = feature.Color.G,
-                    [0, 3] = feature.Color.B,
-                    [0, 4] = feature.Aspect,
-                    [0, 5] = feature.Slope
+                    [0, 1] = (feature.Color.A << 24) 
+                            | (feature.Color.R << 16) 
+                            | (feature.Color.G << 8) 
+                            | feature.Color.B,
+                    [0, 2] = (feature.AverageNeighbourhoodColor.A << 24) 
+                                | (feature.AverageNeighbourhoodColor.R << 16) 
+                                | (feature.AverageNeighbourhoodColor.G << 8) 
+                                | feature.AverageNeighbourhoodColor.B,
+                    [0, 3] = feature.Aspect,
+                    [0, 4] = feature.Slope
                 }
             };
 
@@ -76,7 +89,7 @@ namespace LandscapeClassifier.Classifier
             return (LandcoverType)result;
         }
 
-        public LandcoverType[,] Predict(FeatureVector[,] features)
+        public BitmapSource Predict(FeatureVector[,] features)
         {
             var dimensionY = features.GetLength(0);
             var dimensionX = features.GetLength(1);
@@ -89,24 +102,41 @@ namespace LandscapeClassifier.Classifier
                     var feature = features[y, x];
                     var featureIndex = y*dimensionX + x;
                     sampleMat.Data[featureIndex, 0] = feature.Altitude;
-                    sampleMat.Data[featureIndex, 1] = feature.Color.R;
-                    sampleMat.Data[featureIndex, 2] = feature.Color.G;
-                    sampleMat.Data[featureIndex, 3] = feature.Color.B;
-                    sampleMat.Data[featureIndex, 4] = feature.Aspect;
-                    sampleMat.Data[featureIndex, 5] = feature.Slope;
+                    sampleMat.Data[featureIndex, 1] = (feature.Color.A << 24) | (feature.Color.R << 16) |
+                                                      (feature.Color.G << 8) | feature.Color.B;
+                    sampleMat.Data[featureIndex, 2] = (feature.AverageNeighbourhoodColor.A << 24) | (feature.AverageNeighbourhoodColor.R << 16) |
+                                                      (feature.AverageNeighbourhoodColor.G << 8) | feature.AverageNeighbourhoodColor.B;
+                    sampleMat.Data[featureIndex, 3] = feature.Aspect;
+                    sampleMat.Data[featureIndex, 4] = feature.Slope;
                 }
             }
 
-            LandcoverType[,] predictions = new LandcoverType[dimensionY, dimensionX];
+
+            var dpi = 96d;
+            var width = dimensionX;
+            var height = dimensionY;
+
+            var stride = width * 4; // 4 bytes per pixel
+            var pixelData = new byte[stride * height];
+
             for (var row = 0; row < sampleMat.Rows; row++)
             {
                 var prediction = (int)classifier.Predict(sampleMat.GetRow(row));
                 var y = row / dimensionX;
                 var x = row % dimensionX;
-                predictions[y, x] = (LandcoverType) prediction;
+                var landCoverType = (LandcoverType) prediction;
+                var color = landCoverType.GetColor();
+
+                pixelData[row * 4 + 0] = color.B;
+                pixelData[row * 4 + 1] = color.G;
+                pixelData[row * 4 + 2] = color.R;
+                pixelData[row * 4 + 3] = color.A;
             }
 
-            return predictions;
+            var predictionBitmapSource = BitmapSource.Create(dimensionX, dimensionY, dpi, dpi,  PixelFormats.Bgra32,
+                null, pixelData, stride);
+
+            return predictionBitmapSource;
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using LandscapeClassifier.Model;
 
 namespace LandscapeClassifier.Classifier
@@ -27,6 +28,6 @@ namespace LandscapeClassifier.Classifier
         /// </summary>
         /// <param name="features"></param>
         /// <returns></returns>
-        LandcoverType[,] Predict(FeatureVector[,] features);
+        BitmapSource Predict(FeatureVector[,] features);
     }
 }
