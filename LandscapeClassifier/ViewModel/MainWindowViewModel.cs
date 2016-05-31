@@ -197,6 +197,8 @@ namespace LandscapeClassifier.ViewModel
                 {
                     _predictedLandcoverImage = value;
                     NotifyPropertyChanged("PredictedLandcoverImage");
+
+                    IsAllPredicted = value != null;
                 }
             }
         }
@@ -277,9 +279,19 @@ namespace LandscapeClassifier.ViewModel
         public IEnumerable<string> LandCoverTypesEnumerable { get; set; }
 
         /// <summary>
+        /// Possible classifiers.
+        /// </summary>
+        public IEnumerable<string> ClassifiersEnumerable { get; set; }
+
+        /// <summary>
         /// The current land cover type.
         /// </summary>
         public LandcoverType SelectedLandCoverType { get; set; }
+
+        /// <summary>
+        /// The current classifier.
+        /// </summary>
+        public Classifier.Classifier SelectededClassifier { get; set; }
 
 
         public MainWindowViewModel()
@@ -287,6 +299,7 @@ namespace LandscapeClassifier.ViewModel
             _classifier = new BayesLandCoverClassifier();
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
+            ClassifiersEnumerable = Enum.GetNames(typeof(Classifier.Classifier));
 
             Features = new ObservableCollection<ClassifiedFeatureVectorViewModel>();
 
@@ -633,19 +646,38 @@ namespace LandscapeClassifier.ViewModel
                     encoder.Save(fileStream);
                 }
 
-                // Write Layer
-                var layerData = new List<byte[]>();
-
+                // Write ortho image
                 var width = AscFile.Ncols;
                 var height = AscFile.Nrows;
                 var dpi = 96d;
 
                 var stride = width*4; // 4 bytes per pixel
 
+                byte[] orthoImageData = new byte[stride*height];
+                Int32Rect sourceRect = new Int32Rect((int) ViewportRect.X, (int) ViewportRect.Y,
+                    (int) ViewportRect.Width, (int) ViewportRect.Height);
+                OrthoImage.CopyPixels(sourceRect, orthoImageData, stride, 0);
+
+                // Write prediction image
+                using (var fileStream = new FileStream(Path.Combine(folder, "orthophoto.png"), FileMode.Create))
+                {
+                    var encoder = new PngBitmapEncoder();
+                    var orthoImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null,
+                        orthoImageData, stride);
+                    encoder.Frames.Add(BitmapFrame.Create(orthoImage));
+                    encoder.Save(fileStream);
+                }
+
+                // Write Layers
+                var layerData = new List<byte[]>();
+                var colorMapData = new List<byte[]>();
+
                 for (var layerIndex = 0; layerIndex < Enum.GetValues(typeof(LandcoverType)).Length; ++layerIndex)
                 {
-                    var pixelData = new byte[stride*height];
-                    layerData.Add(pixelData);
+                    var layerDataArray = new byte[stride*height];
+                    var colorMapDataArray = new byte[stride * height];
+                    layerData.Add(layerDataArray);
+                    colorMapData.Add(colorMapDataArray);
                 }
 
                 byte[] predictionImageData = new byte[stride*height];
@@ -663,18 +695,24 @@ namespace LandscapeClassifier.ViewModel
                         where color == type.GetColor()
                         select (int) type).FirstOrDefault();
 
-                    layerData[layerIndex][dataIndex + 0] = b;
-                    layerData[layerIndex][dataIndex + 1] = g;
-                    layerData[layerIndex][dataIndex + 2] = r;
-                    layerData[layerIndex][dataIndex + 3] = a;
+                    layerData[layerIndex][dataIndex + 0] = 0;
+                    layerData[layerIndex][dataIndex + 1] = 0;
+                    layerData[layerIndex][dataIndex + 2] = 0;
+                    layerData[layerIndex][dataIndex + 3] = 0;
+
+                    colorMapData[layerIndex][dataIndex + 0] = orthoImageData[dataIndex + 0];
+                    colorMapData[layerIndex][dataIndex + 1] = orthoImageData[dataIndex + 1];
+                    colorMapData[layerIndex][dataIndex + 2] = orthoImageData[dataIndex + 2];
+                    colorMapData[layerIndex][dataIndex + 3] = orthoImageData[dataIndex + 3];
                 }
 
                 for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
                 {
-                    byte[] data = layerData[layerIndex];
+                    var data = layerData[layerIndex];
                     var bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
                         stride);
 
+                    // write layer
                     using (
                         var fileStream = new FileStream(Path.Combine(folder, "layer" + layerIndex + ".png"),
                             FileMode.Create))
@@ -683,23 +721,20 @@ namespace LandscapeClassifier.ViewModel
                         encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
                         encoder.Save(fileStream);
                     }
-                }
 
+                    data = colorMapData[layerIndex];
+                    bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
+                        stride);
 
-                // Write ortho image
-                byte[] orthoImageData = new byte[stride*height];
-                Int32Rect sourceRect = new Int32Rect((int) ViewportRect.X, (int) ViewportRect.Y,
-                    (int) ViewportRect.Width, (int) ViewportRect.Height);
-                OrthoImage.CopyPixels(sourceRect, orthoImageData, stride, 0);
-
-                // Write prediction image
-                using (var fileStream = new FileStream(Path.Combine(folder, "orthophoto.png"), FileMode.Create))
-                {
-                    var encoder = new PngBitmapEncoder();
-                    var orthoImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null,
-                        orthoImageData, stride);
-                    encoder.Frames.Add(BitmapFrame.Create(orthoImage));
-                    encoder.Save(fileStream);
+                    // write color map
+                    using (
+                       var fileStream = new FileStream(Path.Combine(folder, "colorMap" + layerIndex + ".png"),
+                           FileMode.Create))
+                    {
+                        BitmapEncoder encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
+                        encoder.Save(fileStream);
+                    }
                 }
             }
         }

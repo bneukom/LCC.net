@@ -180,8 +180,11 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Classifier\BayesLandCoverClassifier.cs" />
+    <Compile Include="Classifier\Classifier.cs" />
     <Compile Include="Classifier\ILandCoverClassifier.cs" />
+    <Compile Include="Classifier\NeuralNetworkLandCoverClassifier.cs" />
     <Compile Include="Converter\ColorToBrushConverter.cs" />
+    <Compile Include="Converter\DoubleRoundingConverter.cs" />
     <Compile Include="Model\ClassifiedFeatureVector.cs" />
     <Compile Include="Util\MoreMath.cs" />
     <Compile Include="Model\AscFile.cs" />

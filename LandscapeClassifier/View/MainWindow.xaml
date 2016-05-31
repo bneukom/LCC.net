@@ -74,6 +74,7 @@
                         <Grid Grid.Row="0 " Grid.Column="1">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -81,29 +82,37 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right">
-                                <Label x:Name="ComboInfo" Content="Landcover Type"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
-                                <ComboBox SelectedIndex="0" SelectedValue="{Binding SelectedLandCoverType}" ItemsSource="{Binding LandCoverTypesEnumerable}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <ListBox x:Name="FeaturesListBox" Width="250" Grid.Row="1" HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedFeatureVector}" ItemsSource="{Binding Features}"  >
-                                <!-- TODO very slow, use ViewModel -->
+                            <Grid Grid.Row="0" >
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" ></ColumnDefinition>
+                                    <ColumnDefinition Width="Auto" ></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+                                <Label Grid.Column="0" Content="Classifier"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                <ComboBox SelectedIndex="0" Grid.Column="1" SelectedValue="{Binding SelectededClassifier}" ItemsSource="{Binding ClassifiersEnumerable}"   HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Grid Grid.Row="1" >
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" ></ColumnDefinition>
+                                    <ColumnDefinition Width="Auto" ></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+                                <Label x:Name="ComboInfo" Grid.Column="0" Content="Landcover Type"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                <ComboBox SelectedIndex="0" Grid.Column="1" SelectedValue="{Binding SelectedLandCoverType}" ItemsSource="{Binding LandCoverTypesEnumerable}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
+                            </Grid>
+                            <ListBox x:Name="FeaturesListBox" Width="250" Grid.Row="2" HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedFeatureVector}" ItemsSource="{Binding Features}"  >
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <DataTemplate.Resources>
-                                            <converter:ColorToBrushConverter x:Key="ColorToBrushConverter" />
-                                        </DataTemplate.Resources>
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Foreground="{Binding TypeColorBrush, Mode=OneWay}" Text="{Binding TypeText, Mode=OneWay}" Margin="2,2,2,2"></TextBlock>
-                                            <TextBlock Foreground="White" Text="{Binding FeatureText, Mode=OneWay}" Margin="2,2,2,2"></TextBlock>
+                                            <TextBlock Foreground="{Binding TypeColorBrush, Mode=OneWay, Delay=1000}" Text="{Binding TypeText, Mode=OneWay}" Margin="2,2,2,2"></TextBlock>
+                                            <TextBlock Foreground="White" Text="{Binding FeatureText, Mode=OneWay, Delay=1000}" Margin="2,2,2,2"></TextBlock>
                                         </StackPanel>
                                     </DataTemplate> 
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <Button Grid.Column="0" Grid.Row="2" x:Name="RemoveButton" Command="{Binding RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="3" Command="{Binding RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="4" Content="Export Features" Command="{Binding ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="5" Content="Import Features" Command="{Binding ImportFeatureCommand}" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="6" Content="Train Features" Command="{Binding TrainCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="3" x:Name="RemoveButton" Command="{Binding RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="4" Command="{Binding RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="5" Content="Export Features" Command="{Binding ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="6" Content="Import Features" Command="{Binding ImportFeatureCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="7" Content="Train Features" Command="{Binding TrainCommand}" Margin="5,5,5,0"></Button>
                         </Grid>
 
                         <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2">
@@ -143,10 +152,13 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Orientation="Horizontal"  HorizontalAlignment="Stretch"  VerticalAlignment="Stretch">
+                            <StackPanel.Resources>
+                                <converter:DoubleRoundingConverter x:Key="DoubleRoundingConverter" />
+                            </StackPanel.Resources>
                             <Button Height="25" Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictAllCommand}"></Button>
                             <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Overlay Transparency:"></TextBlock>
                             <Slider Orientation="Horizontal" IsEnabled="{Binding IsAllPredicted}" Value="{Binding OverlayOpacity}" Minimum="0" Maximum="1" Width="100" TickPlacement="BottomRight" TickFrequency="0.1" VerticalAlignment="Center"></Slider>
-                            <TextBlock Margin="0,5,5,5" IsEnabled="{Binding IsAllPredicted}" Text="{Binding OverlayOpacity}" VerticalAlignment="Center" Width="50"/>
+                            <TextBlock Margin="0,5,5,5" IsEnabled="{Binding IsAllPredicted}" Text="{Binding OverlayOpacity, Converter={StaticResource DoubleRoundingConverter}}" VerticalAlignment="Center" Width="50"/>
                             <Button Height="25" Content="Export Predictions" Command="{Binding ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
                         </StackPanel>
 
