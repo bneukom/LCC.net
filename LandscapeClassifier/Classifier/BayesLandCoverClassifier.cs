@@ -11,6 +11,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.ML;
 using Emgu.CV.ML.MlEnum;
 using Emgu.CV.Structure;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.ViewModel;
 
@@ -36,7 +37,6 @@ namespace LandscapeClassifier.Classifier
             Matrix<float> trainData = new Matrix<float>(samples.Count, FeaturesPerVector);
             Matrix<int> trainClasses = new Matrix<int>(samples.Count, 1);
 
-            trainData.Data[0, 0] = 3;
 
             for (var featureIndex = 0; featureIndex < samples.Count; ++ featureIndex)
             {
@@ -45,14 +45,8 @@ namespace LandscapeClassifier.Classifier
                 trainClasses[featureIndex, 0] = (int) classifiedFeature.Type;
 
                 trainData[featureIndex, 0] = classifiedFeature.FeatureVector.Altitude;
-                trainData[featureIndex, 1] = (classifiedFeature.FeatureVector.Color.A << 24) 
-                                            | (classifiedFeature.FeatureVector.Color.R << 16) 
-                                            | (classifiedFeature.FeatureVector.Color.G << 8) 
-                                            | classifiedFeature.FeatureVector.Color.B;
-                trainData[featureIndex, 2] = (classifiedFeature.FeatureVector.AverageNeighbourhoodColor.A << 24) 
-                    | (classifiedFeature.FeatureVector.AverageNeighbourhoodColor.R << 16) 
-                    | (classifiedFeature.FeatureVector.AverageNeighbourhoodColor.G << 8) 
-                    | classifiedFeature.FeatureVector.AverageNeighbourhoodColor.B;
+                trainData[featureIndex, 1] = classifiedFeature.FeatureVector.Color.GetARGB();
+                trainData[featureIndex, 2] = classifiedFeature.FeatureVector.AverageNeighbourhoodColor.GetARGB();
                 trainData[featureIndex, 3] = classifiedFeature.FeatureVector.Aspect;
                 trainData[featureIndex, 4] = classifiedFeature.FeatureVector.Slope;
             }
@@ -71,14 +65,8 @@ namespace LandscapeClassifier.Classifier
                 Data =
                 {
                     [0, 0] = feature.Altitude,
-                    [0, 1] = (feature.Color.A << 24) 
-                            | (feature.Color.R << 16) 
-                            | (feature.Color.G << 8) 
-                            | feature.Color.B,
-                    [0, 2] = (feature.AverageNeighbourhoodColor.A << 24) 
-                                | (feature.AverageNeighbourhoodColor.R << 16) 
-                                | (feature.AverageNeighbourhoodColor.G << 8) 
-                                | feature.AverageNeighbourhoodColor.B,
+                    [0, 1] = feature.Color.GetARGB(),
+                    [0, 2] = feature.AverageNeighbourhoodColor.GetARGB(),
                     [0, 3] = feature.Aspect,
                     [0, 4] = feature.Slope
                 }

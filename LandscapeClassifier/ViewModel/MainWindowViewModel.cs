@@ -23,8 +23,6 @@ namespace LandscapeClassifier.ViewModel
 {
     public class MainWindowViewModel : INotifyPropertyChanged
     {
-        private readonly ILandCoverClassifier _classifier;
-
         private AscFile _ascFile;
         private WorldFile _worldFile;
 
@@ -40,6 +38,9 @@ namespace LandscapeClassifier.ViewModel
         private string _trainingStatusText;
         private SolidColorBrush _trainingStatusBrush;
         private bool _isAllPredicted;
+        private Classifier.Classifier _selectededClassifier;
+        private ILandCoverClassifier _currentClassifier;
+
 
         /// <summary>
         /// Export predictions.
@@ -267,6 +268,27 @@ namespace LandscapeClassifier.ViewModel
             }
         }
 
+        /// <summary>
+        /// Property name of the <see cref="SelectededClassifier"/>
+        /// </summary>
+        public const string SelectedClassifierProperty = "SelectededClassifier";
+
+        /// <summary>
+        /// The current classifier.
+        /// </summary>
+        public Classifier.Classifier SelectededClassifier
+        {
+            get { return _selectededClassifier; }
+            set
+            {
+                if (value != _selectededClassifier)
+                {
+                    _selectededClassifier = value;
+                    NotifyPropertyChanged(SelectedClassifierProperty);
+                }
+                
+            }
+        }
 
         /// <summary>
         /// Feature vectors.
@@ -288,15 +310,9 @@ namespace LandscapeClassifier.ViewModel
         /// </summary>
         public LandcoverType SelectedLandCoverType { get; set; }
 
-        /// <summary>
-        /// The current classifier.
-        /// </summary>
-        public Classifier.Classifier SelectededClassifier { get; set; }
-
 
         public MainWindowViewModel()
         {
-            _classifier = new BayesLandCoverClassifier();
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
             ClassifiersEnumerable = Enum.GetNames(typeof(Classifier.Classifier));
@@ -316,6 +332,17 @@ namespace LandscapeClassifier.ViewModel
 
             Features.CollectionChanged += (sender, args) => { MarkClassifierNotTrained(); };
 
+            PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == SelectedClassifierProperty)
+                {
+                    _currentClassifier = SelectededClassifier.CreateClassifier();
+                    MarkClassifierNotTrained();
+                }
+            };
+            SelectededClassifier = Classifier.Classifier.Bayes;
+            _currentClassifier = SelectededClassifier.CreateClassifier();
+
             MarkClassifierNotTrained();
         }
 
@@ -328,7 +355,7 @@ namespace LandscapeClassifier.ViewModel
         /// <returns></returns>
         public LandcoverType Predict(FeatureVector feature)
         {
-            return _classifier.Predict(feature);
+            return _currentClassifier.Predict(feature);
         }
 
         // @TODO coordinate system?
@@ -596,7 +623,7 @@ namespace LandscapeClassifier.ViewModel
 
         private void Train()
         {
-            _classifier.Train(Features.Select(f => f.ClassifiedFeatureVector).ToList());
+            _currentClassifier.Train(Features.Select(f => f.ClassifiedFeatureVector).ToList());
             IsTrained = true;
 
             MarkClassifierTrained();
@@ -771,7 +798,7 @@ namespace LandscapeClassifier.ViewModel
                 }
             }
             // Predict
-            var prediction = _classifier.Predict(features);
+            var prediction = _currentClassifier.Predict(features);
             PredictedLandcoverImage = prediction;
         }
 
