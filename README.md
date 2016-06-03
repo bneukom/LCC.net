@@ -1,12 +1,12 @@
 # LandscapeClassifier
 
-Tool used to classify ortho images in combination with a DEM with several OpenCL classifiers.
+Tool used to classify ortho images with several OpenCV classifiers.
 
 ## Features
 - Import ortho images and DEMs
 - Training via GUI
 - Export of feature vectors
-- Prediction via Bayes- KNN- NeuralNetwork-classifiers
+- Prediction via Bayes- KNN- NeuralNetwork-classifiers (OpenCV)
 
 ## Sample images
 
