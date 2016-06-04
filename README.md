@@ -4,9 +4,10 @@ Tool used to classify ortho images with several OpenCV classifiers.
 
 ## Features
 - Import ortho images and DEMs
-- Training via GUI
-- Export of feature vectors
+- Interactive feature training
 - Prediction via Bayes- KNN- NeuralNetwork-classifiers (OpenCV)
+- Export of landcover type binary maps which can easily be imported into Unreal Engine
+
 
 ## Sample images
 
