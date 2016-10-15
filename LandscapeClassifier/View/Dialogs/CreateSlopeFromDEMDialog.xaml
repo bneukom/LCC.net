@@ -1,0 +1,43 @@
+﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.CreateSlopeFromDEMDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LandscapeClassifier.View"
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+        mc:Ignorable="d"
+        Title="Create Slope From Heightmap Image" Height="250.303" Width="500">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="35"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="Auto"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Label Grid.Row="0" Grid.Column="0" Margin="0,5,5,5" HorizontalContentAlignment="Left" Content="DEM Path:"></Label>
+        
+        <TextBox  Grid.Row="0" x:Name="PathTextBox" Grid.Column="1" Margin="5,5,5,5"></TextBox>
+        <Button Grid.Row="0" Grid.Column="2"  Margin="5,5,5,5" Width="70"  Content="Browse..." Click="BrowseClick"/>
+
+        <Label  Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Min Altitude [m]:"></Label>
+        <TextBox x:Name="MinAltitude" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" ></TextBox>
+
+        <Label  Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="Max Altitude [m]:"></Label>
+        <TextBox x:Name="MaxAltitude" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5"></TextBox>
+
+        <Label  Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Content="Pixel Dimension [m]:"></Label>
+        <TextBox x:Name="PixelDimension" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5"></TextBox>
+
+        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
+            <Button Content="Ok" Click="OkClick" Width="60"/>
+            <Button Content="Cancel" Click="CancelClick" Width="60" Margin="5,0,0,0"/>
+        </StackPanel>
+    </Grid>
+</controls:MetroWindow>

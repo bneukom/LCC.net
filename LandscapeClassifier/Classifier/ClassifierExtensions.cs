@@ -16,6 +16,12 @@ namespace LandscapeClassifier.Classifier
                     return new BayesLandCoverClassifier();
                 case Classifier.ANN:
                     return new NeuralNetworkLandCoverClassifier();
+                case Classifier.NearestNeighbour:
+                    return new NearestNeighbourClassifier();
+                case Classifier.KNearestNeighbour:
+                    return new KNearestNeighbourClassifier();
+                case Classifier.DecisionTrees:
+                    return new DecisionTreeClassifier();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(classifier), classifier, null);
             }

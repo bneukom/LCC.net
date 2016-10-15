@@ -54,14 +54,11 @@ namespace LandscapeClassifier.View
                 // @TODO transformation matrix
                 var left = (_mainWindowViewModel.AscFile.Xllcorner - _mainWindowViewModel.WorldFile.X) / _mainWindowViewModel.WorldFile.PixelSizeX;
 
-                var topWorldCoordinates = _mainWindowViewModel.AscFile.Yllcorner +
-                                          _mainWindowViewModel.AscFile.Cellsize * _mainWindowViewModel.AscFile.Nrows;
+                var width = _mainWindowViewModel.AscFile.Ncols * _mainWindowViewModel.AscFile.Cellsize / _mainWindowViewModel.WorldFile.PixelSizeY;
+                var height = _mainWindowViewModel.AscFile.Nrows * _mainWindowViewModel.AscFile.Cellsize / _mainWindowViewModel.WorldFile.PixelSizeY;
 
-                var topScreenCoordinates = (topWorldCoordinates - _mainWindowViewModel.WorldFile.Y) /
-                                           _mainWindowViewModel.WorldFile.PixelSizeY;
 
-                var width = _mainWindowViewModel.AscFile.Ncols;
-                var height = _mainWindowViewModel.AscFile.Nrows;
+                var topScreenCoordinates = (_mainWindowViewModel.AscFile.Yllcorner - _mainWindowViewModel.WorldFile.Y) * _mainWindowViewModel.AscFile.Cellsize / _mainWindowViewModel.WorldFile.PixelSizeY;
 
                 _mainWindowViewModel.ViewportRect = new Rect(new Point(left, topScreenCoordinates), new Size(width, height));
             }
@@ -111,9 +108,7 @@ namespace LandscapeClassifier.View
                 // _mainWindowViewModel.OrthoImage = new BitmapImage(new Uri(openFileDialog.FileName));
                 _mainWindowViewModel.OrthoImage = scaledImage;
 
-                var worldFilePath = directoryName + "\\" + Path.GetFileNameWithoutExtension(openFileDialog.FileName) +
-                                    ".tfw";
-
+                var worldFilePath = directoryName + "\\" + Path.GetFileNameWithoutExtension(openFileDialog.FileName) + ".tfw";
                 _mainWindowViewModel.WorldFile = WorldFile.FromFile(worldFilePath);
                 OpenDEM.IsEnabled = true;
 
@@ -152,7 +147,7 @@ namespace LandscapeClassifier.View
 
                 // Position in LV95 coordinate system
                 var lv95X = (int)(position.X * _mainWindowViewModel.WorldFile.PixelSizeX + _mainWindowViewModel.WorldFile.X);
-                var lv95Y = (int)(position.Y * _mainWindowViewModel.WorldFile.PixelSizeY + _mainWindowViewModel.WorldFile.Y);
+                var lv95Y = (int)((ImageCanvas.Height - position.Y) * _mainWindowViewModel.WorldFile.PixelSizeY + _mainWindowViewModel.WorldFile.Y);
                 LV95Position.Content = "(" + lv95X + ", " + lv95Y + ")";
 
                 // Color

@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Input;
@@ -16,6 +17,7 @@ using LandscapeClassifier.Classifier;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
+using LandscapeClassifier.View;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 
@@ -27,6 +29,10 @@ namespace LandscapeClassifier.ViewModel
         private WorldFile _worldFile;
 
         private BitmapSource _bitmapImage;
+        private double _bitmapImageWidth;
+        private double _bitmapImageHeight;
+        private int _bitmapImagePixelWidth;
+        private int _bitmapImageBitsPerPixel;
         private byte[] _imageData;
         private Rect _viewportRect;
 
@@ -41,6 +47,20 @@ namespace LandscapeClassifier.ViewModel
         private Classifier.Classifier _selectededClassifier;
         private ILandCoverClassifier _currentClassifier;
 
+        /// <summary>
+        /// Exports a slope map from the loaded DEM.
+        /// </summary>
+        public ICommand ExportSlopeImageCommand { set; get; }
+
+        /// <summary>
+        /// Exports a slope map from the loaded DEM.
+        /// </summary>
+        public ICommand ExportCurvatureImageCommand { set; get; }
+
+        /// <summary>
+        /// Create slope texture from a DEM.
+        /// </summary>
+        public ICommand CreateSlopeFromDEM { set; get; }
 
         /// <summary>
         /// Export predictions.
@@ -174,6 +194,10 @@ namespace LandscapeClassifier.ViewModel
                 if (value != _bitmapImage)
                 {
                     _bitmapImage = value;
+                    _bitmapImageWidth = _bitmapImage.Width;
+                    _bitmapImageHeight = _bitmapImage.Height;
+                    _bitmapImagePixelWidth = _bitmapImage.PixelWidth;
+                    _bitmapImageBitsPerPixel = _bitmapImage.Format.BitsPerPixel;
 
                     var stride = (int) _bitmapImage.PixelWidth*(_bitmapImage.Format.BitsPerPixel/8);
                     _imageData = new byte[(int) _bitmapImage.PixelHeight*stride];
@@ -324,6 +348,10 @@ namespace LandscapeClassifier.ViewModel
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
             RemoveAllFeaturesCommand = new RelayCommand(() => Features.Clear(), () => Features.Count > 0);
 
+            ExportSlopeImageCommand = new RelayCommand(() => ExportSlopeFromDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
+            ExportCurvatureImageCommand = new RelayCommand(() => ExportCurvatureFromDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
+            CreateSlopeFromDEM = new RelayCommand(() => new CreateSlopeFromDEMDialog().ShowDialog(), () => true);
+
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
             TrainCommand = new RelayCommand(Train, CanTrain);
 
@@ -382,13 +410,17 @@ namespace LandscapeClassifier.ViewModel
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public short GetAscDataAt(Point position)
+        public float GetAscDataAt(Point position)
         {
             if (_ascFile == null || _worldFile == null) throw new InvalidOperationException();
 
+            // Console.WriteLine(position);
+
+            var height = _ascFile.Nrows*_ascFile.Cellsize / _worldFile.PixelSizeX;
+
             // Position in LV95 coordinate system
             var lv95X = (int) (position.X*_worldFile.PixelSizeX + _worldFile.X);
-            var lv95Y = (int) (position.Y*_worldFile.PixelSizeY + _worldFile.Y);
+            var lv95Y = (int) ((height - position.Y)*_worldFile.PixelSizeY + _worldFile.Y);
 
             if (lv95X > _ascFile.Xllcorner && lv95X < _ascFile.Xllcorner + _ascFile.Ncols*_ascFile.Cellsize &&
                 lv95Y > _ascFile.Yllcorner && lv95Y < _ascFile.Yllcorner + _ascFile.Nrows*_ascFile.Cellsize)
@@ -413,12 +445,12 @@ namespace LandscapeClassifier.ViewModel
             if (_bitmapImage == null) throw new InvalidOperationException();
 
             // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
-            if (position.Y < 0 || position.Y < 0 || position.X >= _bitmapImage.Width ||
-                position.Y >= _bitmapImage.Height)
+            if (position.Y < 0 || position.Y < 0 || position.X >= _bitmapImageWidth ||
+                position.Y >= _bitmapImageHeight)
                 return Colors.Black;
 
-            var stride = (int) _bitmapImage.PixelWidth*(_bitmapImage.Format.BitsPerPixel/8);
-            var index = (int) position.Y*stride + _bitmapImage.Format.BitsPerPixel/8*(int) position.X;
+            var stride = (int) _bitmapImagePixelWidth*(_bitmapImageBitsPerPixel/8);
+            var index = (int) position.Y*stride + _bitmapImageBitsPerPixel/8*(int) position.X;
 
             var B = _imageData[index];
             var G = _imageData[index + 1];
@@ -438,9 +470,9 @@ namespace LandscapeClassifier.ViewModel
             if (_bitmapImage == null) throw new InvalidOperationException();
 
             // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
-            if (position.Y < 1 || position.Y < 1
-                || position.X >= _bitmapImage.Width - 1
-                || position.Y >= _bitmapImage.Height - 1)
+            if (position.Y < 1 || position.X < 1
+                || position.X >= _bitmapImageWidth - 1
+                || position.Y >= _bitmapImageHeight - 1)
                 return Colors.Black;
 
             byte R = 0, G = 0, B = 0, A = 0;
@@ -448,9 +480,9 @@ namespace LandscapeClassifier.ViewModel
             {
                 for (var y = -1; y <= 1; ++y)
                 {
-                    var stride = (int) _bitmapImage.PixelWidth*(_bitmapImage.Format.BitsPerPixel/8);
+                    var stride = (int) _bitmapImagePixelWidth*(_bitmapImageBitsPerPixel/8);
                     var index = ((int) position.Y + y)*stride +
-                                _bitmapImage.Format.BitsPerPixel/8*((int) position.X + x);
+                                _bitmapImageBitsPerPixel/8*((int) position.X + x);
 
                     B += _imageData[index];
                     G += _imageData[index + 1];
@@ -481,34 +513,32 @@ namespace LandscapeClassifier.ViewModel
         /// <returns></returns>
         public AspectSlope GetSlopeAndAspectAt(Point position)
         {
-            var left = (_ascFile.Xllcorner - _worldFile.X)/_worldFile.PixelSizeX;
+            var height = _ascFile.Nrows * _ascFile.Cellsize / _worldFile.PixelSizeX;
 
-            var topWorldCoordinates = _ascFile.Yllcorner +
-                                      _ascFile.Cellsize*_ascFile.Nrows;
+            // Position in LV95 coordinate system
+            var positionX = (position.X * _worldFile.PixelSizeX + _worldFile.X);
+            var positionY = ((height - position.Y) * _worldFile.PixelSizeY + _worldFile.Y);
 
-            var topScreenCoordinates = (topWorldCoordinates - _worldFile.Y)/
-                                       _worldFile.PixelSizeY;
+            var indexX = (int) ((positionX - _ascFile.Xllcorner)/_ascFile.Cellsize);
+            var indexY = _ascFile.Nrows - (int) ((positionY - _ascFile.Yllcorner)/_ascFile.Cellsize) - 1;
 
-            int positionX = (int) (position.X - left);
-            int positionY = (int) (position.Y - topScreenCoordinates);
-
-            if (positionX - 1 < 0 || positionX + 1 >= _ascFile.Ncols || positionY - 1 < 0 ||
-                positionY + 1 >= _ascFile.Nrows)
+            if (indexX - 1 < 0 || indexX + 1 >= _ascFile.Ncols || indexY - 1 < 0 ||
+                indexY + 1 >= _ascFile.Nrows)
             {
                 return new AspectSlope(0, 0);
             }
 
-            float Z1 = _ascFile.Data[positionY - 1, positionX - 1];
-            float Z2 = _ascFile.Data[positionY - 1, positionX];
-            float Z3 = _ascFile.Data[positionY - 1, positionX + 1];
+            float Z1 = _ascFile.Data[indexY - 1, indexX - 1];
+            float Z2 = _ascFile.Data[indexY - 1, indexX];
+            float Z3 = _ascFile.Data[indexY - 1, indexX + 1];
 
-            float Z4 = _ascFile.Data[positionY, positionX - 1];
-            float Z5 = _ascFile.Data[positionY, positionX];
-            float Z6 = _ascFile.Data[positionY, positionX + 1];
+            float Z4 = _ascFile.Data[indexY, indexX - 1];
+            float Z5 = _ascFile.Data[indexY, indexX];
+            float Z6 = _ascFile.Data[indexY, indexX + 1];
 
-            float Z7 = _ascFile.Data[positionY + 1, positionX - 1];
-            float Z8 = _ascFile.Data[positionY + 1, positionX];
-            float Z9 = _ascFile.Data[positionY + 1, positionX + 1];
+            float Z7 = _ascFile.Data[indexY + 1, indexX - 1];
+            float Z8 = _ascFile.Data[indexY + 1, indexX];
+            float Z9 = _ascFile.Data[indexY + 1, indexX + 1];
 
 
             float b = (Z3 + 2*Z6 + Z9 - Z1 - 2*Z4 - Z7)/(8*_ascFile.Cellsize);
@@ -697,14 +727,19 @@ namespace LandscapeClassifier.ViewModel
 
                 // Write Layers
                 var layerData = new List<byte[]>();
-                var colorMapData = new List<byte[]>();
+                // var colorMapData = new List<byte[]>();
 
-                for (var layerIndex = 0; layerIndex < Enum.GetValues(typeof(LandcoverType)).Length; ++layerIndex)
+                var LandCovers = new List<LandcoverType>() {LandcoverType.Tree};
+                var LandCoverColors = new Dictionary<Color, int>();
+
+                for (var layerIndex = 0; layerIndex < LandCovers.Count; ++layerIndex)
                 {
+                    LandCoverColors.Add(LandCovers[layerIndex].GetColor(), layerIndex);
+
                     var layerDataArray = new byte[stride*height];
                     var colorMapDataArray = new byte[stride * height];
                     layerData.Add(layerDataArray);
-                    colorMapData.Add(colorMapDataArray);
+                    // colorMapData.Add(colorMapDataArray);
                 }
 
                 byte[] predictionImageData = new byte[stride*height];
@@ -718,19 +753,19 @@ namespace LandscapeClassifier.ViewModel
                     var a = predictionImageData[dataIndex + 3];
                     var color = Color.FromArgb(a, r, g, b);
 
-                    int layerIndex = (from type in Enum.GetValues(typeof(LandcoverType)).Cast<LandcoverType>()
-                        where color == type.GetColor()
-                        select (int) type).FirstOrDefault();
+                    int layerIndex = LandCoverColors[color];
 
-                    layerData[layerIndex][dataIndex + 0] = 0;
-                    layerData[layerIndex][dataIndex + 1] = 0;
-                    layerData[layerIndex][dataIndex + 2] = 0;
-                    layerData[layerIndex][dataIndex + 3] = 0;
-
+                    layerData[layerIndex][dataIndex + 0] = 255;
+                    layerData[layerIndex][dataIndex + 1] = 255;
+                    layerData[layerIndex][dataIndex + 2] = 255;
+                    layerData[layerIndex][dataIndex + 3] = 255;
+                    
+                    /*
                     colorMapData[layerIndex][dataIndex + 0] = orthoImageData[dataIndex + 0];
                     colorMapData[layerIndex][dataIndex + 1] = orthoImageData[dataIndex + 1];
                     colorMapData[layerIndex][dataIndex + 2] = orthoImageData[dataIndex + 2];
                     colorMapData[layerIndex][dataIndex + 3] = orthoImageData[dataIndex + 3];
+                    */
                 }
 
                 for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
@@ -749,6 +784,7 @@ namespace LandscapeClassifier.ViewModel
                         encoder.Save(fileStream);
                     }
 
+                    /*
                     data = colorMapData[layerIndex];
                     bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
                         stride);
@@ -762,6 +798,7 @@ namespace LandscapeClassifier.ViewModel
                         encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
                         encoder.Save(fileStream);
                     }
+                    */
                 }
             }
         }
@@ -778,25 +815,36 @@ namespace LandscapeClassifier.ViewModel
             var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize*AscFile.Nrows;
             var topScreenCoordinates = (topWorldCoordinates - WorldFile.Y)/WorldFile.PixelSizeY;
 
-            // @TODO only works because AscFile#CellSize == WorldFile#CellSize
-            var width = AscFile.Ncols;
-            var height = AscFile.Nrows;
+            var width = (int)(AscFile.Ncols * _ascFile.Cellsize / _worldFile.PixelSizeX);
+            var height = (int)(AscFile.Nrows * _ascFile.Cellsize / _worldFile.PixelSizeY);
+
+            width = 1000;
+            height = 1000;
+        
+            var dpi = 96d;
+
+            var stride = width * 4; // 4 bytes per pixel
+            var pixelData = new byte[stride * height];
+
+            FeatureVector[,] features = new FeatureVector[height, width];
 
             // Create features
-            FeatureVector[,] features = new FeatureVector[height, width];
-            for (int y = 0; y < height; ++y)
+            Parallel.For(0, height, y =>
             {
                 for (int x = 0; x < width; ++x)
                 {
-                    var position = new Point(x + left, y + topScreenCoordinates);
+                    var position = new Point(x, y);
                     var altitude = GetAscDataAt(position);
                     var color = GetColorAt(position);
                     var averageNeighborhoodColor = GetAverageNeighborhoodColor(position);
                     var slopeAndAspectAt = GetSlopeAndAspectAt(position);
+
                     features[y, x] = new FeatureVector(altitude, color, averageNeighborhoodColor,
                         slopeAndAspectAt.Aspect, slopeAndAspectAt.Slope);
                 }
-            }
+            });
+           
+
             // Predict
             var prediction = _currentClassifier.Predict(features);
             PredictedLandcoverImage = prediction;

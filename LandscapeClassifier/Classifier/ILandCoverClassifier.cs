@@ -29,5 +29,6 @@ namespace LandscapeClassifier.Classifier
         /// <param name="features"></param>
         /// <returns></returns>
         BitmapSource Predict(FeatureVector[,] features);
+
     }
 }

@@ -8,6 +8,6 @@ namespace LandscapeClassifier.Classifier
 {
     public enum Classifier
     {
-        Bayes, ANN
+        Bayes, ANN, NearestNeighbour, KNearestNeighbour, DecisionTrees
     }
 }

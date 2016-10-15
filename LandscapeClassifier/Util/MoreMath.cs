@@ -20,5 +20,10 @@ namespace LandscapeClassifier.Util
         {
             return rad * (180.0 / Math.PI);
         }
+
+        public static double Clamp(double value, double min, double max)
+        {
+            return Math.Max(Math.Min(value, max), min);
+        }
     }
 }

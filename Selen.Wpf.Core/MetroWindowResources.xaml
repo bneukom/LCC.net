@@ -131,7 +131,8 @@
 
     <DropShadowEffect x:Key="DropShadowBrush" Direction="330" Opacity="0.3" ShadowDepth="0" BlurRadius="6"/>
 
-    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{DynamicResource WhiteColor}" />
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{DynamicResource Gray13}" />
+    <SolidColorBrush x:Key="WindowTitleBrush" Color="{DynamicResource Gray13}" />
     <SolidColorBrush x:Key="SeperatorBrush" Color="#FFC4C4C5"/>
 
 

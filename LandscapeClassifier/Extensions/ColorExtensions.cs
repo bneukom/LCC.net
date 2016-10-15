@@ -13,5 +13,10 @@ namespace LandscapeClassifier.Extensions
         {
             return (color.A << 24) | (color.R << 16) | (color.G << 8)  | color.B;
         }
+
+        public static float GetLuminance(this Color color)
+        {
+            return 0.2126f*color.R + 0.7152f*color.G + 0.0722f*color.B;
+        }
     }
 }
