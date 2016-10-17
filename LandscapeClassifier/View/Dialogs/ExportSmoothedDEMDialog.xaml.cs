@@ -1,5 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -19,8 +22,6 @@ namespace LandscapeClassifier.View
         private ExportSmoothedDEMDialog()
         {
             InitializeComponent();
-
-           
         }
 
         public static bool? ShowDialog(AscFile ascFile)
@@ -36,83 +37,160 @@ namespace LandscapeClassifier.View
 
         private void OkClick(object sender, RoutedEventArgs e)
         {
-            int levels = 256;
+            float[,] smoothedHeightMap = new float[_ascFile.Nrows, _ascFile.Ncols];
+            float[,] smoothIterationResult = new float[_ascFile.Nrows, _ascFile.Ncols];
+            float[,] smoothDelta = new float[_ascFile.Nrows, _ascFile.Ncols];
 
-            for (int level = 1; level <= levels; level *= 2)
+            float L = _ascFile.Cellsize;
+
+            // Initialize
+            for (int y = 0; y < _ascFile.Nrows; y++)
             {
-                int stride = _ascFile.Ncols / level * 4;
-                int size = _ascFile.Nrows / level * stride;
-
-                byte[] slopePixelData = new byte[size];
-
-                float[] neighbours = new float[8];
-                float L = _ascFile.Cellsize * level;
-
-                float minCurvature = 1000;
-                float maxCurvature = 0;
-                for (int y = level; y < _ascFile.Nrows - level; y += level)
+                for (int x = 0; x < _ascFile.Ncols; x++)
                 {
-                    for (int x = level; x < _ascFile.Ncols - level; x += level)
-                    {
-
-                        neighbours[0] = _ascFile.Data[y - level, x - level];
-                        neighbours[1] = _ascFile.Data[y - level, x];
-                        neighbours[2] = _ascFile.Data[y - level, x + level];
-
-                        neighbours[3] = _ascFile.Data[y, x - level];
-                        neighbours[4] = _ascFile.Data[y, x + level];
-
-                        neighbours[5] = _ascFile.Data[y + level, x - level];
-                        neighbours[6] = _ascFile.Data[y + level, x];
-                        neighbours[7] = _ascFile.Data[y + level, x + level];
-
-                        float Z2 = neighbours[0]; // N
-                        float Z4 = neighbours[2]; // W
-                        float Z5 = _ascFile.Data[y, x];
-                        float Z6 = neighbours[6]; // E
-                        float Z8 = neighbours[4]; // S
-
-                        float D = ((Z4 + Z6) / 2 - Z5) / (L * L);
-                        float E = ((Z2 + Z8) / 2 - Z5) / (L * L);
-                        float curvature = 2 * (D + E);
-
-                        byte slopeGrayScale = (byte)MoreMath.Clamp(((curvature * 16 * level) + (255.0f / 2.0f)), 0, 255);
-
-                        int index = (y / level) * stride + 4 * (x / level);
-                        slopePixelData[index + 0] = slopeGrayScale;
-                        slopePixelData[index + 1] = slopeGrayScale;
-                        slopePixelData[index + 2] = slopeGrayScale;
-                        slopePixelData[index + 3] = 255;
-
-                        minCurvature = Math.Min(minCurvature, curvature);
-                        maxCurvature = Math.Max(maxCurvature, curvature);
-                    }
-                }
-
-                Console.WriteLine($"min curvature for level {level}: {minCurvature}");
-                Console.WriteLine($"max curvature for level {level}: {maxCurvature}");
-
-                // Write prediction image
-                using (var fileStream = new FileStream(System.IO.Path.Combine(PathTextBox.Text, $"curvature{level}.png"), FileMode.Create))
-                {
-                    var encoder = new PngBitmapEncoder();
-                    var slopeImage = BitmapSource.Create(_ascFile.Ncols / level, _ascFile.Nrows / level, 96, 96, PixelFormats.Bgra32, null, slopePixelData,
-                        stride);
-
-                    encoder.Frames.Add(BitmapFrame.Create(slopeImage));
-                    encoder.Save(fileStream);
+                    var height = _ascFile.Data[y, x];
+                    smoothedHeightMap[y,x] = height;
+                    smoothIterationResult[y, x] = height;
                 }
             }
+
+            // Smooth
+            for (int iteration = 0; iteration < IterationsSlider.Value; ++iteration)
+            {
+                Parallel.For(1, _ascFile.Nrows - 1, y =>
+                {
+                    float[] neighbours = new float[8];
+
+                    for (int x = 1; x < _ascFile.Ncols - 1; x++)
+                    {
+                        neighbours[0] = smoothedHeightMap[y - 1, x - 1];
+                        neighbours[1] = smoothedHeightMap[y - 1, x];
+                        neighbours[2] = smoothedHeightMap[y - 1, x + 1];
+
+                        neighbours[3] = smoothedHeightMap[y, x - 1];
+                        neighbours[4] = smoothedHeightMap[y, x + 1];
+
+                        neighbours[5] = smoothedHeightMap[y + 1, x - 1];
+                        neighbours[6] = smoothedHeightMap[y + 1, x];
+                        neighbours[7] = smoothedHeightMap[y + 1, x + 1];
+
+                        // http://paulbourke.net/geometry/polygonmesh/
+                        float height = smoothedHeightMap[y, x];
+                        float smoothedHeight = height;
+                        for (int i = 0; i < 8; ++i)
+                        {
+                            smoothedHeight += (neighbours[i] - height) / 8;
+                        }
+
+                        
+                        smoothIterationResult[y, x] = smoothedHeight;
+                    }
+                });
+
+                Array.Copy(smoothIterationResult, smoothedHeightMap, _ascFile.Nrows * _ascFile.Ncols);
+            }
+
+            // Calculate delta image
+            Parallel.For(1, _ascFile.Nrows - 1, y =>
+            {
+                for (int x = 0; x < _ascFile.Ncols; x++)
+                {
+                    var height = smoothedHeightMap[y, x];
+                    smoothDelta[y, x] = _ascFile.Data[y, x] - height;
+                }
+            });
+
+            Task.Run(() =>
+            {
+                float[,] floatOriginalImageData = new float[_ascFile.Nrows, _ascFile.Ncols];
+                Array.Copy(_ascFile.Data, floatOriginalImageData, _ascFile.Data.Length);
+                writeGrayscale16Image(floatOriginalImageData, "heightmap");
+            });
+
+            Task.Run(() => writeGrayscale16Image(smoothedHeightMap, "heightmapSmoothed"));
+
+            Task.Run(() => writeGrayscale16Image(smoothDelta, "heightmapDelta"));
+
+            Task.WaitAll();
         }
 
-        private float grayscaleToAltitude(byte value, float minAltitude, float maxAltitude)
+        private void writeGrayscale16Image(float[,] data, string fileName)
         {
-            return (value/255.0f)*(maxAltitude - minAltitude) + minAltitude;
+            int height = data.GetLength(0);
+            int width = data.GetLength(1);
+            float min = (float)1e6;
+            float max = (float)-1e6;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var val = data[y, x];
+                    min = Math.Min(min, val);
+                    max = Math.Max(max, val);
+                }
+            }
+
+            int stride = (width * 16 + 7) / 8;
+            int size = height * width;
+
+            ushort[] pixelData = new ushort[size];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var val = data[y, x];
+                    int index = y*width + 1*x;
+
+                    ushort smoothedHeightGrayscale = floatToUshort(val, min, max);
+                    pixelData[index + 0] = smoothedHeightGrayscale;
+                }
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                using (
+                    var fileStream = new FileStream(System.IO.Path.Combine(PathTextBox.Text, fileName + ".png"),
+                    FileMode.Create))
+                {
+                    var encoder = new PngBitmapEncoder();
+                    var image = BitmapSource.Create(width, height, 96, 96, PixelFormats.Gray16, null,
+                        pixelData,
+                        stride);
+
+                    encoder.Frames.Add(BitmapFrame.Create(image));
+                    encoder.Save(fileStream);
+                }
+
+                File.WriteAllLines(System.IO.Path.Combine(PathTextBox.Text, fileName + ".aux"), new string[] { $"min: {min}", $"max: {max}" });
+
+            });
+       }
+
+
+        private ushort floatToUshort(float value, float min, float max)
+        {
+            return (ushort) ((value - min)/(max - min)* ushort.MaxValue);
         }
 
         private void CancelClick(object sender, RoutedEventArgs e)
         {
             throw new NotImplementedException();
+        }
+
+        static T[,] Cast2D<T>(object[,] input)
+        {
+            int rows = input.GetLength(0);
+            int columns = input.GetLength(1);
+            T[,] ret = new T[rows, columns];
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < columns; j++)
+                {
+                    ret[i, j] = (T)input[i, j];
+                }
+            }
+            return ret;
         }
     }
 }

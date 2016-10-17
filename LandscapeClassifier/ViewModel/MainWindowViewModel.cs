@@ -48,6 +48,11 @@ namespace LandscapeClassifier.ViewModel
         private ILandCoverClassifier _currentClassifier;
 
         /// <summary>
+        /// Exports a height map
+        /// </summary>
+        public ICommand ExportSmoothedHeightImageCommand { set; get; }
+
+        /// <summary>
         /// Exports a slope map from the loaded DEM.
         /// </summary>
         public ICommand ExportSlopeImageCommand { set; get; }
@@ -346,10 +351,11 @@ namespace LandscapeClassifier.ViewModel
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
-            RemoveAllFeaturesCommand = new RelayCommand(() => Features.Clear(), () => Features.Count > 0);
 
             ExportSlopeImageCommand = new RelayCommand(() => ExportSlopeFromDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
             ExportCurvatureImageCommand = new RelayCommand(() => ExportCurvatureFromDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
+            RemoveAllFeaturesCommand = new RelayCommand(() => Features.Clear(), () => Features.Count > 0);
+            ExportSmoothedHeightImageCommand = new RelayCommand(() => ExportSmoothedDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
             CreateSlopeFromDEM = new RelayCommand(() => new CreateSlopeFromDEMDialog().ShowDialog(), () => true);
 
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);

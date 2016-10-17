@@ -6,9 +6,11 @@
         xmlns:local="clr-namespace:LandscapeClassifier.View"
         xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
-        Title="Create Laplacian Smoothing" Height="161.056" Width="510.258">
+        Title="Create Laplacian Smoothing" Height="211.723" Width="510.258">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="38"></RowDefinition>
             <RowDefinition Height="38"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="35"></RowDefinition>
@@ -26,11 +28,18 @@
                 <ColumnDefinition Width="*"></ColumnDefinition>
                 <ColumnDefinition Width="auto"></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="PathTextBox" Grid.Column="0" Margin="5,5,5,5"></TextBox>
+            <TextBox x:Name="PathTextBox" Grid.Column="0" Margin="5,5,0,5"></TextBox>
             <Button Grid.Column="1" Content="Browse" Width="70" Margin="5,5,5,5"/>
         </Grid>
 
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
+        <Label Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Iterations: </Label>
+        <Slider IsSnapToTickEnabled="True" x:Name="IterationsSlider" Maximum="20" Minimum="1" TickPlacement="BottomRight" TickFrequency="1" Grid.Row="1" VerticalAlignment="Center" Grid.Column="1" Margin="5,0,5,0"></Slider>
+        
+        <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Export Unsmoothed:</Label>
+        <CheckBox Grid.Row="2" Grid.Column="1" x:Name="ExportUnsmoothed" IsChecked="True" Margin="5,0,0,0" VerticalAlignment="Center" ></CheckBox>
+       
+        
+        <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
             <Button Content="Ok" Click="OkClick" Width="60"/>
             <Button Content="Cancel" Click="CancelClick" Width="60" Margin="5,0,0,0"/>
         </StackPanel>
