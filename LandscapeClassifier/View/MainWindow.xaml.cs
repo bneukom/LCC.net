@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,6 +12,7 @@ using LandscapeClassifier.Util;
 using LandscapeClassifier.ViewModel;
 using MahApps.Metro.Controls;
 using Microsoft.Win32;
+using OSGeo.GDAL;
 
 namespace LandscapeClassifier.View
 {
@@ -67,10 +70,11 @@ namespace LandscapeClassifier.View
 
         private void OpenOrthoImage_Click(object sender, RoutedEventArgs e)
         {
+            GdalConfiguration.ConfigureGdal();
+
             // Create an instance of the open file dialog box.
             var openFileDialog = new OpenFileDialog
             {
-                Filter = "TIF Files (.tif)|*.tif",
                 FilterIndex = 1,
                 Multiselect = true
             };
@@ -84,8 +88,28 @@ namespace LandscapeClassifier.View
                 var directoryName = Path.GetDirectoryName(openFileDialog.FileName);
                 OrthoImagePath.Content = openFileDialog.FileName;
 
-                // var sourceImage = new BitmapImage(new Uri(openFileDialog.FileName));
+                var dataSet = Gdal.Open(openFileDialog.FileName, Access.GA_ReadOnly);
+                var band = dataSet.GetRasterBand(1);
 
+                Console.WriteLine(band.GetRasterColorInterpretation());
+
+                int width = band.XSize;
+                int height = band.YSize;
+                int stride = (width * 16 + 7) / 8;
+
+                // IntPtr data = Marshal.AllocHGlobal(width*height*2);
+                // band.ReadRaster(0, 0, width, height, data, width, height, DataType.GDT_UInt16, 0, 0);
+                short[] data = new short[width * height];
+
+                band.ReadRaster(0, 0, width, height, data, width, height, 0, 0);
+
+                var scaledImage = BitmapSource.Create(band.XSize, band.YSize, 96, 96, PixelFormats.Gray16, null, data, stride);
+                
+                _mainWindowViewModel.OrthoImage = scaledImage;
+
+                /*
+                // var sourceImage = new BitmapImage(new Uri(openFileDialog.FileName));
+                Stream imageStreamSource = new FileStream(openFileDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
                 var sourceImage = new BitmapImage();
                 using (var stream = File.OpenRead(openFileDialog.FileName))
                 {
@@ -108,10 +132,10 @@ namespace LandscapeClassifier.View
                 // _mainWindowViewModel.OrthoImage = new BitmapImage(new Uri(openFileDialog.FileName));
                 _mainWindowViewModel.OrthoImage = scaledImage;
 
-                var worldFilePath = directoryName + "\\" + Path.GetFileNameWithoutExtension(openFileDialog.FileName) + ".tfw";
-                _mainWindowViewModel.WorldFile = WorldFile.FromFile(worldFilePath);
-                OpenDEM.IsEnabled = true;
-
+                //var worldFilePath = directoryName + "\\" + Path.GetFileNameWithoutExtension(openFileDialog.FileName) + ".tfw";
+                //_mainWindowViewModel.WorldFile = WorldFile.FromFile(worldFilePath);
+                // OpenDEM.IsEnabled = true;
+                */
             }
         }
 
