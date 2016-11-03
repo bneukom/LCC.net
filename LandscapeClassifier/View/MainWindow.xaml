@@ -8,7 +8,9 @@
         xmlns:converter="clr-namespace:LandscapeClassifier.Converter"
         xmlns:controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:validationRules="clr-namespace:LandscapeClassifier.View.ValidationRules"
+        xmlns:classifierControls="clr-namespace:LandscapeClassifier.Controls"
         mc:Ignorable="d"
+        GlowBrush="{DynamicResource AccentColorBrush}"
         Title="Land Cover Classifier"  DataContext="{StaticResource MainViewModel}" Icon="/Resources/Icons/Icon128_3.png" WindowTitleBrush="#DDDDDD" Height="768" Width="1024" UseLayoutRounding="True">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -38,14 +40,25 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Button x:Name="OpenOrthoImage"  Content="Open Satelite Images" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="0" Click="OpenOrthoImage_Click"/>
+            <Button x:Name="OpenOrthoImage" Command="{Binding OpenImagesCommand}"  Content="Open Satelite Images" HorizontalAlignment="Left" Margin="5,8,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
             <Button x:Name="OpenDEM" IsEnabled="False"  Content="Open DEM" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="1" Click="OpenDEM_Click"/>
             <Label x:Name="OrthoImagePath" Foreground="LightGray"  Content="None" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch"  Margin="5,4,5,5"  VerticalAlignment="Center"/>
             <Label x:Name="DEMPath" Foreground="LightGray" Content="None" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch"  Margin="5,5,5,4"  VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
                 <Label Grid.Row="2" Content="Features:"></Label>
-                <CheckBox VerticalAlignment="Center" Content="Color" Margin="0,0,5,0"></CheckBox>
-                <CheckBox VerticalAlignment="Center" IsEnabled="False" Content="Spectral Colors" Margin="0,0,5,0"></CheckBox>
+                <CheckBox VerticalAlignment="Center" Content="RGB" Margin="0,0,5,0"></CheckBox>
+                <ItemsControl ItemsSource="{Binding ImageBandViewModels}" x:Name="tStack">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsActive, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,5,0"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <CheckBox VerticalAlignment="Center" IsEnabled="False" Content="Altitide" Margin="0,0,5,0"></CheckBox>
                 <CheckBox VerticalAlignment="Center" IsEnabled="False" Content="Slope" Margin="0,0,5,0"></CheckBox>
                 <CheckBox VerticalAlignment="Center" IsEnabled="False" Content="Aspect" Margin="0,0,5,0"></CheckBox>
@@ -61,36 +74,29 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="auto"/>
                         </Grid.ColumnDefinitions>
-                        <TabControl TabStripPlacement="Bottom">
-                            <TabItem  Header="RGB">
-                                <ScrollViewer RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="TrainingImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="TrainingImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
-                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
-                                        <Grid.LayoutTransform>
-                                            <MatrixTransform x:Name="MatrixTransform"/>
-                                        </Grid.LayoutTransform>
-                                        <Canvas Width="7768" Height="7751"  x:Name="ImageCanvas" Grid.Column="0" Grid.Row="0" >
-                                            <Image x:Name="TrainingOrthoImage" Source="{Binding OrthoImage}" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor"  Width="7768" Height="7751"></Image>
-                                            <Rectangle Fill="Black" Width="7768" Height="7751" Opacity="0.7">
-                                                <Rectangle.Clip>
-                                                    <CombinedGeometry GeometryCombineMode="Exclude">
-                                                        <CombinedGeometry.Geometry1>
-                                                            <RectangleGeometry Rect="0,0,7768,7751"/>
-                                                        </CombinedGeometry.Geometry1>
-                                                        <CombinedGeometry.Geometry2>
-                                                            <RectangleGeometry Rect="{Binding ViewportRect}"/>
-                                                        </CombinedGeometry.Geometry2>
-                                                    </CombinedGeometry>
-
-                                                </Rectangle.Clip>
-                                            </Rectangle>
-                                        </Canvas>
-                                    </Grid>
-                                </ScrollViewer>
-                            </TabItem>
-                            <TabItem Header="Band 0"></TabItem>
+                        <TabControl TabStripPlacement="Bottom" ItemsSource="{Binding ImageBandViewModels}">
+                            <TabControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>                            
+                                        <TextBlock Text="{Binding Title}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </TabControl.ItemTemplate>
+                            <TabControl.ContentTemplate>
+                                <DataTemplate>
+                                    <ScrollViewer RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="TrainingImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="TrainingImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
+                                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
+                                            <Grid.LayoutTransform>
+                                                <ScaleTransform ScaleX="2" ScaleY="2"></ScaleTransform>
+                                            </Grid.LayoutTransform>
+                                            <Canvas Width="{Binding ImagePixelWidth}" Height="{Binding ImagePixelHeight}"  x:Name="ImageCanvas" Grid.Column="0" Grid.Row="0" >
+                                                <Image Source="{Binding BandImage}" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor"  Width="{Binding ImagePixelWidth}" Height="{Binding ImagePixelHeight}"></Image>
+                                            </Canvas>
+                                        </Grid>
+                                    </ScrollViewer>
+                                </DataTemplate>
+                            </TabControl.ContentTemplate>
                         </TabControl>
-                       
-
                         <Grid Grid.Row="0 " Grid.Column="1">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -125,7 +131,7 @@
                                             <TextBlock Foreground="{Binding TypeColorBrush, Mode=OneWay, Delay=1000}" Text="{Binding TypeText, Mode=OneWay}" Margin="2,2,2,2"></TextBlock>
                                             <TextBlock Foreground="White" Text="{Binding FeatureText, Mode=OneWay, Delay=1000}" Margin="2,2,2,2"></TextBlock>
                                         </StackPanel>
-                                    </DataTemplate> 
+                                    </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <Button Grid.Column="0" Grid.Row="3" x:Name="RemoveButton" Command="{Binding RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
@@ -182,6 +188,7 @@
                             <Button Height="25" Content="Export Predictions" Command="{Binding ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
                         </StackPanel>
 
+                        <!--
                         <ScrollViewer RenderTransformOrigin="0.5,0.5" Margin="5,0" HorizontalScrollBarVisibility="Visible"  Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" MouseMove="PredictionImageScrollViewer_MouseMove" MouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonUp="ImageScrollViewer_MouseLeftButtonUp" PreviewMouseLeftButtonDown="ImageScrollViewer_MouseLeftButtonDown" MouseRightButtonUp="PredictionImageScrollViewer_MouseRightButtonUp" PreviewMouseRightButtonUp="ImageScrollViewer_PreviewMouseRightButtonUp" >
                             <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
                                 <Grid.LayoutTransform>
@@ -210,13 +217,13 @@
                                 </Canvas>
                             </Grid>
                         </ScrollViewer>
+                        -->
 
-        
                         <StackPanel Grid.Row="2" Orientation="Horizontal"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">
                             <Label Content="Pixel Prediction:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label x:Name="LandcoverPredictionLabel" Content="???" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                         </StackPanel>
- 
+
                     </Grid>
                 </TabItem>
             </TabControl>
@@ -224,4 +231,6 @@
     </DockPanel>
 
 </controls:MetroWindow>
+
+
 

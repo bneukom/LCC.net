@@ -85,7 +85,6 @@ namespace LandscapeClassifier.View
                         Console.WriteLine("Test");
                     }
                     byte slopeGrayScale = (byte)(slope / (Math.PI/2) * 255);
-                    byte slopeGrayScale2 = (byte) (Math.Sqrt(slope/(Math.PI/2))*255);
 
                     int index = y * stride + 4 * x;
                     slopePixelData[index + 0] = slopeGrayScale;

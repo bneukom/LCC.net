@@ -17,6 +17,7 @@
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Accents/BaseDark.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <viewModel:MainWindowViewModel x:Key="MainViewModel"></viewModel:MainWindowViewModel>
+            <viewModel:OpenImageDialogViewModel x:Key="OpenImageViewModel"></viewModel:OpenImageDialogViewModel>
             <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>
     </Application.Resources>

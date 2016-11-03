@@ -2,15 +2,19 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Annotations;
 using LandscapeClassifier.Classifier;
@@ -18,23 +22,16 @@ using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View;
+using LandscapeClassifier.View.Open;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using OSGeo.GDAL;
 
 namespace LandscapeClassifier.ViewModel
 {
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private AscFile _ascFile;
-        private WorldFile _worldFile;
-
-        private BitmapSource _bitmapImage;
-        private double _bitmapImageWidth;
-        private double _bitmapImageHeight;
-        private int _bitmapImagePixelWidth;
-        private int _bitmapImageBitsPerPixel;
-        private byte[] _imageData;
-        private Rect _viewportRect;
 
         private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
         private bool _isTrained;
@@ -103,9 +100,19 @@ namespace LandscapeClassifier.ViewModel
         public ICommand ImportFeatureCommand { set; get; }
 
         /// <summary>
+        /// Open image bands.
+        /// </summary>
+        public ICommand OpenImagesCommand { set; get; }
+
+        /// <summary>
         /// Predict all.
         /// </summary>
         public object PredictAllCommand { set; get; }
+
+        /// <summary>
+        /// Image BandInfo ImageBandViewModels
+        /// </summary>
+        public ObservableCollection<ImageBandViewModel> ImageBandViewModels { set; get; }
 
         /// <summary>
         /// True if the classifier has been trained.
@@ -141,22 +148,6 @@ namespace LandscapeClassifier.ViewModel
         }
 
         /// <summary>
-        /// World file to the ortho image.
-        /// </summary>
-        public WorldFile WorldFile
-        {
-            get { return _worldFile; }
-            set
-            {
-                if (value != _worldFile)
-                {
-                    _worldFile = value;
-                    NotifyPropertyChanged("WorldFile");
-                }
-            }
-        }
-
-        /// <summary>
         /// ASC file which represents the DEM.
         /// </summary>
         public AscFile AscFile
@@ -168,49 +159,6 @@ namespace LandscapeClassifier.ViewModel
                 {
                     _ascFile = value;
                     NotifyPropertyChanged("AscFile");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Viewport rectangle which contains all data (asc and orthoimage) used for classification.
-        /// </summary>
-        public Rect ViewportRect
-        {
-            get { return _viewportRect; }
-            set
-            {
-                if (value != _viewportRect)
-                {
-                    _viewportRect = value;
-                    NotifyPropertyChanged("ViewportRect");
-                }
-            }
-        }
-
-        /// <summary>
-        /// The OrthoImage map.
-        /// </summary>
-        public BitmapSource OrthoImage
-        {
-            get { return _bitmapImage; }
-            set
-            {
-                if (value != _bitmapImage)
-                {
-                    _bitmapImage = value;
-                    _bitmapImageWidth = _bitmapImage.Width;
-                    _bitmapImageHeight = _bitmapImage.Height;
-                    _bitmapImagePixelWidth = _bitmapImage.PixelWidth;
-                    _bitmapImageBitsPerPixel = _bitmapImage.Format.BitsPerPixel;
-
-                    var stride = (int) _bitmapImage.PixelWidth*(_bitmapImage.Format.BitsPerPixel/8);
-                    _imageData = new byte[(int) _bitmapImage.PixelHeight*stride];
-
-                    // @TODO waste of memory!
-                    _bitmapImage.CopyPixels(_imageData, stride, 0);
-
-                    NotifyPropertyChanged("OrthoImage");
                 }
             }
         }
@@ -315,7 +263,7 @@ namespace LandscapeClassifier.ViewModel
                     _selectededClassifier = value;
                     NotifyPropertyChanged(SelectedClassifierProperty);
                 }
-                
+
             }
         }
 
@@ -342,11 +290,16 @@ namespace LandscapeClassifier.ViewModel
 
         public MainWindowViewModel()
         {
+            GdalConfiguration.ConfigureGdal();
+
+            ImageBandViewModels = new ObservableCollection<ImageBandViewModel>();
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
             ClassifiersEnumerable = Enum.GetNames(typeof(Classifier.Classifier));
 
             Features = new ObservableCollection<ClassifiedFeatureVectorViewModel>();
+
+            OpenImagesCommand = new RelayCommand(OpenBands, () => true);
 
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
@@ -380,6 +333,161 @@ namespace LandscapeClassifier.ViewModel
             MarkClassifierNotTrained();
         }
 
+        /// <summary>
+        /// Channel data. 
+        /// </summary>
+        private class ChannelData
+        {
+            public int Width;
+            public int Height;
+            public IntPtr Data;
+            public double Min;
+            public double Max;
+
+            public byte this[int index]
+            {
+                get
+                {
+                    unsafe
+                    {
+                        ushort val = *((ushort*)Data.ToPointer() + index);
+                        byte clamped = (byte)MoreMath.Clamp((val - Min) / (Max - Min) * byte.MaxValue, 0, byte.MaxValue - 1);
+                        return clamped;
+                    }
+                }
+            }
+
+        }
+
+        private void OpenBands()
+        {
+            OpenImageDialog dialog = new OpenImageDialog();
+
+            if (dialog.ShowDialog() == true)
+            {
+                var firstDataSet =  Gdal.Open(dialog.DialogViewModel.Bands.First().Path, Access.GA_ReadOnly);
+                int width = firstDataSet.GetRasterBand(1).XSize;
+                int height = firstDataSet.GetRasterBand(1).YSize;
+                int stride = (width * 16 + 7) / 8;
+
+                byte[] bgra = new byte[width * height * 4];
+                int rgbStride = width * 4;
+
+                Task loadImages = Task.Factory.StartNew(() => Parallel.ForEach(dialog.DialogViewModel.Bands, (bandInfo, _, bandIndex) =>
+                {
+                    var dataSet = Gdal.Open(bandInfo.Path, Access.GA_ReadOnly);
+                    var band = dataSet.GetRasterBand(1);
+                    
+                    IntPtr data = Marshal.AllocHGlobal(stride * height);
+                    band.ReadRaster(0, 0, width, height, data, width, height, DataType.GDT_UInt16, 2, stride);
+
+                    double[] minMax = new double[2];
+                    band.ComputeRasterMinMax(minMax, 0);
+
+                    // Cutoff
+                    int[] histogram = new int[ushort.MaxValue];
+                    band.GetHistogram(0, ushort.MaxValue, ushort.MaxValue, histogram, 1, 0,
+                        ProgressFunc, "");
+
+                    double minCut = width * height * 0.02f;
+                    int minCutValue = (int)minMax[0];
+                    bool minCutSet = false;
+
+                    double maxCut = width * height * 0.98f;
+                    int maxCutValue = (int)minMax[1];
+                    bool maxCutSet = false;
+
+                    int pixelCount = 0;
+                    for (int bucket = 0; bucket < histogram.Length; ++bucket)
+                    {
+                        pixelCount += histogram[bucket];
+                        if (pixelCount >= minCut && !minCutSet)
+                        {
+                            minCutValue = bucket;
+                            minCutSet = true;
+                        }
+                        if (pixelCount >= maxCut && !maxCutSet)
+                        {
+                            maxCutValue = bucket;
+                            maxCutSet = true;
+                        }
+                    }
+
+                    // Add RGB
+                    if (dialog.DialogViewModel.AddRgb)
+                    {
+                        // Apply RGB contrast enhancement
+                        if (dialog.DialogViewModel.RgbContrastEnhancement)
+                        {
+                            int colorOffset = bandInfo.B ? 0 : bandInfo.G ? 1 : bandInfo.R ? 2 : -1;
+                            unsafe
+                            {
+                                ushort* dataPtr = (ushort*)data.ToPointer();
+                                for (int dataIndex = 0; dataIndex < width*height; ++dataIndex)
+                                {
+                                    ushort current = *(dataPtr + dataIndex);
+                                    byte val = (byte)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * byte.MaxValue, 0, byte.MaxValue - 1);
+
+                                    bgra[dataIndex * 4 + colorOffset] = val;
+                                    bgra[dataIndex*4 + 3] = 255;
+                                }
+                            }
+                        }
+                    }
+
+                    // Apply band contrast enhancement
+                    if (dialog.DialogViewModel.RgbContrastEnhancement)
+                    {
+                        unsafe
+                        {
+                            ushort* dataPtr = (ushort*) data.ToPointer();
+                            for (int dataIndex = 0; dataIndex < width*height; ++dataIndex)
+                            {
+                                ushort current = *(dataPtr + dataIndex);
+                                *(dataPtr + dataIndex) = (ushort) MoreMath.Clamp((current - minCutValue)/(double) (maxCutValue - minCutValue)*ushort.MaxValue, 0, ushort.MaxValue - 1);
+                            }
+                        }
+                    }
+
+                   
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        WriteableBitmap bandImage = new WriteableBitmap(width, height, 96, 96, PixelFormats.Gray16, null);
+                        bandImage.Lock();
+
+                        unsafe
+                        {
+                            Buffer.MemoryCopy(data.ToPointer(), bandImage.BackBuffer.ToPointer(), stride*height,
+                                stride*height);
+                        }
+
+                        bandImage.AddDirtyRect(new Int32Rect(0, 0, width, height));
+                        bandImage.Unlock();
+
+                        ImageBandViewModels.Add(new ImageBandViewModel("band " + bandIndex, bandImage));
+                    });
+
+                    Marshal.FreeHGlobal(data);
+                }));
+
+                // Load rgb image
+                loadImages.ContinueWith(t =>
+                {
+                    // Create RGB image
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var rgbImage = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, bgra, rgbStride);
+                        ImageBandViewModels.Insert(0, new ImageBandViewModel("rgb", rgbImage));
+                    });
+                });
+            }
+        }
+
+        public static int ProgressFunc(double Complete, IntPtr Message, IntPtr Data)
+        {
+            return 1;
+        }
+
         #region Model Accessers
 
         /// <summary>
@@ -390,188 +498,6 @@ namespace LandscapeClassifier.ViewModel
         public LandcoverType Predict(FeatureVector feature)
         {
             return _currentClassifier.Predict(feature);
-        }
-
-        // @TODO coordinate system?
-        /// <summary>
-        /// Returns whether the given position is within the bounds of the ASC file.
-        /// </summary>
-        /// <param name="position">Pixel position in the </param>
-        /// <returns></returns>
-        public bool IsInAscBounds(Point position)
-        {
-            if (_ascFile == null) throw new InvalidOperationException();
-
-            // Position in LV95 coordinate system
-            var lv95X = (int) (position.X*WorldFile.PixelSizeX + WorldFile.X);
-            var lv95Y = (int) (position.Y*WorldFile.PixelSizeY + WorldFile.Y);
-
-            return lv95X > _ascFile.Xllcorner && lv95X < _ascFile.Xllcorner + _ascFile.Ncols*_ascFile.Cellsize &&
-                   lv95Y > _ascFile.Yllcorner && lv95Y < _ascFile.Yllcorner + _ascFile.Nrows*_ascFile.Cellsize;
-        }
-
-        // @TODO coordinate system?
-        /// <summary>
-        /// Returns the data from the ASC file at the given position.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public float GetAscDataAt(Point position)
-        {
-            if (_ascFile == null || _worldFile == null) throw new InvalidOperationException();
-
-            // Console.WriteLine(position);
-
-            var height = _ascFile.Nrows*_ascFile.Cellsize / _worldFile.PixelSizeX;
-
-            // Position in LV95 coordinate system
-            var lv95X = (int) (position.X*_worldFile.PixelSizeX + _worldFile.X);
-            var lv95Y = (int) ((height - position.Y)*_worldFile.PixelSizeY + _worldFile.Y);
-
-            if (lv95X > _ascFile.Xllcorner && lv95X < _ascFile.Xllcorner + _ascFile.Ncols*_ascFile.Cellsize &&
-                lv95Y > _ascFile.Yllcorner && lv95Y < _ascFile.Yllcorner + _ascFile.Nrows*_ascFile.Cellsize)
-            {
-                var indexX = (int) ((lv95X - _ascFile.Xllcorner)/_ascFile.Cellsize);
-                var indexY = (int) ((lv95Y - _ascFile.Yllcorner)/_ascFile.Cellsize);
-                return _ascFile.Data[_ascFile.Nrows - indexY - 1, indexX];
-            }
-            else
-            {
-                return _ascFile.NoDataValue;
-            }
-        }
-
-        /// <summary>
-        /// Returns the color at the given pixel position.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public Color GetColorAt(Point position)
-        {
-            if (_bitmapImage == null) throw new InvalidOperationException();
-
-            // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
-            if (position.Y < 0 || position.Y < 0 || position.X >= _bitmapImageWidth ||
-                position.Y >= _bitmapImageHeight)
-                return Colors.Black;
-
-            var stride = (int) _bitmapImagePixelWidth*(_bitmapImageBitsPerPixel/8);
-            var index = (int) position.Y*stride + _bitmapImageBitsPerPixel/8*(int) position.X;
-
-            var B = _imageData[index];
-            var G = _imageData[index + 1];
-            var R = _imageData[index + 2];
-            var A = _imageData[index + 3];
-
-            return Color.FromArgb(A, R, G, B);
-        }
-
-        /// <summary>
-        /// Returns the average color of the eight neighborhood surrounding the pixel at the given position.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public Color GetAverageNeighborhoodColor(Point position)
-        {
-            if (_bitmapImage == null) throw new InvalidOperationException();
-
-            // @TODO http://stackoverflow.com/questions/3745824/loading-image-into-imagesource-incorrect-width-and-height
-            if (position.Y < 1 || position.X < 1
-                || position.X >= _bitmapImageWidth - 1
-                || position.Y >= _bitmapImageHeight - 1)
-                return Colors.Black;
-
-            byte R = 0, G = 0, B = 0, A = 0;
-            for (var x = -1; x <= 1; ++x)
-            {
-                for (var y = -1; y <= 1; ++y)
-                {
-                    var stride = (int) _bitmapImagePixelWidth*(_bitmapImageBitsPerPixel/8);
-                    var index = ((int) position.Y + y)*stride +
-                                _bitmapImageBitsPerPixel/8*((int) position.X + x);
-
-                    B += _imageData[index];
-                    G += _imageData[index + 1];
-                    R += _imageData[index + 2];
-                    A += _imageData[index + 3];
-                }
-            }
-
-            return Color.FromArgb((byte) (A/8), (byte) (R/8), (byte) (G/8), (byte) (B/8));
-        }
-
-        /// <summary>
-        /// Returns the luminance at the given pixel position.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public float GetLuminance(Point position)
-        {
-            var color = GetColorAt(position);
-            return 0.2126f*color.R + 0.7152f*color.G + 0.0722f*color.B;
-        }
-
-        // @TODO coordinate system?
-        /// <summary>
-        /// Returns the slope at the given position or 0 if not available.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public AspectSlope GetSlopeAndAspectAt(Point position)
-        {
-            var height = _ascFile.Nrows * _ascFile.Cellsize / _worldFile.PixelSizeX;
-
-            // Position in LV95 coordinate system
-            var positionX = (position.X * _worldFile.PixelSizeX + _worldFile.X);
-            var positionY = ((height - position.Y) * _worldFile.PixelSizeY + _worldFile.Y);
-
-            var indexX = (int) ((positionX - _ascFile.Xllcorner)/_ascFile.Cellsize);
-            var indexY = _ascFile.Nrows - (int) ((positionY - _ascFile.Yllcorner)/_ascFile.Cellsize) - 1;
-
-            if (indexX - 1 < 0 || indexX + 1 >= _ascFile.Ncols || indexY - 1 < 0 ||
-                indexY + 1 >= _ascFile.Nrows)
-            {
-                return new AspectSlope(0, 0);
-            }
-
-            float Z1 = _ascFile.Data[indexY - 1, indexX - 1];
-            float Z2 = _ascFile.Data[indexY - 1, indexX];
-            float Z3 = _ascFile.Data[indexY - 1, indexX + 1];
-
-            float Z4 = _ascFile.Data[indexY, indexX - 1];
-            float Z5 = _ascFile.Data[indexY, indexX];
-            float Z6 = _ascFile.Data[indexY, indexX + 1];
-
-            float Z7 = _ascFile.Data[indexY + 1, indexX - 1];
-            float Z8 = _ascFile.Data[indexY + 1, indexX];
-            float Z9 = _ascFile.Data[indexY + 1, indexX + 1];
-
-
-            float b = (Z3 + 2*Z6 + Z9 - Z1 - 2*Z4 - Z7)/(8*_ascFile.Cellsize);
-            float c = (Z1 + 2*Z2 + Z3 - Z7 - 2*Z8 - Z9)/(8*_ascFile.Cellsize);
-
-            float slope = (float) Math.Atan(Math.Sqrt(b*b + c*c));
-            double aspect;
-
-            if (MoreMath.AlmostZero(c))
-            {
-                aspect = 0;
-            }
-            else
-            {
-                aspect = (float) Math.Atan(b/c);
-
-                if (c > 0)
-                {
-                    aspect += Math.PI;
-                }
-                else if (c < 0 && b > 0)
-                {
-                    aspect += (2*Math.PI);
-                }
-            }
-
-            return new AspectSlope(slope, (float) aspect);
         }
 
         #endregion
@@ -613,7 +539,7 @@ namespace LandscapeClassifier.ViewModel
 
         private bool CanExportTrainingSet()
         {
-            return _ascFile != null && _bitmapImage != null && Features.Count > 0;
+            return _ascFile != null && Features.Count > 0;
         }
 
         private void ImportTrainingSet()
@@ -640,8 +566,8 @@ namespace LandscapeClassifier.ViewModel
                 {
                     LandcoverType type;
                     Enum.TryParse<LandcoverType>(line[0], true, out type);
-                    var color = (Color) ColorConverter.ConvertFromString(line[1]);
-                    var averageNeighbourhoodColor = (Color) ColorConverter.ConvertFromString(line[2]);
+                    var color = (Color)ColorConverter.ConvertFromString(line[1]);
+                    var averageNeighbourhoodColor = (Color)ColorConverter.ConvertFromString(line[2]);
                     var altitude = float.Parse(line[3]);
                     var aspect = float.Parse(line[4]);
                     var slope = float.Parse(line[5]);
@@ -683,6 +609,7 @@ namespace LandscapeClassifier.ViewModel
 
         private void ExportPredictions()
         {
+            /*
             var chooseFolderDialog = new CommonOpenFileDialog
             {
                 Title = "Choose Export Folder",
@@ -765,13 +692,7 @@ namespace LandscapeClassifier.ViewModel
                     layerData[layerIndex][dataIndex + 1] = 255;
                     layerData[layerIndex][dataIndex + 2] = 255;
                     layerData[layerIndex][dataIndex + 3] = 255;
-                    
-                    /*
-                    colorMapData[layerIndex][dataIndex + 0] = orthoImageData[dataIndex + 0];
-                    colorMapData[layerIndex][dataIndex + 1] = orthoImageData[dataIndex + 1];
-                    colorMapData[layerIndex][dataIndex + 2] = orthoImageData[dataIndex + 2];
-                    colorMapData[layerIndex][dataIndex + 3] = orthoImageData[dataIndex + 3];
-                    */
+
                 }
 
                 for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
@@ -790,23 +711,9 @@ namespace LandscapeClassifier.ViewModel
                         encoder.Save(fileStream);
                     }
 
-                    /*
-                    data = colorMapData[layerIndex];
-                    bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
-                        stride);
-
-                    // write color map
-                    using (
-                       var fileStream = new FileStream(Path.Combine(folder, "colorMap" + layerIndex + ".png"),
-                           FileMode.Create))
-                    {
-                        BitmapEncoder encoder = new PngBitmapEncoder();
-                        encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-                        encoder.Save(fileStream);
-                    }
-                    */
                 }
             }
+            */
         }
 
         private bool CanExportPredictions()
@@ -816,6 +723,7 @@ namespace LandscapeClassifier.ViewModel
 
         private void PredictAll()
         {
+            /*
             // @TODO create transformation matrix
             var left = (AscFile.Xllcorner - WorldFile.X)/WorldFile.PixelSizeX;
             var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize*AscFile.Nrows;
@@ -854,6 +762,7 @@ namespace LandscapeClassifier.ViewModel
             // Predict
             var prediction = _currentClassifier.Predict(features);
             PredictedLandcoverImage = prediction;
+            */
         }
 
         private bool CanPredictAll()

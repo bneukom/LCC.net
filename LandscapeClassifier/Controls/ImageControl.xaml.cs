@@ -1,62 +1,37 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using LandscapeClassifier.Controls;
-using LandscapeClassifier.Model;
-using LandscapeClassifier.Util;
-using LandscapeClassifier.View.Open;
-using LandscapeClassifier.ViewModel;
-using MahApps.Metro.Controls;
-using Microsoft.Win32;
-using OSGeo.GDAL;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
 
-namespace LandscapeClassifier.View
+namespace LandscapeClassifier.Controls
 {
     /// <summary>
-    ///     Interaction logic for MainWindow.xaml
+    /// Interaction logic for ImageControl.xaml
     /// </summary>
-    public partial class MainWindow : MetroWindow
+    public partial class ImageControl : UserControl
     {
-        private readonly ViewModel.MainWindowViewModel _mainWindowViewModel;
-
         // Dragging points shared for training and prediction scroll viewers
         private Point? _lastCenterPositionOnTarget;
         private Point? _lastDragPoint;
         private Point? _lastMousePositionOnTarget;
 
-        public MainWindow()
+
+        public ImageControl()
         {
             InitializeComponent();
-            _mainWindowViewModel = (ViewModel.MainWindowViewModel) DataContext;
-
-            /*
-            // Workaround for https://social.msdn.microsoft.com/Forums/vstudio/en-US/bdf2f91e-469a-4931-b5aa-35c5ce58591f/tabcontrol-how-to-get-own-scrollviewer-position-on-each-tab?forum=wpf
-            // visual tree is the same for all tabs and casues rendering issues with layout transforms.
-            _mainWindowViewModel.ImageBandViewModels.CollectionChanged += (sender, args) =>
-            {
-                if (args.NewItems != null)
-                {
-                    foreach (ImageBandViewModel item in args.NewItems)
-                    {
-                        TabItem tab = new TabItem {Header = item.Title};
-                        var content = new ImageControl {DataContext = item};
-                        tab.Content = content;
-                        BandsTabs.Items.Add(tab);
-                    }
-                }
-                
-            };
-            */
-        }
-
-        private void OpenDEM_Click(object sender, RoutedEventArgs e)
-        {
+            var mat = Matrix.Identity;
+            mat.Scale(0.5,0.5);
+            // MatrixTransform.Matrix = mat;
         }
 
         private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -152,6 +127,7 @@ namespace LandscapeClassifier.View
         private void ImageScrollViewer_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
         }
-
     }
+
+
 }
