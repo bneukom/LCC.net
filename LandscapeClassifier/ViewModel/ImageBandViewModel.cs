@@ -22,6 +22,8 @@ namespace LandscapeClassifier.ViewModel
         private int _bitmapImagePixelHeight;
         private int _bitmapImageBitsPerPixel;
         private bool _isActive;
+        private Point _mouseScreenPoisition;
+        private Point _mouseWorldPoisition;
 
         /// <summary>
         /// Pixel width of the image.
@@ -72,6 +74,24 @@ namespace LandscapeClassifier.ViewModel
         /// Band information.
         /// </summary>
         public Band Band { get; }
+
+        /// <summary>
+        /// Mouse screen position.
+        /// </summary>
+        public Point MouseScreenPoisition
+        {
+            get { return _mouseScreenPoisition;  }
+            set { _mouseScreenPoisition = value; OnPropertyChanged(nameof(MouseScreenPoisition)); }
+        }
+
+        /// <summary>
+        /// Mouse world position.
+        /// </summary>
+        public Point MouseWorldPoisition
+        {
+            get { return _mouseWorldPoisition; }
+            set { _mouseWorldPoisition = value; OnPropertyChanged(nameof(MouseWorldPoisition)); }
+        }
 
         public ImageBandViewModel(string title, BitmapSource bandImage, Band band)
         {

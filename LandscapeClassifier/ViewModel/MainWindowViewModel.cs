@@ -49,6 +49,7 @@ namespace LandscapeClassifier.ViewModel
         private bool _isAllPredicted;
         private Classifier.Classifier _selectededClassifier;
         private ILandCoverClassifier _currentClassifier;
+        private ImageBandViewModel _activeBandViewModel;
 
         /// <summary>
         /// Exports a height map
@@ -119,6 +120,15 @@ namespace LandscapeClassifier.ViewModel
         /// Image BandInfo ImageBandViewModels
         /// </summary>
         public ObservableCollection<ImageBandViewModel> ImageBandViewModels { set; get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public ImageBandViewModel ActiveBandViewModel
+        {
+            set { _activeBandViewModel = value; OnPropertyChanged(nameof(ActiveBandViewModel)); }
+            get { return _activeBandViewModel; }
+        }
 
         /// <summary>
         /// True if the classifier has been trained.
@@ -474,7 +484,7 @@ namespace LandscapeClassifier.ViewModel
 
                         Band band = new Band(dataSet.GetProjection(), transformMat, upperLeft, bottomRight);
 
-                        var imageBandViewModel = new ImageBandViewModel("band " + bandIndex, bandImage, band);
+                        var imageBandViewModel = new ImageBandViewModel("Band " + dialog.DialogViewModel.SateliteType.GetBand(Path.GetFileName(bandInfo.Path)), bandImage, band);
                         ImageBandViewModels.Add(imageBandViewModel);
                     });
 
@@ -493,7 +503,7 @@ namespace LandscapeClassifier.ViewModel
                                 rgbStride);
 
                             // TODO model
-                            ImageBandViewModels.Insert(0, new ImageBandViewModel("rgb", rgbImage, null));
+                            ImageBandViewModels.Insert(0, new ImageBandViewModel("RGB", rgbImage, null));
                         });
                     });
                 }

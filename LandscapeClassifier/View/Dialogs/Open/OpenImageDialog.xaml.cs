@@ -106,15 +106,7 @@ namespace LandscapeClassifier.View.Open
                 for (int pathIndex = 0; pathIndex < openFileDialog.FileNames.Length; ++pathIndex)
                 {
                     string fileName = Path.GetFileName(openFileDialog.FileNames[pathIndex]);
-                    int bandNumber = -1;
-
-                    switch (DialogViewModel.SateliteType)
-                    {
-                        case SateliteType.Sentinel2:
-                            var bandNumberString = fileName.Substring(fileName.Length - 6, 2);
-                            bandNumber = int.Parse(bandNumberString);
-                            break;
-                    }
+                    int bandNumber = DialogViewModel.SateliteType.GetBand(fileName);
 
                     DialogViewModel.Bands.Add(new BandInfo(openFileDialog.FileNames[pathIndex], bandNumber == 4, bandNumber == 3, bandNumber == 2));
                 }

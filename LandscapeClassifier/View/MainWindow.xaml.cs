@@ -5,10 +5,6 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
-using LandscapeClassifier.Controls;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View.Open;
@@ -112,7 +108,7 @@ namespace LandscapeClassifier.View
         {
             var scrollViewer = (ScrollViewer)sender;
 
-            var mousePos = e.GetPosition(scrollViewer);
+            var mousePos = e.GetPosition(scrollViewer); 
             if (mousePos.X <= scrollViewer.ViewportWidth && mousePos.Y < scrollViewer.ViewportHeight)
             //make sure we still can use the scrollbars
             {

@@ -11,21 +11,21 @@ namespace LandscapeClassifier.Model
     {
         public readonly string ProjectionName;
 
-        public readonly Matrix<double> Transform;
+        public readonly Matrix<double> ScreenToWorld;
 
-        public readonly Matrix<double> InverseTransform;
+        public readonly Matrix<double> WorldToScreen;
 
         public readonly Vector<double> UpperLeft;
         public readonly Vector<double> BottomRight;
 
-        public Band(string projectionName, Matrix<double> transform, Vector<double> upperLeft, Vector<double> bottomRight)
+        public Band(string projectionName, Matrix<double> screenToWorld, Vector<double> upperLeft, Vector<double> bottomRight)
         {
             ProjectionName = projectionName;
-            Transform = transform;
+            ScreenToWorld = screenToWorld;
             UpperLeft = upperLeft;
             BottomRight = bottomRight;
 
-            InverseTransform = Transform.Clone().Inverse();
+            WorldToScreen = ScreenToWorld.Clone().Inverse();
         }
     }
 }

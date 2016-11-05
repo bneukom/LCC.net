@@ -46,7 +46,6 @@
             <Label x:Name="DEMPath" Foreground="LightGray" Content="None" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch"  Margin="5,5,5,4"  VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
                 <Label Grid.Row="2" Content="Features:"></Label>
-                <CheckBox VerticalAlignment="Center" Content="RGB" Margin="0,0,5,0"></CheckBox>
                 <ItemsControl ItemsSource="{Binding ImageBandViewModels}" x:Name="tStack">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -74,7 +73,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="auto"/>
                         </Grid.ColumnDefinitions>
-                        <TabControl  SelectionChanged="BandTabsOnSelectionChanged" TabStripPlacement="Bottom" ItemsSource="{Binding ImageBandViewModels}">
+                        <TabControl SelectionChanged="BandTabsOnSelectionChanged" TabStripPlacement="Bottom" SelectedItem="{Binding ActiveBandViewModel}" ItemsSource="{Binding ImageBandViewModels}">
                             <TabControl.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock>                            
@@ -145,19 +144,9 @@
 
                             <StackPanel Orientation="Horizontal"  Grid.Column="0" HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">
                                 <Label Content="Pixel Position:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="PixelPosition" Content="(0, 0)" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="LV95:" HorizontalAlignment="Left"  Margin="10,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="LV95Position" Content="(0, 0)" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="Altitude:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="AltitudeLabel" Content="???" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="Color:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="ColorLabel" Content="#FFFFFFFF"  Width="80"  HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="AverageNeighbourhoodColor:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="LumaLabel" Content="0" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="Aspect:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="AspectLabel" Content="0°" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="Slope:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label x:Name="SlopeLabel" Content="0°" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                                <Label Content="{Binding ActiveBandViewModel.MouseScreenPoisition, Mode=TwoWay}" HorizontalAlignment="Left" Width="100" Margin="0,0,0,0"  VerticalAlignment="Center" />
+                                <Label Content="WGS84:" HorizontalAlignment="Left"  Margin="10,0,0,0"  VerticalAlignment="Center" />
+                                <Label Content="{Binding ActiveBandViewModel.MouseWorldPoisition, Mode=TwoWay}" HorizontalAlignment="Left"  Width="100" Margin="0,0,0,0"  VerticalAlignment="Center" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="5,5,5,5" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding TrainingStatusText}" Foreground="{Binding TrainingStatusBrush}"></TextBlock>
