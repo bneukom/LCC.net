@@ -34,7 +34,7 @@
             <ColumnDefinition Width="Auto"></ColumnDefinition>
         </Grid.ColumnDefinitions>
         <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Margin="5" IsChecked="{Binding BandContrastEnhancement}" VerticalAlignment="Center">Band Contrast Enhancement</CheckBox>
-        <controls:DropDownButton Grid.Row="0" Grid.Column="2" MinWidth="125" Margin="5" ItemsSource="{Binding Source={StaticResource SateliteDataProvider}}"></controls:DropDownButton>
+        <controls:SplitButton  Grid.Row="0" Grid.Column="2" MinWidth="125" Margin="5" SelectedItem="{Binding SateliteType}" ItemsSource="{Binding Source={StaticResource SateliteDataProvider}}"></controls:SplitButton>
         <CheckBox Grid.Row="1" Grid.Column="0" Margin="5" IsChecked="{Binding AddRgb}" VerticalAlignment="Center">Add RGB</CheckBox>
         <CheckBox Grid.Row="1" Grid.Column="1" Margin="5" IsChecked="{Binding RgbContrastEnhancement}" IsEnabled="{Binding AddRgb}" VerticalAlignment="Center">RGB Contrast Enhancement</CheckBox>
         <DataGrid Grid.Row="2" Grid.ColumnSpan="3" AutoGenerateColumns="False" ItemsSource="{Binding Bands, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" x:Name="listView"   Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >

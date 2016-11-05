@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Annotations;
+using LandscapeClassifier.Model;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace LandscapeClassifier.ViewModel
 {
@@ -19,7 +21,6 @@ namespace LandscapeClassifier.ViewModel
         private int _bitmapImagePixelWidth;
         private int _bitmapImagePixelHeight;
         private int _bitmapImageBitsPerPixel;
-        private byte[] _imageData;
         private bool _isActive;
 
         /// <summary>
@@ -49,12 +50,6 @@ namespace LandscapeClassifier.ViewModel
                     _bitmapImagePixelHeight = _bandImage.PixelHeight;
                     _bitmapImageBitsPerPixel = _bandImage.Format.BitsPerPixel;
 
-                    var stride = (int)_bandImage.PixelWidth * (_bandImage.Format.BitsPerPixel / 8);
-                    _imageData = new byte[(int)_bandImage.PixelHeight * stride];
-
-                    // @TODO waste of memory!
-                    _bandImage.CopyPixels(_imageData, stride, 0);
-
                     OnPropertyChanged(nameof(BandImage));
                 }
             }
@@ -72,11 +67,16 @@ namespace LandscapeClassifier.ViewModel
             get { return _isActive;}
             set { _isActive = value; OnPropertyChanged(nameof(IsActive)); }
         }
-        
 
-        public ImageBandViewModel(string title, BitmapSource bandImage)
+        /// <summary>
+        /// Band information.
+        /// </summary>
+        public Band Band { get; }
+
+        public ImageBandViewModel(string title, BitmapSource bandImage, Band band)
         {
             BandImage = bandImage;
+            Band = band;
             Title = title;
         }
 

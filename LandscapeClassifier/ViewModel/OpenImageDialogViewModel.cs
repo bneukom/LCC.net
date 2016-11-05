@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using LandscapeClassifier.Model;
 
 namespace LandscapeClassifier.ViewModel
 {
@@ -15,6 +16,7 @@ namespace LandscapeClassifier.ViewModel
         private bool _addRgb = true;
         private bool _rgbContrastEnhancement = true;
         private bool _bandContrastEnhancement = false;
+        private SateliteType _sateliteType = SateliteType.Sentinel2;
 
         /// <summary>
         /// Bands
@@ -46,6 +48,14 @@ namespace LandscapeClassifier.ViewModel
         {
             get { return _bandContrastEnhancement; }
             set { _bandContrastEnhancement = value; OnPropertyChanged(nameof(BandContrastEnhancement)); }
+        }
+
+        public SateliteType SateliteType
+        {
+            get { return _sateliteType; }
+            set
+            {
+                _sateliteType = value; OnPropertyChanged(nameof(SateliteType)); }
         }
 
         public OpenImageDialogViewModel()

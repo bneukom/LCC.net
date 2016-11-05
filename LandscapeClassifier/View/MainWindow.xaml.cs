@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using LandscapeClassifier.Controls;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
@@ -153,5 +154,13 @@ namespace LandscapeClassifier.View
         {
         }
 
+        private void BandTabsOnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var source = (TabControl) e.Source;
+            //source.Dispatcher.Invoke(DispatcherPriority.Render, EmptyDelegate);
+            //source.InvalidateVisual();
+        }
+
+        private static readonly Action EmptyDelegate = delegate () { };
     }
 }
