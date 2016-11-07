@@ -9,13 +9,12 @@ namespace LandscapeClassifier.Model
     public class Band
     {
         public readonly string ProjectionName;
-        public readonly string Path;
         public readonly int BandIndex;
 
-        public Band(string projectionName, string path)
+        public Band(string projectionName, int bandIndex)
         {
             ProjectionName = projectionName;
-            Path = path;
+            this.BandIndex = bandIndex;
         }
     }
 }

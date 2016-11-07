@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using GalaSoft.MvvmLight;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.ViewModel
 {
@@ -15,27 +16,18 @@ namespace LandscapeClassifier.ViewModel
         public ClassifiedFeatureVector ClassifiedFeatureVector { get; }
 
         /// <summary>
-        /// 
+        /// Brush for the feature.
         /// </summary>
-        public SolidColorBrush TypeColorBrush =>  new SolidColorBrush(ClassifiedFeatureVector.FeatureVector.Color);
+        public SolidColorBrush FeatureClassColorBrush =>  new SolidColorBrush(Colors.Black);
 
         /// <summary>
-        /// 
+        /// The class of this feature.
         /// </summary>
-        public string TypeText => ClassifiedFeatureVector.Type.ToString();
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public string FeatureText => 
-            ClassifiedFeatureVector.FeatureVector.Altitude + " " + 
-            ClassifiedFeatureVector.FeatureVector.Slope + " " +
-            ClassifiedFeatureVector.FeatureVector.Aspect;
+        public string FeatureClass => ClassifiedFeatureVector.Type.ToString();
 
         public ClassifiedFeatureVectorViewModel(ClassifiedFeatureVector classifiedFeatureVector)
         {
             ClassifiedFeatureVector = classifiedFeatureVector;
-
         }
 
     }

@@ -288,10 +288,13 @@
     <Compile Include="Controls\ImageCanvas.cs" />
     <Compile Include="Converter\ColorToBrushConverter.cs" />
     <Compile Include="Converter\DoubleRoundingConverter.cs" />
+    <Compile Include="Extensions\ListExtensions.cs" />
+    <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
     <Compile Include="Model\Band.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\SateliteType.cs" />
-    <Compile Include="ViewModel\ImageBandViewModel.cs" />
+    <Compile Include="ViewModel\BandsCanvas\BandViewModel.cs" />
+    <Compile Include="ViewModel\BandsCanvas\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\OpenImageDialogViewModel.cs" />
     <Compile Include="View\Dialogs\Open\OpenImageDialog.xaml.cs">
       <DependentUpon>OpenImageDialog.xaml</DependentUpon>
@@ -307,7 +310,7 @@
     <Compile Include="Model\LandcoverType.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="ViewModel\ClassifiedFeatureVectorViewModel.cs" />
-    <Compile Include="ViewModel\LandcoverTypeExtensions.cs" />
+    <Compile Include="Model\LandcoverTypeExtensions.cs" />
     <Compile Include="ViewModel\MainWindowViewModel.cs" />
     <Compile Include="Util\wgs84_ch1903.cs" />
     <Compile Include="Model\WorldFile.cs" />

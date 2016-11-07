@@ -8,7 +8,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using LandscapeClassifier.Extensions;
+using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.ViewModel;
+using LandscapeClassifier.ViewModel.BandsCanvas;
 using MathNet.Numerics.LinearAlgebra;
 using OSGeo.GDAL;
 using OSGeo.OSR;
@@ -57,7 +61,6 @@ namespace LandscapeClassifier.Controls
             MouseUp += OnMouseUp;
             MouseLeave += OnMouseLeave;
             MouseEnter += OnMouseEnter;
-
             MouseWheel += OnMouseWheel;
         }
 
@@ -90,9 +93,13 @@ namespace LandscapeClassifier.Controls
             _drag = false;
             _lastMousePosition = null;
 
-            ImageBandViewModel viewModel = (ImageBandViewModel) DataContext;
-            viewModel.MouseScreenPoisition = new Point(0, 0);
-            viewModel.MouseWorldPoisition = new Point(0, 0);
+            ClassifierViewModel viewModel = (ClassifierViewModel) DataContext;
+
+            if (viewModel != null)
+            {
+                viewModel.MouseScreenPoisition = new Point(0, 0);
+                viewModel.MouseWorldPoisition = new Point(0, 0);
+            }
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs mouseButtonEventArgs)
@@ -103,13 +110,45 @@ namespace LandscapeClassifier.Controls
 
         private void OnMouseDown(object sender, MouseButtonEventArgs mouseButtonEventArgs)
         {
-            _drag = true;
-            _lastMousePosition = mouseButtonEventArgs.GetPosition(this);
+            if (Mouse.LeftButton == MouseButtonState.Pressed)
+            {
+                _drag = true;
+                _lastMousePosition = mouseButtonEventArgs.GetPosition(this);
+            }
+            else
+            {
+                ClassifierViewModel viewModel = (ClassifierViewModel)DataContext;
+
+                var mousePosition = mouseButtonEventArgs.GetPosition(this);
+                Vector<double> mouseVec = _vecBuilder.DenseOfArray(new[] { mousePosition.X, mousePosition.Y, 1.0f});
+
+                var transform = _scaleMat.Inverse()*_screenToViewMat.Inverse();
+
+
+                // TODO translate
+
+                ushort[] bandPixels = new ushort[viewModel.Bands.Count];
+                int[] bandNumbers = new int[viewModel.Bands.Count];
+
+                for (int bandIndex = 0; bandIndex < viewModel.Bands.Count; ++bandIndex)
+                {
+                    var band = viewModel.Bands[bandIndex];
+                    ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)mousePosition.X, (int)mousePosition.Y);
+
+                    bandPixels[bandIndex] = bandPixelValue;
+                    bandNumbers[bandIndex] = band.BandNumber;
+                }
+
+                var classifiedFeatureVector = new ClassifiedFeatureVector(LandcoverType.Grass, new FeatureVector(bandPixels, bandNumbers));
+                viewModel.Features.Add(new ClassifiedFeatureVectorViewModel(classifiedFeatureVector));
+            }
         }
 
         private void OnMove(object sender, MouseEventArgs args)
         {
-            ImageBandViewModel viewModel = (ImageBandViewModel) DataContext;
+            ClassifierViewModel viewModel = (ClassifierViewModel) DataContext;
+            if (viewModel == null) return;
+
             var position = args.GetPosition(this);
 
             if (_drag && _lastMousePosition.HasValue)
@@ -128,12 +167,16 @@ namespace LandscapeClassifier.Controls
             }
             else
             {
-                var viewToWorld = viewModel.BandViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                // TODO divide by pixel resolution!
+                var viewToWorld = viewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
                 var posVec = _vecBuilder.DenseOfArray(new[] {position.X, position.Y, 1});
-                var transformed = viewToWorld*posVec;
 
-                viewModel.MouseScreenPoisition = position;
-                viewModel.MouseWorldPoisition = new Point(transformed[0], transformed[1]);
+                var mouseWorld = viewToWorld*posVec;
+                var mouseView = screenToView*posVec;
+
+                viewModel.MouseScreenPoisition = new Point((int)mouseView[0], (int)mouseView[1]);
+                viewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
             }
         }
 
@@ -141,37 +184,35 @@ namespace LandscapeClassifier.Controls
         {
             base.OnRender(dc);
 
-            ImageBandViewModel viewModel = (ImageBandViewModel) DataContext;
-
-            /*
-            var src = new SpatialReference(viewModel.Band.ProjectionName);
-            var dst = new SpatialReference("+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs");
-
-            CoordinateTransformation transformation = new CoordinateTransformation(src,dst);
-            double[] ret = new double[3];
-            transformation.TransformPoint(ret, viewModel.Band.UpperLeft[0], viewModel.Band.UpperLeft[1], 1);
-            */
-
-            var worldToScreen = _scaleMat * viewModel.BandViewModel.WorldToScreen;
-
-            var upperLeft = new Point(viewModel.BandViewModel.UpperLeft[0], viewModel.BandViewModel.UpperLeft[1]);
-            var bottomRight = new Point(viewModel.BandViewModel.BottomRight[0], viewModel.BandViewModel.BottomRight[1]);
-
-            var worldToView =  _screenToViewMat * worldToScreen;
-
             // Background
             dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
-            Matrix mat = new Matrix(
-                worldToView[0,0], worldToView[0,1], 
-                worldToView[1,0], worldToView[1,1], 
-                worldToView[0,2], worldToView[1,2]);
+            // Draw bands
+            ClassifierViewModel viewModel = (ClassifierViewModel)DataContext;
 
-            MatrixTransform matTransform = new MatrixTransform(mat);
+            if (viewModel == null) return;
 
-            dc.PushTransform(matTransform);
-            dc.DrawImage(viewModel.BandImage,new Rect(upperLeft,bottomRight));
-            dc.Pop();
+            foreach (var band in viewModel.Bands)
+            { 
+                if (!band.IsVisible) continue;
+                var worldToScreen = _scaleMat * viewModel.WorldToScreen;
+
+                var upperLeft = new Point(band.UpperLeft[0], band.UpperLeft[1]);
+                var bottomRight = new Point(band.BottomRight[0], band.BottomRight[1]);
+
+                var worldToView =  _screenToViewMat * worldToScreen;
+
+                Matrix mat = new Matrix(
+                    worldToView[0,0], worldToView[0,1], 
+                    worldToView[1,0], worldToView[1,1], 
+                    worldToView[0,2], worldToView[1,2]);
+
+                MatrixTransform matTransform = new MatrixTransform(mat);
+
+                dc.PushTransform(matTransform);
+                dc.DrawImage(band.BandImage,new Rect(upperLeft,bottomRight));
+                dc.Pop();
+            }
         }
     }
 }

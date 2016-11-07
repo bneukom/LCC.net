@@ -8,11 +8,13 @@ namespace LandscapeClassifier.Model.Classification
 {
     public class ClassificationModel
     {
-        public readonly List<Band> Bands;
+        public readonly string Projection;
+        public readonly List<int> Bands;
         public readonly List<ClassifiedFeatureVector> ClassifiedFeatureVectors;
 
-        public ClassificationModel(List<Band> bands, List<ClassifiedFeatureVector> classifiedFeatureVectors)
+        public ClassificationModel(string projection, List<int> bands, List<ClassifiedFeatureVector> classifiedFeatureVectors)
         {
+            Projection = projection;
             Bands = bands;
             ClassifiedFeatureVectors = classifiedFeatureVectors;
         }
