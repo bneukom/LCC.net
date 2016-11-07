@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.Classifier
 {
@@ -13,8 +14,7 @@ namespace LandscapeClassifier.Classifier
         /// <summary>
         /// Trains the classifier with the given already classified features.
         /// </summary>
-        /// <param name="samples"></param>
-        void Train(List<ClassifiedFeatureVector> samples);
+        void Train(ClassificationModel classificationModel);
 
         /// <summary>
         /// Predicts the land cover type for the given feature vector. <see cref="Train"/> must be called first.

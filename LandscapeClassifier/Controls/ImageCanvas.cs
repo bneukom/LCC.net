@@ -128,7 +128,7 @@ namespace LandscapeClassifier.Controls
             }
             else
             {
-                var viewToWorld = viewModel.Band.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                var viewToWorld = viewModel.BandViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
                 var posVec = _vecBuilder.DenseOfArray(new[] {position.X, position.Y, 1});
                 var transformed = viewToWorld*posVec;
 
@@ -152,10 +152,10 @@ namespace LandscapeClassifier.Controls
             transformation.TransformPoint(ret, viewModel.Band.UpperLeft[0], viewModel.Band.UpperLeft[1], 1);
             */
 
-            var worldToScreen = _scaleMat * viewModel.Band.WorldToScreen;
+            var worldToScreen = _scaleMat * viewModel.BandViewModel.WorldToScreen;
 
-            var upperLeft = new Point(viewModel.Band.UpperLeft[0], viewModel.Band.UpperLeft[1]);
-            var bottomRight = new Point(viewModel.Band.BottomRight[0], viewModel.Band.BottomRight[1]);
+            var upperLeft = new Point(viewModel.BandViewModel.UpperLeft[0], viewModel.BandViewModel.UpperLeft[1]);
+            var bottomRight = new Point(viewModel.BandViewModel.BottomRight[0], viewModel.BandViewModel.BottomRight[1]);
 
             var worldToView =  _screenToViewMat * worldToScreen;
 

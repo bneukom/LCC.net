@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Annotations;
 using LandscapeClassifier.Model;
+using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace LandscapeClassifier.ViewModel
@@ -24,6 +25,31 @@ namespace LandscapeClassifier.ViewModel
         private bool _isActive;
         private Point _mouseScreenPoisition;
         private Point _mouseWorldPoisition;
+
+        /// <summary>
+        /// The projection of the band image.
+        /// </summary>
+        public readonly string ProjectionName;
+
+        /// <summary>
+        /// Conversion from screen to world coordinates.
+        /// </summary>
+        public readonly Matrix<double> ScreenToWorld;
+
+        /// <summary>
+        /// Conversion from world to screen coordinates.
+        /// </summary>
+        public readonly Matrix<double> WorldToScreen;
+
+        /// <summary>
+        /// Band upper left in world coordinates.
+        /// </summary>
+        public readonly Vector<double> UpperLeft;
+
+        /// <summary>
+        /// Band bottom right in world coordinates.
+        /// </summary>
+        public readonly Vector<double> BottomRight;
 
         /// <summary>
         /// Pixel width of the image.
@@ -71,11 +97,6 @@ namespace LandscapeClassifier.ViewModel
         }
 
         /// <summary>
-        /// Band information.
-        /// </summary>
-        public Band Band { get; }
-
-        /// <summary>
         /// Mouse screen position.
         /// </summary>
         public Point MouseScreenPoisition
@@ -93,10 +114,15 @@ namespace LandscapeClassifier.ViewModel
             set { _mouseWorldPoisition = value; OnPropertyChanged(nameof(MouseWorldPoisition)); }
         }
 
-        public ImageBandViewModel(string title, BitmapSource bandImage, Band band)
+        public ImageBandViewModel(string title, BitmapSource bandImage, string projectionName, Matrix<double> screenToWorld, Vector<double> upperLeft, Vector<double> bottomRight)
         {
             BandImage = bandImage;
-            Band = band;
+            ProjectionName = projectionName;
+            ScreenToWorld = screenToWorld;
+            UpperLeft = upperLeft;
+            BottomRight = bottomRight;
+
+            WorldToScreen = ScreenToWorld.Inverse();
             Title = title;
         }
 

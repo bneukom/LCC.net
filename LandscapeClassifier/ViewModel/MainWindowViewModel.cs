@@ -22,6 +22,7 @@ using LandscapeClassifier.Classifier;
 using LandscapeClassifier.Controls;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View;
 using LandscapeClassifier.View.Open;
@@ -31,7 +32,6 @@ using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using OSGeo.GDAL;
 using OSGeo.OSR;
-using Band = LandscapeClassifier.Model.Band;
 
 namespace LandscapeClassifier.ViewModel
 {
@@ -47,7 +47,7 @@ namespace LandscapeClassifier.ViewModel
         private string _trainingStatusText;
         private SolidColorBrush _trainingStatusBrush;
         private bool _isAllPredicted;
-        private Classifier.Classifier _selectededClassifier;
+        private Classifier.Classifier _selectededClassifier = Classifier.Classifier.DecisionTrees;
         private ILandCoverClassifier _currentClassifier;
         private ImageBandViewModel _activeBandViewModel;
 
@@ -343,7 +343,7 @@ namespace LandscapeClassifier.ViewModel
                     MarkClassifierNotTrained();
                 }
             };
-            SelectededClassifier = Classifier.Classifier.Bayes;
+            SelectededClassifier = Classifier.Classifier.DecisionTrees;
             _currentClassifier = SelectededClassifier.CreateClassifier();
 
             MarkClassifierNotTrained();
@@ -355,16 +355,17 @@ namespace LandscapeClassifier.ViewModel
 
             if (dialog.ShowDialog() == true && dialog.DialogViewModel.Bands.Count > 0)
             {
-                var firstBand = dialog.DialogViewModel.Bands.FirstOrDefault(b => b.B || b.G || b.R)
-                    ?? dialog.DialogViewModel.Bands.First();
+                // Initialize RGB data
+                byte[] bgra = null;
+                Dataset rgbDataSet = null;
+                if (dialog.DialogViewModel.AddRgb)
+                {
+                    var firstBand = dialog.DialogViewModel.Bands.First(b => b.B || b.G || b.R);
+                    rgbDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
+                    bgra = new byte[rgbDataSet.RasterXSize * rgbDataSet.RasterYSize * 4];
+                }
 
-                var firstDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
-                int width = firstDataSet.GetRasterBand(1).XSize;
-                int height = firstDataSet.GetRasterBand(1).YSize;
-
-                byte[] bgra = new byte[width * height * 4];
-                int rgbStride = width * 4;
-
+                // Parallel band loading
                 Task loadImages = Task.Factory.StartNew(() => Parallel.ForEach(dialog.DialogViewModel.Bands, (bandInfo, _, bandIndex) =>
                 {
                     var dataSet = Gdal.Open(bandInfo.Path, Access.GA_ReadOnly);
@@ -413,21 +414,18 @@ namespace LandscapeClassifier.ViewModel
                             unsafe
                             {
                                 ushort* dataPtr = (ushort*)data.ToPointer();
-                                Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize*rasterBand.YSize), (range) =>
-                                {
-                                    for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
-                                    {
-                                        ushort current = *(dataPtr + dataIndex);
-                                        byte val =
-                                            (byte)
-                                                MoreMath.Clamp(
-                                                    (current - minCutValue)/(double) (maxCutValue - minCutValue)*
-                                                    byte.MaxValue, 0, byte.MaxValue - 1);
+                                Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize), (range) =>
+                                  {
+                                      for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
+                                      {
+                                          ushort current = *(dataPtr + dataIndex);
+                                          byte val = (byte) MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) *
+                                                      byte.MaxValue, 0, byte.MaxValue - 1);
 
-                                        bgra[dataIndex*4 + colorOffset] = val;
-                                        bgra[dataIndex*4 + 3] = 255;
-                                    }
-                                });
+                                          bgra[dataIndex * 4 + colorOffset] = val;
+                                          bgra[dataIndex * 4 + 3] = 255;
+                                      }
+                                  });
                             }
                         }
                     }
@@ -438,14 +436,14 @@ namespace LandscapeClassifier.ViewModel
                         unsafe
                         {
                             ushort* dataPtr = (ushort*)data.ToPointer();
-                            Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize*rasterBand.YSize), (range) =>
-                            {
-                                for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
-                                {
-                                    ushort current = *(dataPtr + dataIndex);
-                                    *(dataPtr + dataIndex) = (ushort)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * ushort.MaxValue, 0, ushort.MaxValue - 1);
-                                }
-                            });
+                            Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize), (range) =>
+                              {
+                                  for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
+                                  {
+                                      ushort current = *(dataPtr + dataIndex);
+                                      *(dataPtr + dataIndex) = (ushort)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * ushort.MaxValue, 0, ushort.MaxValue - 1);
+                                  }
+                              });
                         }
                     }
 
@@ -473,18 +471,17 @@ namespace LandscapeClassifier.ViewModel
                             {transform[4], -1, transform[3]},
                             {0, 0, 1}
                         };
-                        var builder = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build;
+                        var builder = Matrix<double>.Build;
                         var transformMat = builder.DenseOfArray(matArray);
 
                         var vecBuilder = Vector<double>.Build;
-                        var upperLeft = vecBuilder.DenseOfArray(new[] {transform[0], transform[3], 1});
+                        var upperLeft = vecBuilder.DenseOfArray(new[] { transform[0], transform[3], 1 });
                         var xRes = transform[1];
                         var yRes = transform[5];
-                        var bottomRight = vecBuilder.DenseOfArray(new[] {upperLeft[0] + (rasterBand.XSize * xRes), upperLeft[1] + (rasterBand.YSize * yRes), 1});
+                        var bottomRight = vecBuilder.DenseOfArray(new[] { upperLeft[0] + (rasterBand.XSize * xRes), upperLeft[1] + (rasterBand.YSize * yRes), 1 });
 
-                        Band band = new Band(dataSet.GetProjection(), transformMat, upperLeft, bottomRight);
-
-                        var imageBandViewModel = new ImageBandViewModel("Band " + dialog.DialogViewModel.SateliteType.GetBand(Path.GetFileName(bandInfo.Path)), bandImage, band);
+                        int bandNumber = dialog.DialogViewModel.SateliteType.GetBand(Path.GetFileName(bandInfo.Path));
+                        var imageBandViewModel = new ImageBandViewModel("Band " + bandNumber, bandImage, dataSet.GetProjection(), transformMat, upperLeft, bottomRight);
                         ImageBandViewModels.Add(imageBandViewModel);
                     });
 
@@ -499,11 +496,31 @@ namespace LandscapeClassifier.ViewModel
                         // Create RGB image
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            var rgbImage = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, bgra,
+                            var rgbStride = rgbDataSet.RasterXSize * 4;
+
+                            var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96, PixelFormats.Bgra32, null, bgra,
                                 rgbStride);
 
-                            // TODO model
-                            ImageBandViewModels.Insert(0, new ImageBandViewModel("RGB", rgbImage, null));
+                            // Transformation
+                            double[] transform = new double[6];
+                            rgbDataSet.GetGeoTransform(transform);
+                            double[,] matArray =
+                            {
+                                {1, transform[2], transform[0]},
+                                {transform[4], -1, transform[3]},
+                                {0, 0, 1}
+                            };
+
+                            var builder = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build;
+                            var transformMat = builder.DenseOfArray(matArray);
+
+                            var vecBuilder = Vector<double>.Build;
+                            var upperLeft = vecBuilder.DenseOfArray(new[] { transform[0], transform[3], 1 });
+                            var xRes = transform[1];
+                            var yRes = transform[5];
+                            var bottomRight = vecBuilder.DenseOfArray(new[] { upperLeft[0] + (rgbDataSet.RasterXSize * xRes), upperLeft[1] + (rgbDataSet.RasterYSize * yRes), 1 });
+
+                            ImageBandViewModels.Insert(0, new ImageBandViewModel("RGB", rgbImage, rgbDataSet.GetProjection(), transformMat, upperLeft, bottomRight));
                         });
                     });
                 }
@@ -524,7 +541,8 @@ namespace LandscapeClassifier.ViewModel
         /// <returns></returns>
         public LandcoverType Predict(FeatureVector feature)
         {
-            return _currentClassifier.Predict(feature);
+            // return _currentClassifier.Predict(feature);
+            return LandcoverType.Grass;
         }
 
         #endregion
@@ -533,6 +551,7 @@ namespace LandscapeClassifier.ViewModel
 
         private void ExportTrainingSet()
         {
+            /*
             // Create an instance of the open file dialog box.
             var saveFileDialog = new SaveFileDialog()
             {
@@ -562,6 +581,7 @@ namespace LandscapeClassifier.ViewModel
                     }
                 }
             }
+            */
         }
 
         private bool CanExportTrainingSet()
@@ -571,6 +591,7 @@ namespace LandscapeClassifier.ViewModel
 
         private void ImportTrainingSet()
         {
+            /*
             // Create an instance of the open file dialog box.
             var openFileDialog = new OpenFileDialog()
             {
@@ -603,6 +624,7 @@ namespace LandscapeClassifier.ViewModel
                         new FeatureVector(altitude, color, averageNeighbourhoodColor, aspect, slope))));
                 }
             }
+            */
         }
 
         private bool CanImportTrainingSet()
@@ -612,16 +634,21 @@ namespace LandscapeClassifier.ViewModel
 
         private void Train()
         {
+            /*
             _currentClassifier.Train(Features.Select(f => f.ClassifiedFeatureVector).ToList());
             IsTrained = true;
 
             MarkClassifierTrained();
+            */
         }
 
 
         private bool CanTrain()
         {
+            /*
             return Features.Count > 0 && Features.GroupBy(f => f.ClassifiedFeatureVector.Type).Count() >= 2;
+            */
+            return false;
         }
 
         private void RemoveSelectedFeature()

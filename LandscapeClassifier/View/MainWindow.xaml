@@ -40,9 +40,8 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Button x:Name="OpenOrthoImage" Command="{Binding OpenImagesCommand}"  Content="Open Satelite Images" HorizontalAlignment="Left" Margin="5,8,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
+            <Button x:Name="OpenOrthoImage" Command="{Binding OpenImagesCommand}"  Content="Open Satelite Images" HorizontalAlignment="Left" Margin="5,8,5,5" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
             <Button x:Name="OpenDEM" IsEnabled="False"  Content="Open DEM" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="1" Click="OpenDEM_Click"/>
-            <Label x:Name="OrthoImagePath" Foreground="LightGray"  Content="None" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch"  Margin="5,4,5,5"  VerticalAlignment="Center"/>
             <Label x:Name="DEMPath" Foreground="LightGray" Content="None" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch"  Margin="5,5,5,4"  VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
                 <Label Grid.Row="2" Content="Features:"></Label>
