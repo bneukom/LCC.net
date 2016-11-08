@@ -21,6 +21,11 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
         public int BandNumber { get; }
 
         /// <summary>
+        /// Meters per pixel of the band.
+        /// </summary>
+        public double MetersPerPixel { get; }
+
+        /// <summary>
         /// Title of the tab.
         /// </summary>
         public string BandName { get; set; }
@@ -82,7 +87,7 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
             set { _isFeature = value; OnPropertyChanged(nameof(IsFeature)); }
         }
 
-        public BandViewModel(string bandName, int bandNumber, WriteableBitmap bandImage, Vector<double> upperLeft, Vector<double> bottomRight, bool isFeature = true)
+        public BandViewModel(string bandName, int bandNumber, double metersPerPixel, WriteableBitmap bandImage, Vector<double> upperLeft, Vector<double> bottomRight, bool isFeature = true)
         {
             BandNumber = bandNumber;
             BandImage = bandImage;
@@ -90,6 +95,7 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
             BottomRight = bottomRight;
 
             BandName = bandName;
+            MetersPerPixel = metersPerPixel;
 
             IsFeature = isFeature;
         }

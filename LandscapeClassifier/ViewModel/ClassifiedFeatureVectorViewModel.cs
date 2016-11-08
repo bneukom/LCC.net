@@ -18,7 +18,7 @@ namespace LandscapeClassifier.ViewModel
         /// <summary>
         /// Brush for the feature.
         /// </summary>
-        public SolidColorBrush FeatureClassColorBrush =>  new SolidColorBrush(Colors.Black);
+        public SolidColorBrush FeatureClassColorBrush =>  new SolidColorBrush(Colors.White);
 
         /// <summary>
         /// The class of this feature.

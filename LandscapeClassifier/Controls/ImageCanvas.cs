@@ -122,18 +122,24 @@ namespace LandscapeClassifier.Controls
                 var mousePosition = mouseButtonEventArgs.GetPosition(this);
                 Vector<double> mouseVec = _vecBuilder.DenseOfArray(new[] { mousePosition.X, mousePosition.Y, 1.0f});
 
-                var transform = _scaleMat.Inverse()*_screenToViewMat.Inverse();
-
+                var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
                 // TODO translate
 
-                ushort[] bandPixels = new ushort[viewModel.Bands.Count];
-                int[] bandNumbers = new int[viewModel.Bands.Count];
 
-                for (int bandIndex = 0; bandIndex < viewModel.Bands.Count; ++bandIndex)
+                var featureBands = viewModel.Bands.Where(b => b.IsFeature).ToList();
+
+                ushort[] bandPixels = new ushort[featureBands.Count];
+                int[] bandNumbers = new int[featureBands.Count];
+
+                for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                 {
-                    var band = viewModel.Bands[bandIndex];
-                    ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)mousePosition.X, (int)mousePosition.Y);
+                    var band = featureBands[bandIndex];
+                    var posVec = _vecBuilder.DenseOfArray(new[] { mousePosition.X, mousePosition.Y, 1 });
+                    var bandPixelPosition = screenToView*posVec/band.MetersPerPixel;
+                    
+                    ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                    Console.WriteLine("pixel value at (" + (int)bandPixelPosition[0] + ", " + (int)bandPixelPosition[1] + "): " + bandPixelValue);
 
                     bandPixels[bandIndex] = bandPixelValue;
                     bandNumbers[bandIndex] = band.BandNumber;
@@ -169,13 +175,12 @@ namespace LandscapeClassifier.Controls
             {
                 // TODO divide by pixel resolution!
                 var viewToWorld = viewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
-                var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                
                 var posVec = _vecBuilder.DenseOfArray(new[] {position.X, position.Y, 1});
 
                 var mouseWorld = viewToWorld*posVec;
-                var mouseView = screenToView*posVec;
 
-                viewModel.MouseScreenPoisition = new Point((int)mouseView[0], (int)mouseView[1]);
+                viewModel.MouseScreenPoisition = position;
                 viewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
             }
         }

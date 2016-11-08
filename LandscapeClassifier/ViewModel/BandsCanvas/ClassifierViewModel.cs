@@ -52,7 +52,6 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
         /// </summary>
         public ICommand ImportFeatureCommand { set; get; }
 
-
         /// <summary>
         /// Predict all.
         /// </summary>

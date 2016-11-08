@@ -44,6 +44,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -288,6 +289,7 @@
     <Compile Include="Controls\ImageCanvas.cs" />
     <Compile Include="Converter\ColorToBrushConverter.cs" />
     <Compile Include="Converter\DoubleRoundingConverter.cs" />
+    <Compile Include="Converter\PointToStringConverter.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
     <Compile Include="Model\Band.cs" />

@@ -306,12 +306,13 @@ namespace LandscapeClassifier.ViewModel
                         dataSet.GetGeoTransform(bandTransform);
                         var vecBuilder = Vector<double>.Build;
                         var upperLeft = vecBuilder.DenseOfArray(new[] { bandTransform[0], bandTransform[3], 1 });
+                        var meterPerPixel = bandTransform[1];
                         var xRes = bandTransform[1];
                         var yRes = bandTransform[5];
                         var bottomRight = vecBuilder.DenseOfArray(new[] { upperLeft[0] + (rasterBand.XSize * xRes), upperLeft[1] + (rasterBand.YSize * yRes), 1 });
 
                         int bandNumber = dialog.DialogViewModel.SateliteType.GetBand(Path.GetFileName(bandInfo.Path));
-                        var imageBandViewModel = new BandViewModel("Band " + bandNumber, bandNumber, bandImage, upperLeft, bottomRight, false);
+                        var imageBandViewModel = new BandViewModel("Band " + bandNumber, bandNumber, meterPerPixel, bandImage, upperLeft, bottomRight, true);
 
                         viewModel.Bands.AddSorted(imageBandViewModel, Comparer<BandViewModel>.Create((a,b) => a.BandNumber - b.BandNumber));
                     });
@@ -337,11 +338,12 @@ namespace LandscapeClassifier.ViewModel
                             rgbDataSet.GetGeoTransform(rgbTransform);
                             var vecBuilder = Vector<double>.Build;
                             var upperLeft = vecBuilder.DenseOfArray(new[] { rgbTransform[0], rgbTransform[3], 1 });
+                            var meterPerPixel = rgbTransform[1];
                             var xRes = rgbTransform[1];
                             var yRes = rgbTransform[5];
                             var bottomRight = vecBuilder.DenseOfArray(new[] { upperLeft[0] + (rgbDataSet.RasterXSize * xRes), upperLeft[1] + (rgbDataSet.RasterYSize * yRes), 1 });
 
-                            viewModel.Bands.Insert(0, new BandViewModel("RGB", -1, new WriteableBitmap(rgbImage), upperLeft, bottomRight));
+                            viewModel.Bands.Insert(0, new BandViewModel("RGB", -1, meterPerPixel, new WriteableBitmap(rgbImage), upperLeft, bottomRight, false));
                         });
                     });
                 }
