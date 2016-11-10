@@ -11,10 +11,11 @@ namespace LandscapeClassifier.Extensions
     {
         public static ushort GetUshortPixelValue(this WriteableBitmap writeableBitmap, int x, int y)
         {
+            if (x < 0 || y < 0 || x >= writeableBitmap.PixelWidth || y >= writeableBitmap.PixelHeight) return 0;
             unsafe
             {
                 ushort* dataPtr = (ushort*)writeableBitmap.BackBuffer.ToPointer();
-                return (ushort) (dataPtr + writeableBitmap.BackBufferStride * y + x * sizeof(ushort));
+                return  *(dataPtr + writeableBitmap.PixelWidth * y + x);
             }
         }
     }

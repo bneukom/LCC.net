@@ -9,6 +9,7 @@ using LandscapeClassifier.Model;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel;
+using LandscapeClassifier.ViewModel.MainWindow;
 using MahApps.Metro.Controls;
 using Microsoft.Win32;
 using OSGeo.GDAL;
@@ -20,12 +21,10 @@ namespace LandscapeClassifier.View
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        private readonly ViewModel.MainWindowViewModel _mainWindowViewModel;
 
         public MainWindow()
         {
             InitializeComponent();
-            _mainWindowViewModel = (ViewModel.MainWindowViewModel) DataContext;
 
         }
 

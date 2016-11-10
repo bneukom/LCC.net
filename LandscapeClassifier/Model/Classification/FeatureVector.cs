@@ -3,13 +3,12 @@
     public struct FeatureVector
     {
         public readonly ushort[] BandIntensities;
-        public readonly int[] BandIndices;
 
-        public FeatureVector(ushort[] bandIntensities, int[] bandIndices)
+        public FeatureVector(ushort[] bandIntensities)
         {
-            this.BandIntensities = bandIntensities;
-            this.BandIndices = bandIndices;
+            BandIntensities = bandIntensities;
         }
 
+        public ushort this[int i] => BandIntensities[i];
     }
 }

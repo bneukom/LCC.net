@@ -4,6 +4,8 @@
              xmlns:local="clr-namespace:LandscapeClassifier"
              xmlns:viewModel="clr-namespace:LandscapeClassifier.ViewModel"
              xmlns:validationRules="clr-namespace:LandscapeClassifier.View.ValidationRules"
+             xmlns:bandsCanvas="clr-namespace:LandscapeClassifier.ViewModel.BandsCanvas"
+             xmlns:mainWindow="clr-namespace:LandscapeClassifier.ViewModel.MainWindow"
              StartupUri="View/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -16,9 +18,16 @@
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Accents/Steel.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Accents/BaseDark.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <viewModel:MainWindowViewModel x:Key="MainViewModel"></viewModel:MainWindowViewModel>
+            <mainWindow:MainWindowViewModel x:Key="MainWindowViewModel"></mainWindow:MainWindowViewModel>
             <viewModel:OpenImageDialogViewModel x:Key="OpenImageViewModel"></viewModel:OpenImageDialogViewModel>
             <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
+
+
+
+ 
+
+
+

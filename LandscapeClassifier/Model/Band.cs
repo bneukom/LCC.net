@@ -14,7 +14,7 @@ namespace LandscapeClassifier.Model
         public Band(string projectionName, int bandIndex)
         {
             ProjectionName = projectionName;
-            this.BandIndex = bandIndex;
+            BandIndex = bandIndex;
         }
     }
 }
