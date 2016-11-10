@@ -5,7 +5,7 @@ using System.Windows.Media.Imaging;
 using LandscapeClassifier.Annotations;
 using MathNet.Numerics.LinearAlgebra;
 
-namespace LandscapeClassifier.ViewModel.BandsCanvas
+namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 {
     public class BandViewModel : INotifyPropertyChanged
     {
@@ -15,6 +15,7 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
         private int _bitmapImagePixelHeight;
         private bool _isVisible;
         private bool _isFeature = true;
+        private bool _canChangeIsFeature = true;
 
         private Brush _currentPositionBrush;
 
@@ -57,7 +58,6 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
         /// </summary>
         public readonly Vector<double> BottomRight;
 
-
         /// <summary>
         /// Pixel width of the image.
         /// </summary>
@@ -67,6 +67,16 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
         /// Pixel height of the image.
         /// </summary>
         public double ImagePixelHeight => _bitmapImagePixelHeight;
+
+        /// <summary>
+        /// Max cut for scale.
+        /// </summary>
+        public int MaxCutScale { get; }
+
+        /// <summary>
+        /// Min cut for scale.
+        /// </summary>
+        public int MinCutScale { get; }
 
         /// <summary>
         /// The band image.
@@ -105,8 +115,25 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
             set { _isFeature = value; OnPropertyChanged(nameof(IsFeature)); }
         }
 
-        public BandViewModel(string bandName, string bandPath, int bandNumber, double metersPerPixel, WriteableBitmap bandImage, Vector<double> upperLeft, Vector<double> bottomRight, bool isFeature = true)
+        /// <summary>
+        /// Whether this view model is enabled to be used as a feature.
+        /// </summary>
+        public bool CanChangeIsFeature
         {
+            set {
+                _canChangeIsFeature = value;
+                OnPropertyChanged(nameof(CanChangeIsFeature));
+            }
+            get { return _canChangeIsFeature; }
+        }
+
+        public BandViewModel(string bandName, string bandPath, int bandNumber, double metersPerPixel, 
+            WriteableBitmap bandImage, Vector<double> upperLeft, Vector<double> bottomRight, 
+            int minCutScale, int maxCutScale, bool isFeature = true, bool canChangeIsFeature = true)
+        {
+            MinCutScale = minCutScale;
+            MaxCutScale = maxCutScale;
+
             BandNumber = bandNumber;
             BandPath = bandPath;
             BandImage = bandImage;
@@ -117,6 +144,7 @@ namespace LandscapeClassifier.ViewModel.BandsCanvas
             MetersPerPixel = metersPerPixel;
 
             IsFeature = isFeature;
+            CanChangeIsFeature = canChangeIsFeature;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

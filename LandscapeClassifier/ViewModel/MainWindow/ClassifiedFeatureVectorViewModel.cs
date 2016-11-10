@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media;
 using GalaSoft.MvvmLight;
-using LandscapeClassifier.Model;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model.Classification;
 
-namespace LandscapeClassifier.ViewModel
+namespace LandscapeClassifier.ViewModel.MainWindow
 {
     public class ClassifiedFeatureVectorViewModel : ViewModelBase
     {
@@ -18,29 +14,7 @@ namespace LandscapeClassifier.ViewModel
         /// <summary>
         /// Brush for the feature.
         /// </summary>
-        public SolidColorBrush FeatureClassColorBrush
-        {
-            get
-            {
-                switch (ClassifiedFeatureVector.Type)
-                {
-                    case LandcoverType.Grass:
-                        return new SolidColorBrush(Colors.LightGreen);
-                    case LandcoverType.Gravel:
-                        return new SolidColorBrush(Colors.LightGray);
-                    case LandcoverType.Rock:
-                        return new SolidColorBrush(Colors.DarkGray);
-                    case LandcoverType.Snow:
-                        return new SolidColorBrush(Colors.White);
-                    case LandcoverType.Tree:
-                        return new SolidColorBrush(Colors.DarkGreen);
-                    case LandcoverType.Water:
-                        return new SolidColorBrush(Colors.DodgerBlue);
-                    default:
-                        return new SolidColorBrush(Colors.White);
-                }
-            }
-        }
+        public Brush FeatureClassColorBrush => ClassifiedFeatureVector.Type.GetDefaultBrush();
 
         /// <summary>
         /// The class of this feature.

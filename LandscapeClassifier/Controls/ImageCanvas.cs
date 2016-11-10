@@ -12,7 +12,6 @@ using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.ViewModel;
-using LandscapeClassifier.ViewModel.BandsCanvas;
 using LandscapeClassifier.ViewModel.MainWindow;
 using MathNet.Numerics.LinearAlgebra;
 using OSGeo.GDAL;
@@ -137,7 +136,6 @@ namespace LandscapeClassifier.Controls
                     var bandPixelPosition = screenToView* mouseVec / band.MetersPerPixel;
                     
                     ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
-                    Console.WriteLine("pixel value at (" + (int)bandPixelPosition[0] + ", " + (int)bandPixelPosition[1] + "): " + bandPixelValue);
 
                     bandPixels[bandIndex] = bandPixelValue;
                 }
@@ -182,15 +180,33 @@ namespace LandscapeClassifier.Controls
 
                 var featureBands = viewModel.ClassifierViewModel.Bands.Where(b => b.IsFeature).ToList();
 
+                ushort[] bandIntensities = new ushort[featureBands.Count];
                 for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                 {
                     var band = featureBands[bandIndex];
                     var bandPixelPosition = screenToView * posVec / band.MetersPerPixel;
 
-                    ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                    ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                    bandIntensities[bandIndex] = bandIntensity;
 
-                    byte grayScale = (byte) (((float) bandPixelValue/ushort.MaxValue)*byte.MaxValue);
-                    band.CurrentPositionBrush = new SolidColorBrush(Color.FromRgb(grayScale, grayScale, grayScale));
+                    if (viewModel.ClassifierViewModel.PreviewBandIntensityScale)
+                    {
+
+                    }
+                    else
+                    {
+                        byte grayScale = (byte)((float)bandIntensity / ushort.MaxValue * byte.MaxValue);
+                        band.CurrentPositionBrush = new SolidColorBrush(Color.FromRgb(grayScale, grayScale, grayScale));
+                    }
+
+                }
+
+                // TODO TEST
+                if (viewModel.ClassifierViewModel.IsTrained)
+                {
+                    var featureVector = new FeatureVector(bandIntensities);
+                    var predictedType = viewModel.ClassifierViewModel.CurrentClassifier.Predict(featureVector);
+                    Console.WriteLine("Predicted type: " + predictedType);
                 }
             }
         }

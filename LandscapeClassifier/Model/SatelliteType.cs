@@ -6,20 +6,20 @@ using System.Threading.Tasks;
 
 namespace LandscapeClassifier.Model
 {
-    public enum SateliteType
+    public enum SatelliteType
     {
         Sentinel2
     }
 
-    public static class SateliteTypeExtensions
+    public static class SatelliteTypeExtensions
     {
-        public static int GetBand(this SateliteType sateliteType, string fileName)
+        public static int GetBand(this SatelliteType satelliteType, string fileName)
         {
             int bandNumber = -1;
 
-            switch (sateliteType)
+            switch (satelliteType)
             {
-                case SateliteType.Sentinel2:
+                case SatelliteType.Sentinel2:
                     var bandNumberString = fileName.Substring(fileName.Length - 6, 2);
                     bandNumber = int.Parse(bandNumberString);
                     break;

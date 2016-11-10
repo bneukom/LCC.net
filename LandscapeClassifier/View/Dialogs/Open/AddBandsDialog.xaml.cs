@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.ViewModel;
 using MahApps.Metro.Controls;
@@ -15,16 +16,35 @@ namespace LandscapeClassifier.View.Open
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml
     /// </summary>
-    public partial class OpenImageDialog : MetroWindow
+    public partial class AddBandsDialog : MetroWindow
     {
-        public OpenImageDialogViewModel DialogViewModel { get; private set; }
+        public AddBandsDialogViewModel DialogViewModel { get; private set; }
 
-        public OpenImageDialog()
+        public AddBandsDialog()
         {
             InitializeComponent();
 
-            DialogViewModel = (OpenImageDialogViewModel)DataContext;
-            DialogViewModel.Bands.Clear();
+            DialogViewModel = (AddBandsDialogViewModel)DataContext;
+        }
+
+        public bool? ShowImportMissingBandsDialog(List<BandInfo> bandInfo, bool contrastEnhancement, SatelliteType satelliteType)
+        {
+            MissingBandsInfoTextBlock.Visibility = Visibility.Visible;
+            AddRemoveBandsStackPanel.Visibility = Visibility.Collapsed;
+            DialogViewModel.Reset();
+            bandInfo.ForEach(b => DialogViewModel.Bands.Add(b));
+            DialogViewModel.BandContrastEnhancement = contrastEnhancement;
+            DialogViewModel.SatelliteType = satelliteType;
+            DialogViewModel.MissingBandsImport = true;
+            return ShowDialog();
+        }
+
+        public bool? ShowAddBandsDialog()
+        {
+            MissingBandsInfoTextBlock.Visibility = Visibility.Collapsed;
+            AddRemoveBandsStackPanel.Visibility = Visibility.Visible;
+            DialogViewModel.Reset();
+            return ShowDialog();
         }
 
         private void OkClick(object sender, RoutedEventArgs e)
@@ -106,7 +126,7 @@ namespace LandscapeClassifier.View.Open
                 for (int pathIndex = 0; pathIndex < openFileDialog.FileNames.Length; ++pathIndex)
                 {
                     string fileName = Path.GetFileName(openFileDialog.FileNames[pathIndex]);
-                    int bandNumber = DialogViewModel.SateliteType.GetBand(fileName);
+                    int bandNumber = DialogViewModel.SatelliteType.GetBand(fileName);
 
                     DialogViewModel.Bands.Add(new BandInfo(openFileDialog.FileNames[pathIndex], bandNumber == 4, bandNumber == 3, bandNumber == 2));
                 }

@@ -53,7 +53,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <CheckBox Content="{Binding BandName}" IsChecked="{Binding IsFeature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,5,0"/>
+                            <CheckBox Content="{Binding BandName}" IsEnabled="{Binding CanChangeIsFeature}" IsChecked="{Binding IsFeature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,5,0"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -161,7 +161,7 @@
                                     </Separator.LayoutTransform>
                                 </Separator>
                                 <Label Content="WGS84:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <TextBox HorizontalAlignment="Left"  MinWidth="140" Margin="0,0,0,0"  VerticalAlignment="Center" Text="{Binding MouseWorldPoisition, Mode=TwoWay, Converter={StaticResource PointToStringConverter}}"/>
+                                <TextBox HorizontalAlignment="Left"  MinWidth="140" Margin="0,0,0,0"  VerticalAlignment="Center" Text="{Binding ClassifierViewModel.MouseWorldPoisition, Mode=TwoWay, Converter={StaticResource PointToStringConverter}}"/>
                                 <Separator Margin="5,0,5,0">
                                     <Separator.LayoutTransform>
                                         <RotateTransform Angle="90" />
@@ -180,6 +180,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <CheckBox Checked="{Binding ClassifierViewModel.PreviewBandIntensityScale}" VerticalAlignment="Center">Preview Scale</CheckBox>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="5,5,5,5" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding ClassifierViewModel.TrainingStatusText}" Foreground="{Binding ClassifierViewModel.TrainingStatusBrush}"></TextBlock>

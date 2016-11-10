@@ -1,5 +1,6 @@
-﻿using GalaSoft.MvvmLight;
-using LandscapeClassifier.ViewModel.BandsCanvas;
+﻿using System.Windows.Input;
+using GalaSoft.MvvmLight;
+using LandscapeClassifier.ViewModel.MainWindow.Classification;
 
 namespace LandscapeClassifier.ViewModel.MainWindow
 {

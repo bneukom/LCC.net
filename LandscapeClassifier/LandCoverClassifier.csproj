@@ -289,18 +289,20 @@
     <Compile Include="Controls\ImageCanvas.cs" />
     <Compile Include="Converter\ColorToBrushConverter.cs" />
     <Compile Include="Converter\DoubleRoundingConverter.cs" />
+    <Compile Include="Converter\InverseBoolConverter.cs" />
     <Compile Include="Converter\PointToStringConverter.cs" />
+    <Compile Include="Extensions\LandCoverTypeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
     <Compile Include="Model\Band.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
-    <Compile Include="Model\SateliteType.cs" />
+    <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\BandViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
-    <Compile Include="ViewModel\Dialogs\OpenImageDialogViewModel.cs" />
-    <Compile Include="View\Dialogs\Open\OpenImageDialog.xaml.cs">
-      <DependentUpon>OpenImageDialog.xaml</DependentUpon>
+    <Compile Include="ViewModel\Dialogs\AddBandsDialogViewModel.cs" />
+    <Compile Include="View\Dialogs\Open\AddBandsDialog.xaml.cs">
+      <DependentUpon>AddBandsDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Extensions\ColorExtensions.cs" />
     <Compile Include="GdalConfiguration.cs" />
@@ -333,7 +335,7 @@
       <DependentUpon>ExportWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\ValidationRules\DoubleValidationRule.cs" />
-    <Page Include="View\Dialogs\Open\OpenImageDialog.xaml">
+    <Page Include="View\Dialogs\Open\AddBandsDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -379,7 +381,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Properties\Settings.Designer.cs">
+    <Compile Include="Classifier\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -390,7 +392,7 @@
     </EmbeddedResource>
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
-    <None Include="Properties\Settings.settings">
+    <None Include="Classifier\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>

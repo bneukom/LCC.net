@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using Accord;
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
-using Accord.Statistics.Filters;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 
@@ -15,7 +11,8 @@ namespace LandscapeClassifier.Classifier
 {
     class DecisionTreeClassifier : ILandCoverClassifier
     {
-        ID3Learning id3Learning;
+        private ID3Learning _id3Learning;
+        private DecisionTree _tree;
 
         public void Train(ClassificationModel classificationModel)
         {
@@ -35,15 +32,16 @@ namespace LandscapeClassifier.Classifier
                 responses[featureIndex] = (int) featureVector.Type;
             }
 
-            DecisionTree tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
+            _tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
 
-            id3Learning = new ID3Learning(tree);
-            id3Learning.Learn(input, responses);
+            _id3Learning = new ID3Learning(_tree);
+            _id3Learning.Learn(input, responses);
+            
         }
 
         public LandcoverType Predict(FeatureVector feature)
         {
-            throw new NotImplementedException();
+            return (LandcoverType) _tree.Decide(Array.ConvertAll(feature.BandIntensities, s => (int)s));
         }
 
         public BitmapSource Predict(FeatureVector[,] features)

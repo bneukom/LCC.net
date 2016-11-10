@@ -11,12 +11,14 @@ using LandscapeClassifier.Model;
 
 namespace LandscapeClassifier.ViewModel
 {
-    public class OpenImageDialogViewModel : INotifyPropertyChanged
+    public class AddBandsDialogViewModel : INotifyPropertyChanged
     {
         private bool _addRgb = true;
         private bool _rgbContrastEnhancement = true;
         private bool _bandContrastEnhancement = false;
-        private SateliteType _sateliteType = SateliteType.Sentinel2;
+        private SatelliteType _satelliteType = SatelliteType.Sentinel2;
+        private bool _missingBandsImport;
+
 
         /// <summary>
         /// Bands
@@ -50,15 +52,27 @@ namespace LandscapeClassifier.ViewModel
             set { _bandContrastEnhancement = value; OnPropertyChanged(nameof(BandContrastEnhancement)); }
         }
 
-        public SateliteType SateliteType
+        /// <summary>
+        /// The satellite type of the bands.
+        /// </summary>
+        public SatelliteType SatelliteType
         {
-            get { return _sateliteType; }
+            get { return _satelliteType; }
             set
             {
-                _sateliteType = value; OnPropertyChanged(nameof(SateliteType)); }
+                _satelliteType = value; OnPropertyChanged(nameof(SatelliteType)); }
         }
 
-        public OpenImageDialogViewModel()
+        /// <summary>
+        /// Import missing bands.
+        /// </summary>
+        public bool MissingBandsImport
+        {
+            get { return _missingBandsImport; }
+            set { _missingBandsImport = value; OnPropertyChanged(nameof(MissingBandsImport)); }
+        }
+
+        public AddBandsDialogViewModel()
         {
             Bands = new ObservableCollection<BandInfo>();
 
@@ -115,6 +129,18 @@ namespace LandscapeClassifier.ViewModel
                 }
                 band.PropertyChanged += BandOnPropertyChanged;
             }
+        }
+
+        /// <summary>
+        /// Resets this viewmodel to its default values.
+        /// </summary>
+        public void Reset()
+        {
+            Bands.Clear();
+            BandContrastEnhancement = false;
+            AddRgb = true;
+            RgbContrastEnhancement = true;
+            SatelliteType = SatelliteType.Sentinel2;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

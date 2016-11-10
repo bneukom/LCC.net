@@ -31,8 +31,5 @@ namespace LandscapeClassifier.View
         private void OpenDEM_Click(object sender, RoutedEventArgs e)
         {
         }
-
-
-
     }
 }

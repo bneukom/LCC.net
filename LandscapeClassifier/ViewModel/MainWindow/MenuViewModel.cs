@@ -93,13 +93,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
     
 
-
-
         public MenuViewModel()
         {
             GdalConfiguration.ConfigureGdal();
-
-            
 
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
 
