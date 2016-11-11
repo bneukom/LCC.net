@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace LandscapeClassifier.Classifier {
+namespace LandscapeClassifier {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

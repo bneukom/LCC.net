@@ -4,19 +4,22 @@ using System.Windows.Media.Imaging;
 using Accord;
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
+using Accord.MachineLearning.VectorMachines;
+using Accord.MachineLearning.VectorMachines.Learning;
+using Accord.Statistics.Kernels;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.Classifier
 {
-    class DecisionTreeClassifier : ILandCoverClassifier
+    class SVMClassifier : ILandCoverClassifier
     {
-        private C45Learning _id3Learning;
-        private DecisionTree _tree;
+        private MulticlassSupportVectorMachine<Linear> svm;
 
         public void Train(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
+            int numClasses = Enum.GetValues(typeof(LandcoverType)).Length;
             DecisionVariable[]  decisionVariables = classificationModel.Bands.Select(
                 b => DecisionVariable.Continuous(b.ToString())).ToArray();
 
@@ -32,19 +35,27 @@ namespace LandscapeClassifier.Classifier
                 responses[featureIndex] = (int) featureVector.Type;
             }
 
-            _tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
-            _id3Learning = new C45Learning(_tree);
-            _id3Learning.SplitStep = 10;
-            _id3Learning.Learn(input, responses);
+            // Create a one-vs-one multi-class SVM learning algorithm 
+            var teacher = new MulticlassSupportVectorLearning<Linear>()
+            {
+                // using LIBLINEAR's L2-loss SVC dual for each SVM
+                Learner = (p) => new LinearDualCoordinateDescent()
+                {
+                    Loss = Loss.L2
+                }
+            };
 
-            Console.WriteLine(_tree.NumberOfOutputs);
+
+            svm = teacher.Learn(input, responses);
+
+            Console.WriteLine();
 
 
         }
 
         public LandcoverType Predict(FeatureVector feature)
         {
-            return (LandcoverType) _tree.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
+            return (LandcoverType) svm.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
 
         public BitmapSource Predict(FeatureVector[,] features)

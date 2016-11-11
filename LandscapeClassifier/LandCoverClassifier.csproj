@@ -284,9 +284,13 @@
     </ApplicationDefinition>
     <Compile Include="Classifier\Classifier.cs" />
     <Compile Include="Classifier\ClassifierExtensions.cs" />
+    <Compile Include="Classifier\BayesClassifier.cs" />
+    <Compile Include="Classifier\SVMClassifier.cs" />
     <Compile Include="Classifier\DecisionTreeClassifier.cs" />
     <Compile Include="Classifier\ILandCoverClassifier.cs" />
-    <Compile Include="Controls\ImageCanvas.cs" />
+    <Compile Include="Controls\ImageCanvasBase.cs" />
+    <Compile Include="Controls\ClassificationImageCanvas.cs" />
+    <Compile Include="Controls\PredictionImageCanvas.cs" />
     <Compile Include="Converter\ColorToBrushConverter.cs" />
     <Compile Include="Converter\DoubleRoundingConverter.cs" />
     <Compile Include="Converter\InverseBoolConverter.cs" />
@@ -301,6 +305,7 @@
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\AddBandsDialogViewModel.cs" />
+    <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
     <Compile Include="View\Dialogs\Open\AddBandsDialog.xaml.cs">
       <DependentUpon>AddBandsDialog.xaml</DependentUpon>
     </Compile>
@@ -316,7 +321,6 @@
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="ViewModel\MainWindow\ClassifiedFeatureVectorViewModel.cs" />
     <Compile Include="Model\LandcoverTypeExtensions.cs" />
-    <Compile Include="ViewModel\MainWindow\MenuViewModel.cs" />
     <Compile Include="Util\wgs84_ch1903.cs" />
     <Compile Include="Model\WorldFile.cs" />
     <Compile Include="View\Dialogs\Export\ExportSmoothedDEMDialog.xaml.cs">
@@ -381,7 +385,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Classifier\Settings.Designer.cs">
+    <Compile Include="Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -392,7 +396,7 @@
     </EmbeddedResource>
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
-    <None Include="Classifier\Settings.settings">
+    <None Include="Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
@@ -446,9 +450,7 @@
   <ItemGroup>
     <Content Include="GdalConfiguration.vb" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ViewModel\MainWindow\Prediction\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

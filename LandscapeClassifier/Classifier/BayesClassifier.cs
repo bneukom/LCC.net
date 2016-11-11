@@ -2,49 +2,57 @@
 using System.Linq;
 using System.Windows.Media.Imaging;
 using Accord;
+using Accord.MachineLearning.Bayes;
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
+using Accord.Statistics.Distributions.Univariate;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.Classifier
 {
-    class DecisionTreeClassifier : ILandCoverClassifier
+    public class BayesClassifier : ILandCoverClassifier
     {
-        private C45Learning _id3Learning;
-        private DecisionTree _tree;
+        private NaiveBayesLearning _learning;
+        private NaiveBayes _bayes;
 
         public void Train(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
-            DecisionVariable[]  decisionVariables = classificationModel.Bands.Select(
-                b => DecisionVariable.Continuous(b.ToString())).ToArray();
+            int numClasses = Enum.GetValues(typeof(LandcoverType)).Length;
 
-            double[][] input = new double[numFeatures][];
+            int[][] input = new int[numFeatures][];
             int[] responses = new int[numFeatures];
-            
+
+            int[] symbols = new int[numFeatures];
+            for (int i = 0; i < symbols.Length; ++i) symbols[i] = ushort.MaxValue;
+
+            _bayes = new NaiveBayes(numClasses, symbols);
+
             for (int featureIndex = 0;
                 featureIndex < classificationModel.ClassifiedFeatureVectors.Count;
                 ++featureIndex)
             {
                 var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
-                input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
+                input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (int) s);
                 responses[featureIndex] = (int) featureVector.Type;
             }
 
-            _tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
-            _id3Learning = new C45Learning(_tree);
-            _id3Learning.SplitStep = 10;
-            _id3Learning.Learn(input, responses);
+            _learning = new NaiveBayesLearning()
+            {
+                Model = _bayes,
+            };
 
-            Console.WriteLine(_tree.NumberOfOutputs);
+            _learning.Options.InnerOption.UseLaplaceRule = true;
 
+
+            _learning.Learn(input, responses);
 
         }
 
         public LandcoverType Predict(FeatureVector feature)
         {
-            return (LandcoverType) _tree.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
+            return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (int)s));
         }
 
         public BitmapSource Predict(FeatureVector[,] features)

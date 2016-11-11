@@ -8,6 +8,7 @@ namespace LandscapeClassifier.Classifier
 {
     public enum Classifier
     {
-        DecisionTrees
+        DecisionTrees, Bayes, SVM
+
     }
 }

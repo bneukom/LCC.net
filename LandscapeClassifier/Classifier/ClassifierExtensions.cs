@@ -14,6 +14,10 @@ namespace LandscapeClassifier.Classifier
             {
                 case Classifier.DecisionTrees:
                     return new DecisionTreeClassifier();
+                case Classifier.Bayes:
+                    return new BayesClassifier();
+                case Classifier.SVM:
+                    return new SVMClassifier();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(classifier), classifier, null);
             }

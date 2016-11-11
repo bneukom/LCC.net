@@ -46,19 +46,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
 
-        private SatelliteType _satelliteType;
-        private bool _bandsContrastEnhancement;
+        private readonly MainWindowViewModel _mainWindowViewModel;
+        
         private bool _previewBandIntensityScale = true;
-
-        /// <summary>
-        /// Open image bands.
-        /// </summary>
-        public ICommand OpenImagesCommand { set; get; }
-
-        /// <summary>
-        /// Export predictions.
-        /// </summary>
-        public ICommand ExportPredictionsCommand { set; get; }
+        private bool _areBandsUnscaled;
 
         /// <summary>
         /// Export command.
@@ -74,11 +65,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// Import features command.
         /// </summary>
         public ICommand ImportFeatureCommand { set; get; }
-
-        /// <summary>
-        /// Predict all.
-        /// </summary>
-        public object PredictAllCommand { set; get; }
 
         /// <summary>
         /// Remove selected command.
@@ -110,7 +96,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public Matrix<double> WorldToScreen;
 
-
         /// <summary>
         /// The bands of the image.
         /// </summary>
@@ -120,6 +105,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// Whether multiple bands can be visible or not.
         /// </summary>
         public bool MultipleBandsEnabled { get; set; }
+
+        /// <summary>
+        /// Used satellite type.
+        /// </summary>
+        public SatelliteType SatelliteType { get; set; }
+
+        /// <summary>
+        /// Contrast enhancement used for bands.
+        /// </summary>
+        public bool BandsContrastEnhancement { get; set; }
 
         /// <summary>
         /// Mouse screen position.
@@ -231,7 +226,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 if (value != _isTrained)
                 {
                     _isTrained = value;
-                    RaisePropertyChanged(nameof(IsTrained));
+                    RaisePropertyChanged();
                 }
             }
         }
@@ -242,7 +237,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public LandcoverType SelectedLandCoverType
         {
             get { return _selectedLandCoverType; }
-            set { _selectedLandCoverType = value; RaisePropertyChanged(nameof(SelectedLandCoverType)); }
+            set { _selectedLandCoverType = value; RaisePropertyChanged(); }
         }
 
         /// <summary>
@@ -250,7 +245,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public bool PreviewBandIntensityScale
         {
-            get { return _previewBandIntensityScale; }
+            get { return _previewBandIntensityScale && AreBandsUnscaled; }
             set { _previewBandIntensityScale = value; RaisePropertyChanged(); }
         }
 
@@ -269,8 +264,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public ILandCoverClassifier CurrentClassifier => _currentClassifier;
 
-        public ClassifierViewModel()
+        /// <summary>
+        /// Whether the bands are unscaled or not.
+        /// </summary>
+        public bool AreBandsUnscaled
         {
+            get { return _areBandsUnscaled; }
+            set { _areBandsUnscaled = value; RaisePropertyChanged(); }
+        }
+
+        public ClassifierViewModel(MainWindowViewModel mainWindowViewModel)
+        {
+            _mainWindowViewModel = mainWindowViewModel;
+
             ScreenToWorld = Matrix<double>.Build.DenseIdentity(3);
             WorldToScreen = ScreenToWorld.Inverse();
 
@@ -311,12 +317,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
 
-            OpenImagesCommand = new RelayCommand(OpenBands, () => true);
+            
 
             TrainCommand = new RelayCommand(Train, CanTrain);
-
-            PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
-            ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
         }
 
         private void RemoveSelectedFeature()
@@ -398,8 +401,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 {
 
                     var bands = Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber);
-                    outputStreamWriter.WriteLine(_satelliteType);
-                    outputStreamWriter.WriteLine(_bandsContrastEnhancement);
+                    outputStreamWriter.WriteLine(SatelliteType);
+                    outputStreamWriter.WriteLine(BandsContrastEnhancement);
                     outputStreamWriter.WriteLine(bands.Aggregate("", (a, b) => a + b.BandPath + ";"));
 
                     foreach (var feature in Features.Select(f => f.ClassifiedFeatureVector))
@@ -445,7 +448,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                 var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => Bands.All(b => b.BandPath != s)).Select(s =>
                 {
-                    int bandNumber = _satelliteType.GetBand(Path.GetFileName(s));
+                    int bandNumber = SatelliteType.GetBand(Path.GetFileName(s));
                     return new BandInfo(s, bandNumber == 4, bandNumber == 3, bandNumber == 2);
                 }).ToList();
 
@@ -457,7 +460,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     if (dialog.ShowImportMissingBandsDialog(missingBands, bandContrastEnhancement, satelliteType) ==
                         true && dialog.DialogViewModel.Bands.Count > 0)
                     {
-                        AddBands(dialog.DialogViewModel);
+                        _mainWindowViewModel.AddBands(dialog.DialogViewModel);
                     }
                     else
                     {
@@ -483,203 +486,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             return true;
         }
 
-        private void OpenBands()
-        {
-            AddBandsDialog dialog = new AddBandsDialog();
-
-            if (dialog.ShowAddBandsDialog() == true && dialog.DialogViewModel.Bands.Count > 0)
-            {
-                AddBands(dialog.DialogViewModel);
-            }
-        }
-
-        private void AddBands(AddBandsDialogViewModel viewModel)
-        {
-            // Store bands loading information
-            _satelliteType = viewModel.SatelliteType;
-            _bandsContrastEnhancement = viewModel.RgbContrastEnhancement;
-
-            // Initialize RGB data
-            byte[] bgra = null;
-            Dataset rgbDataSet = null;
-            if (viewModel.AddRgb)
-            {
-                var firstRGBBand = viewModel.Bands.First(b => b.B || b.G || b.R);
-                rgbDataSet = Gdal.Open(firstRGBBand.Path, Access.GA_ReadOnly);
-                bgra = new byte[rgbDataSet.RasterXSize * rgbDataSet.RasterYSize * 4];
-            }
-
-            var firstBand = viewModel.Bands.First();
-            var firstDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
-
-            // Transformation
-            double[] transform = new double[6];
-            firstDataSet.GetGeoTransform(transform);
-            double[,] matArray =
-            {
-                    {1, transform[2], transform[0]},
-                    {transform[4], -1, transform[3]},
-                    {0, 0, 1}
-                };
-            var builder = Matrix<double>.Build;
-            var transformMat = builder.DenseOfArray(matArray);
-
-            ProjectionName = firstDataSet.GetProjection();
-            ScreenToWorld = transformMat;
-            WorldToScreen = transformMat.Inverse();
-
-            // Parallel band loading
-            Task loadImages = Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Bands, (bandInfo, _, bandIndex) =>
-            {
-                var dataSet = Gdal.Open(bandInfo.Path, Access.GA_ReadOnly);
-                var rasterBand = dataSet.GetRasterBand(1);
-
-                int stride = (rasterBand.XSize * 16 + 7) / 8;
-                IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
-                rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize, rasterBand.YSize, DataType.GDT_UInt16, 2, stride);
-
-                // Cutoff
-                int[] histogram = new int[ushort.MaxValue];
-                rasterBand.GetHistogram(0, ushort.MaxValue, ushort.MaxValue, histogram, 1, 0,
-                    ProgressFunc, "");
-
-                double minCut = rasterBand.XSize * rasterBand.YSize * 0.02f;
-                int minCutValue = 0;
-                bool minCutSet = false;
-
-                double maxCut = rasterBand.XSize * rasterBand.YSize * 0.98f;
-                int maxCutValue = ushort.MaxValue;
-                bool maxCutSet = false;
-
-                int pixelCount = 0;
-                for (int bucket = 0; bucket < histogram.Length; ++bucket)
-                {
-                    pixelCount += histogram[bucket];
-                    if (pixelCount >= minCut && !minCutSet)
-                    {
-                        minCutValue = bucket;
-                        minCutSet = true;
-                    }
-                    if (pixelCount >= maxCut && !maxCutSet)
-                    {
-                        maxCutValue = bucket;
-                        maxCutSet = true;
-                    }
-                }
-
-                // Add RGB
-                if (viewModel.AddRgb)
-                {
-                    // Apply RGB contrast enhancement
-                    if (viewModel.RgbContrastEnhancement && (bandInfo.B || bandInfo.G || bandInfo.R))
-                    {
-                        int colorOffset = bandInfo.B ? 0 : bandInfo.G ? 1 : bandInfo.R ? 2 : -1;
-                        unsafe
-                        {
-                            ushort* dataPtr = (ushort*)data.ToPointer();
-                            Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize), (range) =>
-                            {
-                                for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
-                                {
-                                    ushort current = *(dataPtr + dataIndex);
-                                    byte val = (byte)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) *
-                                                byte.MaxValue, 0, byte.MaxValue - 1);
-
-                                    bgra[dataIndex * 4 + colorOffset] = val;
-                                    bgra[dataIndex * 4 + 3] = 255;
-                                }
-                            });
-                        }
-                    }
-                }
-
-                // Apply band contrast enhancement
-                if (viewModel.BandContrastEnhancement)
-                {
-                    unsafe
-                    {
-                        ushort* dataPtr = (ushort*)data.ToPointer();
-
-
-                        Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize), (range) =>
-                        {
-                            for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
-                            {
-                                ushort current = *(dataPtr + dataIndex);
-                                *(dataPtr + dataIndex) = (ushort)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * ushort.MaxValue, 0, ushort.MaxValue - 1);
-                            }
-                        });
-                    }
-                }
-
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    WriteableBitmap bandImage = new WriteableBitmap(rasterBand.XSize, rasterBand.YSize, 96, 96, PixelFormats.Gray16, null);
-                    bandImage.Lock();
-
-                    unsafe
-                    {
-                        Buffer.MemoryCopy(data.ToPointer(), bandImage.BackBuffer.ToPointer(), stride * rasterBand.YSize,
-                            stride * rasterBand.YSize);
-                    }
-
-                    bandImage.AddDirtyRect(new Int32Rect(0, 0, rasterBand.XSize, rasterBand.YSize));
-                    bandImage.Unlock();
-
-                    // Position
-                    double[] bandTransform = new double[6];
-                    dataSet.GetGeoTransform(bandTransform);
-                    var vecBuilder = Vector<double>.Build;
-                    var upperLeft = vecBuilder.DenseOfArray(new[] { bandTransform[0], bandTransform[3], 1 });
-                    var meterPerPixel = bandTransform[1];
-                    var xRes = bandTransform[1];
-                    var yRes = bandTransform[5];
-                    var bottomRight = vecBuilder.DenseOfArray(new[] { upperLeft[0] + (rasterBand.XSize * xRes), upperLeft[1] + (rasterBand.YSize * yRes), 1 });
-
-                    int bandNumber = viewModel.SatelliteType.GetBand(Path.GetFileName(bandInfo.Path));
-                    var imageBandViewModel = new BandViewModel("Band " + bandNumber, bandInfo.Path, bandNumber, meterPerPixel, bandImage, upperLeft, bottomRight, minCutValue, maxCutValue, true, Features.Count == 0);
-
-                    Bands.AddSorted(imageBandViewModel, Comparer<BandViewModel>.Create((a, b) => a.BandNumber - b.BandNumber));
-                });
-
-                Marshal.FreeHGlobal(data);
-            }));
-
-            // Load rgb image
-            if (viewModel.AddRgb)
-            {
-                loadImages.ContinueWith(t =>
-                {
-                    // Create RGB image
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        var rgbStride = rgbDataSet.RasterXSize * 4;
-
-                        var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96, PixelFormats.Bgra32, null, bgra,
-                            rgbStride);
-
-                        // Transformation
-                        double[] rgbTransform = new double[6];
-                        rgbDataSet.GetGeoTransform(rgbTransform);
-                        var vecBuilder = Vector<double>.Build;
-                        var upperLeft = vecBuilder.DenseOfArray(new[] { rgbTransform[0], rgbTransform[3], 1 });
-                        var meterPerPixel = rgbTransform[1];
-                        var xRes = rgbTransform[1];
-                        var yRes = rgbTransform[5];
-                        var bottomRight = vecBuilder.DenseOfArray(new[] { upperLeft[0] + (rgbDataSet.RasterXSize * xRes), upperLeft[1] + (rgbDataSet.RasterYSize * yRes), 1 });
-
-                        Bands.Insert(0, new BandViewModel("RGB", null, -1, meterPerPixel, new WriteableBitmap(rgbImage), upperLeft, bottomRight, 0, 0, false, Features.Count == 0));
-                    });
-                });
-            }
-        }
-
-        public static int ProgressFunc(double complete, IntPtr message, IntPtr data)
-        {
-            return 1;
-        }
-
         /// <summary>
         /// Trains the classifier.
         /// </summary>
@@ -700,167 +506,5 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             return Features.Count > 0;
         }
 
-        private void ExportPredictions()
-        {
-            /*
-            var chooseFolderDialog = new CommonOpenFileDialog
-            {
-                Title = "Choose Export Folder",
-                IsFolderPicker = true,
-                AddToMostRecentlyUsedList = false,
-                AllowNonFileSystemItems = false,
-                EnsureFileExists = true,
-                EnsurePathExists = true,
-                EnsureReadOnly = false,
-                EnsureValidNames = true,
-                Multiselect = false,
-                ShowPlacesList = true
-            };
-
-            if (chooseFolderDialog.ShowDialog() == CommonFileDialogResult.Ok)
-            {
-                var folder = chooseFolderDialog.FileName;
-
-                // Write prediction image
-                using (var fileStream = new FileStream(Path.Combine(folder, "classification.png"), FileMode.Create))
-                {
-                    BitmapEncoder encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(BitmapFrame.Create(PredictedLandcoverImage));
-                    encoder.Save(fileStream);
-                }
-
-                // Write ortho image
-                var width = AscFile.Ncols;
-                var height = AscFile.Nrows;
-                var dpi = 96d;
-
-                var stride = width*4; // 4 bytes per pixel
-
-                byte[] orthoImageData = new byte[stride*height];
-                Int32Rect sourceRect = new Int32Rect((int) ViewportRect.X, (int) ViewportRect.Y,
-                    (int) ViewportRect.Width, (int) ViewportRect.Height);
-                OrthoImage.CopyPixels(sourceRect, orthoImageData, stride, 0);
-
-                // Write prediction image
-                using (var fileStream = new FileStream(Path.Combine(folder, "orthophoto.png"), FileMode.Create))
-                {
-                    var encoder = new PngBitmapEncoder();
-                    var orthoImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null,
-                        orthoImageData, stride);
-                    encoder.Frames.Add(BitmapFrame.Create(orthoImage));
-                    encoder.Save(fileStream);
-                }
-
-                // Write Layers
-                var layerData = new List<byte[]>();
-                // var colorMapData = new List<byte[]>();
-
-                var LandCovers = new List<LandcoverType>() {LandcoverType.Tree};
-                var LandCoverColors = new Dictionary<Color, int>();
-
-                for (var layerIndex = 0; layerIndex < LandCovers.Count; ++layerIndex)
-                {
-                    LandCoverColors.Add(LandCovers[layerIndex].GetColor(), layerIndex);
-
-                    var layerDataArray = new byte[stride*height];
-                    var colorMapDataArray = new byte[stride * height];
-                    layerData.Add(layerDataArray);
-                    // colorMapData.Add(colorMapDataArray);
-                }
-
-                byte[] predictionImageData = new byte[stride*height];
-                _predictedLandcoverImage.CopyPixels(predictionImageData, stride, 0);
-
-                for (int dataIndex = 0; dataIndex < predictionImageData.Length; dataIndex += 4)
-                {
-                    var b = predictionImageData[dataIndex + 0];
-                    var g = predictionImageData[dataIndex + 1];
-                    var r = predictionImageData[dataIndex + 2];
-                    var a = predictionImageData[dataIndex + 3];
-                    var color = Color.FromArgb(a, r, g, b);
-
-                    int layerIndex = LandCoverColors[color];
-
-                    layerData[layerIndex][dataIndex + 0] = 255;
-                    layerData[layerIndex][dataIndex + 1] = 255;
-                    layerData[layerIndex][dataIndex + 2] = 255;
-                    layerData[layerIndex][dataIndex + 3] = 255;
-
-                }
-
-                for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
-                {
-                    var data = layerData[layerIndex];
-                    var bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
-                        stride);
-
-                    // write layer
-                    using (
-                        var fileStream = new FileStream(Path.Combine(folder, "layer" + layerIndex + ".png"),
-                            FileMode.Create))
-                    {
-                        BitmapEncoder encoder = new PngBitmapEncoder();
-                        encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-                        encoder.Save(fileStream);
-                    }
-
-                }
-            }
-            */
-        }
-
-        private bool CanExportPredictions()
-        {
-            return false;
-        }
-
-        private void PredictAll()
-        {
-            /*
-            // @TODO create transformation matrix
-            var left = (AscFile.Xllcorner - WorldFile.X)/WorldFile.PixelSizeX;
-            var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize*AscFile.Nrows;
-            var topScreenCoordinates = (topWorldCoordinates - WorldFile.Y)/WorldFile.PixelSizeY;
-
-            var width = (int)(AscFile.Ncols * _ascFile.Cellsize / _worldFile.PixelSizeX);
-            var height = (int)(AscFile.Nrows * _ascFile.Cellsize / _worldFile.PixelSizeY);
-
-            width = 1000;
-            height = 1000;
-        
-            var dpi = 96d;
-
-            var stride = width * 4; // 4 bytes per pixel
-            var pixelData = new byte[stride * height];
-
-            FeatureVector[,] features = new FeatureVector[height, width];
-
-            // Create features
-            Parallel.For(0, height, y =>
-            {
-                for (int x = 0; x < width; ++x)
-                {
-                    var position = new Point(x, y);
-                    var altitude = GetAscDataAt(position);
-                    var color = GetColorAt(position);
-                    var averageNeighborhoodColor = GetAverageNeighborhoodColor(position);
-                    var slopeAndAspectAt = GetSlopeAndAspectAt(position);
-
-                    features[y, x] = new FeatureVector(altitude, color, averageNeighborhoodColor,
-                        slopeAndAspectAt.Aspect, slopeAndAspectAt.Slope);
-                }
-            });
-           
-
-            // Predict
-            var prediction = _currentClassifier.Predict(features);
-            PredictedLandcoverImage = prediction;
-            */
-        }
-
-        private bool CanPredictAll()
-        {
-            return IsTrained;
-        }
     }
 }
