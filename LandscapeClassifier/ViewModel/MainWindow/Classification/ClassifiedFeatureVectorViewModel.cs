@@ -2,13 +2,17 @@
 using System.Windows.Media;
 using GalaSoft.MvvmLight;
 using LandscapeClassifier.Extensions;
+using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 
-namespace LandscapeClassifier.ViewModel.MainWindow
+namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 {
     public class ClassifiedFeatureVectorViewModel : ViewModelBase
     {
 
+        /// <summary>
+        /// The feature vector model.
+        /// </summary>
         public ClassifiedFeatureVector ClassifiedFeatureVector { get; }
 
         /// <summary>
@@ -19,7 +23,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// <summary>
         /// The class of this feature.
         /// </summary>
-        public string FeatureClass => ClassifiedFeatureVector.Type.ToString();
+        public LandcoverType FeatureType => ClassifiedFeatureVector.Type;
 
         /// <summary>
         /// The values of this feature vector.

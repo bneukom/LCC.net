@@ -9,10 +9,11 @@
         xmlns:controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:validationRules="clr-namespace:LandscapeClassifier.View.ValidationRules"
         xmlns:classifierControls="clr-namespace:LandscapeClassifier.Controls"
+        xmlns:classification="clr-namespace:LandscapeClassifier.ViewModel.MainWindow.Classification"
         mc:Ignorable="d"
         GlowBrush="{DynamicResource AccentColorBrush}"
         Title="Land Cover Classifier" DataContext="{StaticResource MainWindowViewModel}"  Icon="/Resources/Icons/Icon128_3.png" WindowTitleBrush="#DDDDDD" Height="900" Width="1440" UseLayoutRounding="True">
-    <DockPanel>
+    <DockPanel IsEnabled="{Binding WindowEnabled}">
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
                 <MenuItem Header="_Export Training Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}"/>
@@ -45,7 +46,7 @@
             <Label x:Name="DEMPath" Foreground="LightGray" Content="None" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch"  Margin="5,5,5,4"  VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
                 <Label Content="Features:"></Label>
-                <ItemsControl ItemsSource="{Binding ClassifierViewModel.Bands}">
+                <ItemsControl ItemsSource="{Binding Bands}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal"/>
@@ -86,7 +87,7 @@
                                 <Label Grid.Column="0">Bands</Label>
                                 <CheckBox Grid.Column="1" Margin="5" VerticalAlignment="Center" IsChecked="{Binding ClassifierViewModel.MultipleBandsEnabled}" HorizontalAlignment="Right">Multiple Bands Active</CheckBox>
                             </Grid>
-                            <ListBox Grid.Column="0" Grid.Row="1" MinWidth="250" ItemsSource="{Binding ClassifierViewModel.Bands}">
+                            <ListBox Grid.Column="0" Grid.Row="1" MinWidth="250" ItemsSource="{Binding Bands}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
@@ -126,16 +127,19 @@
                                 <Label x:Name="ComboInfo" Grid.Column="0" Content="Landcover Type"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                 <ComboBox SelectedIndex="0" Grid.Column="1" SelectedValue="{Binding ClassifierViewModel.SelectedLandCoverType}" ItemsSource="{Binding ClassifierViewModel.LandCoverTypesEnumerable}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
                             </Grid>
-                            <ListBox x:Name="FeaturesListBox" Width="300" Grid.Row="2" HorizontalAlignment="Stretch" SelectedItem="{Binding ClassifierViewModel.SelectedFeatureVector}" ItemsSource="{Binding ClassifierViewModel.Features}"  >
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
+                            <TreeView  Width="325" Grid.Row="2" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
+                                <TreeView.Resources>
+                                    <HierarchicalDataTemplate DataType = "{x:Type classification:FeatureByTypeViewModel}" ItemsSource = "{Binding Path=Features}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock VerticalAlignment="Center" Foreground="{Binding FeatureClassColorBrush, Mode=OneWay, Delay=1000}" Text="{Binding FeatureClass, Mode=OneWay}" Margin="2,2,2,2"></TextBlock>
-                                            <TextBlock VerticalAlignment="Center" Foreground="{Binding FeatureClassColorBrush, Mode=OneWay, Delay=1000}" Text="{Binding FeatureValues, Mode=OneWay}" Margin="2,2,2,2" FontSize="9"></TextBlock>
+                                            <TextBlock Text="{Binding Path=Type}"/>
+                                            <TextBlock Margin="5,0,0,0" Text="{Binding Path=Features.Count}"></TextBlock>
                                         </StackPanel>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+                                    </HierarchicalDataTemplate>
+                                    <HierarchicalDataTemplate DataType = "{x:Type classification:ClassifiedFeatureVectorViewModel}">
+                                        <TextBlock FontSize="9" Foreground="{Binding FeatureClassColorBrush}" Text="{Binding Path=FeatureValues}"/>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.Resources>
+                            </TreeView>
                             <Button Grid.Column="0" Grid.Row="3" x:Name="RemoveButton" Command="{Binding ClassifierViewModel.RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
                             <Button Grid.Column="0" Grid.Row="4" Command="{Binding ClassifierViewModel.RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
                             <Button Grid.Column="0" Grid.Row="5" Content="Export Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
@@ -168,7 +172,7 @@
                                     </Separator.LayoutTransform>
                                 </Separator>
                                 <Label Content="Band Intensity:"/>
-                                <ItemsControl ItemsSource="{Binding ClassifierViewModel.Bands}">
+                                <ItemsControl ItemsSource="{Binding Bands}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Orientation="Horizontal"/>
@@ -200,11 +204,12 @@
                             <StackPanel.Resources>
                                 <converter:DoubleRoundingConverter x:Key="DoubleRoundingConverter" />
                             </StackPanel.Resources>
-                            <Button Content="Predict All" Margin="5,5,5,5" Command="{Binding ClassifierViewModel.PredictAllCommand}"></Button>
+                            <Button Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictionViewModel.PredictAllCommand}"></Button>
                             <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Overlay Transparency:"></TextBlock>
                             <Slider Style="{DynamicResource FlatSlider}" Orientation="Horizontal" IsEnabled="{Binding ClassifierViewModel.IsAllPredicted}" Value="{Binding MenuViewModel.OverlayOpacity}" Minimum="0" Maximum="1" Width="100" TickPlacement="BottomRight" TickFrequency="0.1" VerticalAlignment="Center"></Slider>
                             <TextBlock Margin="2,5,5,5" IsEnabled="{Binding ClassifierViewModel.IsAllPredicted}" Text="{Binding MenuViewModel.OverlayOpacity, Converter={StaticResource DoubleRoundingConverter}}" VerticalAlignment="Center" Width="50"/>
-                            <Button Content="Export Predictions" Command="{Binding ClassifierViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
+                            <Button Content="Export All Predictions" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
+                            <Button Content="Export by Landcover Type" Command="{Binding PredictionViewModel.ExportByLandcoverTypeCommand}" Margin="5,5,5,5"></Button>
                         </StackPanel>
                         <classifierControls:PredictionImageCanvas Grid.Row="1" x:Name="PredictionCanvas"></classifierControls:PredictionImageCanvas>
                         <StackPanel Grid.Row="2" Orientation="Horizontal"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">

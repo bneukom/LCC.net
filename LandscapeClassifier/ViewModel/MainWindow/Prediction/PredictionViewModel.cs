@@ -1,20 +1,31 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MathNet.Numerics.LinearAlgebra;
+using ZedGraph;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 {
     public class PredictionViewModel : ViewModelBase
     {
         private LandcoverType _mousePredictionType;
+        private bool _isAllPredicted;
+        private MainWindowViewModel _mainWindowViewModel;
 
         /// <summary>
         /// Predict all.
@@ -25,6 +36,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// Export predictions.
         /// </summary>
         public ICommand ExportPredictionsCommand { set; get; }
+
+        /// <summary>
+        /// Export grayscale by landcover type.
+        /// </summary>
+        public ICommand ExportByLandcoverTypeCommand { get; set; }
 
         /// <summary>
         /// Band to display.
@@ -50,13 +66,40 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// </summary>
         public Matrix<double> WorldToScreen;
 
-        public PredictionViewModel()
+
+        /// <summary>
+        /// True if all pixels have been predicted.
+        /// </summary>
+        public bool IsAllPredicted
         {
+            get { return _isAllPredicted; }
+            set { _isAllPredicted = value; RaisePropertyChanged(); }
+        }
+
+
+        public PredictionViewModel(MainWindowViewModel mainWindowViewModel)
+        {
+            _mainWindowViewModel = mainWindowViewModel;
+
             ScreenToWorld = Matrix<double>.Build.DenseIdentity(3);
             WorldToScreen = ScreenToWorld.Inverse();
 
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
             ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
+            ExportByLandcoverTypeCommand = new RelayCommand(ExportPredictionsByLandcoverType, CanExportPredictions);
+
+            Messenger.Default.Register<BandsLoadedMessage>(this, m =>
+            {
+                ScreenToWorld = m.ScreenToWorld;
+                WorldToScreen = m.ScreenToWorld.Inverse();
+                VisibleBand = _mainWindowViewModel.Bands.FirstOrDefault(f => f.IsRgb) ??
+                           _mainWindowViewModel.Bands.First();
+            });
+        }
+
+        private void ExportPredictionsByLandcoverType()
+        {
+            throw new NotImplementedException();
         }
 
         private void ExportPredictions()
@@ -175,46 +218,95 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private void PredictAll()
         {
-            /*
-            // @TODO create transformation matrix
-            var left = (AscFile.Xllcorner - WorldFile.X)/WorldFile.PixelSizeX;
-            var topWorldCoordinates = AscFile.Yllcorner + AscFile.Cellsize*AscFile.Nrows;
-            var topScreenCoordinates = (topWorldCoordinates - WorldFile.Y)/WorldFile.PixelSizeY;
+            var firstBand = _mainWindowViewModel.Bands.FirstOrDefault(f => f.IsRgb) ??
+                            _mainWindowViewModel.Bands.First();
 
-            var width = (int)(AscFile.Ncols * _ascFile.Cellsize / _worldFile.PixelSizeX);
-            var height = (int)(AscFile.Nrows * _ascFile.Cellsize / _worldFile.PixelSizeY);
+            var numFeatures = _mainWindowViewModel.Bands.Count(f => f.IsFeature);
 
-            width = 1000;
-            height = 1000;
-        
-            var dpi = 96d;
+            var firstBandUpperLeftScreen = WorldToScreen * firstBand.UpperLeft;
+            var firstBandBottomRightScreen = WorldToScreen * firstBand.BottomRight;
 
-            var stride = width * 4; // 4 bytes per pixel
-            var pixelData = new byte[stride * height];
+            int pixelWidth = (int)((firstBandBottomRightScreen[0] - firstBandUpperLeftScreen[0]) / firstBand.MetersPerPixel);
+            int pixelHeight = (int)((firstBandBottomRightScreen[1] - firstBandUpperLeftScreen[1]) / firstBand.MetersPerPixel);
 
-            FeatureVector[,] features = new FeatureVector[height, width];
+            double firstBandScale = firstBand.MetersPerPixel;
 
-            // Create features
-            Parallel.For(0, height, y =>
+            var featureBands = _mainWindowViewModel.Bands.Where(f => f.IsFeature).ToList();
+
+            IntPtr[] data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
+
+            int[][] result = new int[pixelHeight][];
+
+            // TODO iterate over world coordinates (scale with global world to screen)?
+            Parallel.For(0, pixelHeight, line =>
             {
-                for (int x = 0; x < width; ++x)
-                {
-                    var position = new Point(x, y);
-                    var altitude = GetAscDataAt(position);
-                    var color = GetColorAt(position);
-                    var averageNeighborhoodColor = GetAverageNeighborhoodColor(position);
-                    var slopeAndAspectAt = GetSlopeAndAspectAt(position);
+                double[][] features = new double[pixelWidth][];
 
-                    features[y, x] = new FeatureVector(altitude, color, averageNeighborhoodColor,
-                        slopeAndAspectAt.Aspect, slopeAndAspectAt.Slope);
+                for (int i = 0; i < pixelWidth; ++i)
+                {
+                    features[i] = new double[numFeatures];
+                }
+                
+                for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
+                {
+                    var band = featureBands[bandIndex];
+
+                    var inverseTransform = band.Transform.Inverse();
+                    var bandUpperLeftScreen = inverseTransform*band.UpperLeft;
+                    var bandBottomRightScreen = inverseTransform*band.BottomRight;
+                    var left = (int) bandUpperLeftScreen[0];
+                    var right = (int) bandBottomRightScreen[0];
+
+                    var width = right - left;
+                    int bandLine = (int) (line/ band.MetersPerPixel*firstBandScale);
+
+                    unsafe
+                    {
+                        ushort* dataPtr = (ushort*) data[bandIndex].ToPointer();
+
+                        for (int i = 0; i < pixelWidth; ++i)
+                        {
+                            var indexX = (int)(i/band.MetersPerPixel*firstBandScale);
+                            var pixelValue = *(dataPtr + bandLine * width + indexX);
+                            features[i][bandIndex] = (double) pixelValue/ushort.MaxValue;
+                        }
+                    }
+                }
+
+
+                result[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
+            });
+
+            int stride = pixelWidth * 4;
+            int size = pixelHeight * stride;
+            byte[] imageData = new byte[size];
+
+            Parallel.For(0, pixelWidth, x =>
+                //for (int x = 0; x < pixelWidth; ++x)
+            {
+                for (int y = 0; y < pixelHeight; ++y)
+                {
+                    int index = 4*y*pixelWidth + 4*x;
+                    LandcoverType type = (LandcoverType) result[y][x];
+                    var color = type.GetColor();
+                    imageData[index + 0] = color.B;
+                    imageData[index + 1] = color.G;
+                    imageData[index + 2] = color.R;
+                    imageData[index + 3] = color.A;
                 }
             });
-           
+                                               
 
-            // Predict
-            var prediction = _currentClassifier.Predict(features);
-            PredictedLandcoverImage = prediction;
-            */
+            var folder = "c:/temp";
+            using (var fileStream = new FileStream(System.IO.Path.Combine(folder, "test.png"), FileMode.Create))
+            {
+                var encoder = new PngBitmapEncoder();
+                var slopeImage = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
+
+                encoder.Frames.Add(BitmapFrame.Create(slopeImage));
+                encoder.Save(fileStream);
+            }
+
         }
 
         private bool CanPredictAll() => true;

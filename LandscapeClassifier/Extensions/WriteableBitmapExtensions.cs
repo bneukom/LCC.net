@@ -18,5 +18,6 @@ namespace LandscapeClassifier.Extensions
                 return  *(dataPtr + writeableBitmap.PixelWidth * y + x);
             }
         }
+
     }
 }

@@ -55,7 +55,7 @@ namespace LandscapeClassifier.Classifier
             return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (int)s));
         }
 
-        public BitmapSource Predict(FeatureVector[,] features)
+        public int[] Predict(double[][] features)
         {
             throw new NotImplementedException();
         }

@@ -303,6 +303,7 @@
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\BandViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\FeaturesViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\AddBandsDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
@@ -319,7 +320,7 @@
     <Compile Include="Model\Classification\FeatureVector.cs" />
     <Compile Include="Model\LandcoverType.cs" />
     <Compile Include="Properties\Annotations.cs" />
-    <Compile Include="ViewModel\MainWindow\ClassifiedFeatureVectorViewModel.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\ClassifiedFeatureVectorViewModel.cs" />
     <Compile Include="Model\LandcoverTypeExtensions.cs" />
     <Compile Include="Util\wgs84_ch1903.cs" />
     <Compile Include="Model\WorldFile.cs" />

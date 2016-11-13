@@ -31,25 +31,11 @@ namespace LandscapeClassifier.Controls
             MouseMove += OnMove;
             MouseDown += OnMouseDown;
             MouseLeave += OnMouseLeave;
-            MouseWheel += OnMouseWheel;
-
+            
             RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
         }
 
-        private void OnMouseWheel(object sender, MouseWheelEventArgs mouseWheelEventArgs)
-        {
-            double scale = mouseWheelEventArgs.Delta < 0 ? 0.9 : 1.1;
-            var scaleMat = _matrixBuilder.DenseOfArray(new[,]
-            {
-                { _scaleMat[0, 0] * scale, 0, 0},
-                {0, _scaleMat[1, 1] * scale, 0},
-                {0, 0, 1}
-            });
 
-            _scaleMat = scaleMat;
-
-            Console.WriteLine(mouseWheelEventArgs.Delta);
-        }
 
         private void OnMouseLeave(object sender, MouseEventArgs mouseEventArgs)
         {
@@ -74,7 +60,7 @@ namespace LandscapeClassifier.Controls
 
                 var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
-                var featureBands = viewModel.ClassifierViewModel.Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber).ToList();
+                var featureBands = viewModel.Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber).ToList();
 
                 ushort[] bandPixels = new ushort[featureBands.Count];
 
@@ -89,7 +75,7 @@ namespace LandscapeClassifier.Controls
                 }
 
                 var classifiedFeatureVector = new ClassifiedFeatureVector(viewModel.ClassifierViewModel.SelectedLandCoverType, new FeatureVector(bandPixels));
-                viewModel.ClassifierViewModel.Features.Add(new ClassifiedFeatureVectorViewModel(classifiedFeatureVector));
+                viewModel.ClassifierViewModel.FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(classifiedFeatureVector));
             }
         }
 
@@ -111,7 +97,7 @@ namespace LandscapeClassifier.Controls
             viewModel.ClassifierViewModel.MouseScreenPoisition = position;
             viewModel.ClassifierViewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
 
-            var featureBands = viewModel.ClassifierViewModel.Bands.Where(b => b.IsFeature).ToList();
+            var featureBands = viewModel.Bands.Where(b => b.IsFeature).ToList();
 
             foreach (var band in featureBands)
             {
@@ -133,14 +119,15 @@ namespace LandscapeClassifier.Controls
             base.OnRender(dc);
 
             // Background
-            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
+            dc.DrawRectangle(Brushes.Gray, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
             // Draw bands
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-
             if (viewModel == null) return;
 
-            foreach (var band in viewModel.ClassifierViewModel.Bands)
+            // White background if there are visible bands
+            if (viewModel.Bands.Any(b => b.IsVisible)) dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
+            foreach (var band in viewModel.Bands)
             {
                 if (!band.IsVisible) continue;
                 DrawBand(band, dc, viewModel.ClassifierViewModel.WorldToScreen);

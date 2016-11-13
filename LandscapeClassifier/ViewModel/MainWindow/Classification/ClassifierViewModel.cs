@@ -16,6 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Annotations;
 using LandscapeClassifier.Classifier;
 using LandscapeClassifier.Extensions;
@@ -50,6 +51,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         
         private bool _previewBandIntensityScale = true;
         private bool _areBandsUnscaled;
+        private FeaturesViewModel _featuresViewModel;
 
         /// <summary>
         /// Export command.
@@ -79,7 +81,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// Classified Features.
         /// </summary>
-        public ObservableCollection<ClassifiedFeatureVectorViewModel> Features { get; set; }
+        public FeaturesViewModel FeaturesViewModel
+        {
+            get { return _featuresViewModel; }
+            set { _featuresViewModel = value; RaisePropertyChanged(); }
+        }
 
         /// <summary>
         /// The projection of the band image.
@@ -95,11 +101,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// Conversion from world to screen coordinates.
         /// </summary>
         public Matrix<double> WorldToScreen;
-
-        /// <summary>
-        /// The bands of the image.
-        /// </summary>
-        public ObservableCollection<BandViewModel> Bands { get; set; }
 
         /// <summary>
         /// Whether multiple bands can be visible or not.
@@ -280,15 +281,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ScreenToWorld = Matrix<double>.Build.DenseIdentity(3);
             WorldToScreen = ScreenToWorld.Inverse();
 
-            Bands = new ObservableCollection<BandViewModel>();
-            Bands.CollectionChanged += BandsOnCollectionChanged;
+            mainWindowViewModel.Bands.CollectionChanged += BandsOnCollectionChanged;
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
             ClassifiersEnumerable = Enum.GetNames(typeof(Classifier.Classifier));
 
-            Features = new ObservableCollection<ClassifiedFeatureVectorViewModel>();
+            FeaturesViewModel = new FeaturesViewModel();
 
-            RemoveAllFeaturesCommand = new RelayCommand(() => Features.Clear(), () => Features.Count > 0);
+            RemoveAllFeaturesCommand = new RelayCommand(() => FeaturesViewModel.RemoveAllFeatures(), () => FeaturesViewModel.HasFeatures());
 
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
 
@@ -303,12 +303,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             SelectededClassifier = Classifier.Classifier.DecisionTrees;
             _currentClassifier = SelectededClassifier.CreateClassifier();
 
-            Features.CollectionChanged += (sender, args) =>
+
+            FeaturesViewModel.PropertyChanged += (sender, args) =>
             {
-                MarkClassifierNotTrained();
-                foreach (var bandViewModel in Bands)
+                if (args.PropertyName == FeaturesViewModel.FeatureProperty)
                 {
-                    bandViewModel.CanChangeIsFeature = Features.Count == 0;
+                    MarkClassifierNotTrained();
+                    foreach (var bandViewModel in _mainWindowViewModel.Bands)
+                    {
+                        bandViewModel.CanChangeIsFeature = !FeaturesViewModel.HasFeatures();
+                    }
                 }
             };
 
@@ -317,14 +321,22 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
 
-            
-
             TrainCommand = new RelayCommand(Train, CanTrain);
+
+            Messenger.Default.Register<BandsLoadedMessage>(this, m =>
+            {
+                BandsContrastEnhancement = m.BandsContrastEnhancement;
+                SatelliteType = m.SatelliteType;
+                AreBandsUnscaled = m.AreBandsUnscaled;
+                ScreenToWorld = m.ScreenToWorld;
+                WorldToScreen = m.ScreenToWorld.Inverse();
+            });
+
         }
 
         private void RemoveSelectedFeature()
         {
-            Features.Remove(SelectedFeatureVector);
+            FeaturesViewModel.RemoveFeature(SelectedFeatureVector);
         }
 
         private bool CanRemoveSelectedFeature()
@@ -357,7 +369,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             BandViewModel changedBand = (BandViewModel)sender;
             if (propertyChangedEventArgs.PropertyName == nameof(BandViewModel.IsVisible))
             {
-                foreach (BandViewModel bandViewModel in Bands)
+                foreach (BandViewModel bandViewModel in _mainWindowViewModel.Bands)
                 {
                     if (bandViewModel == changedBand) continue;
 
@@ -400,12 +412,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 using (var outputStreamWriter = new StreamWriter(csvPath))
                 {
 
-                    var bands = Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber);
+                    var bands = _mainWindowViewModel.Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber);
                     outputStreamWriter.WriteLine(SatelliteType);
                     outputStreamWriter.WriteLine(BandsContrastEnhancement);
                     outputStreamWriter.WriteLine(bands.Aggregate("", (a, b) => a + b.BandPath + ";"));
 
-                    foreach (var feature in Features.Select(f => f.ClassifiedFeatureVector))
+                    foreach (var feature in FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector))
                     {
                         var featureString = feature.FeatureVector.BandIntensities.Aggregate(feature.Type.ToString(), (accu, intensity) => accu + ";" + intensity);
                         outputStreamWriter.WriteLine(featureString);
@@ -416,7 +428,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private bool CanExportTrainingSet()
         {
-            return Features.Count > 0;
+            return FeaturesViewModel.HasFeatures();
         }
 
         private void ImportTrainingSet()
@@ -434,7 +446,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             // Process input if the user clicked OK.
             if (userClickedOk == DialogResult.OK)
             {
-                Features.Clear();
+                FeaturesViewModel.RemoveAllFeatures();
 
                 var path = openFileDialog.FileName;
                 var lines = File.ReadAllLines(path);
@@ -446,7 +458,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                 string[] bandPaths = lines[2].Split(';');
 
-                var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => Bands.All(b => b.BandPath != s)).Select(s =>
+                var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => _mainWindowViewModel.Bands.All(b => b.BandPath != s)).Select(s =>
                 {
                     int bandNumber = SatelliteType.GetBand(Path.GetFileName(s));
                     return new BandInfo(s, bandNumber == 4, bandNumber == 3, bandNumber == 2);
@@ -475,7 +487,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     Enum.TryParse(line[0], true, out type);
                     var intensities = line.Skip(1).Select(ushort.Parse).ToArray();
 
-                    Features.Add(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type,
+                    FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type,
                         new FeatureVector(intensities))));
                 }
             }
@@ -491,8 +503,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private void Train()
         {
-            var classifiedFeatureVectors = Features.Select(f => f.ClassifiedFeatureVector).ToList();
-            var bands = Bands.Where(b => b.IsFeature).Select(b => b.BandNumber).ToList();
+            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
+            var bands = _mainWindowViewModel.Bands.Where(b => b.IsFeature).Select(b => b.BandNumber).ToList();
 
             _currentClassifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
             IsTrained = true;
@@ -503,7 +515,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private bool CanTrain()
         {
-            return Features.Count > 0;
+            return FeaturesViewModel.HasFeatures();
         }
 
     }

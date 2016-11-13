@@ -47,7 +47,7 @@ namespace LandscapeClassifier.Classifier
             return (LandcoverType) _tree.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
 
-        public BitmapSource Predict(FeatureVector[,] features)
+        public int[] Predict(double[][] features)
         {
             throw new NotImplementedException();
         }

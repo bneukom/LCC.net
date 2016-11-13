@@ -63,6 +63,7 @@ namespace LandscapeClassifier.Controls
             MouseUp += OnMouseUp;
             MouseDown += OnMouseDown;
             MouseMove += OnMove;
+            MouseWheel += OnMouseWheel;
         }
 
         private void OnMove(object sender, MouseEventArgs args)
@@ -119,6 +120,19 @@ namespace LandscapeClassifier.Controls
                 _drag = true;
                 _lastMousePosition = args.GetPosition(this);
             }
+        }
+
+        private void OnMouseWheel(object sender, MouseWheelEventArgs mouseWheelEventArgs)
+        {
+            double scale = mouseWheelEventArgs.Delta < 0 ? 0.9 : 1.1;
+            var scaleMat = _matrixBuilder.DenseOfArray(new[,]
+            {
+                { _scaleMat[0, 0] * scale, 0, 0},
+                {0, _scaleMat[1, 1] * scale, 0},
+                {0, 0, 1}
+            });
+
+            _scaleMat = scaleMat;
         }
 
         protected void DrawBand(BandViewModel band, DrawingContext dc, Matrix<double> worldToScreen)

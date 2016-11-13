@@ -26,6 +26,10 @@ namespace LandscapeClassifier.ViewModel
                     return Colors.DarkGreen;
                 case LandcoverType.Water:
                     return Colors.Blue;
+                case LandcoverType.Agriculture:
+                    return Colors.AntiqueWhite;
+                case LandcoverType.None:
+                    return Colors.White;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(self), self, null);
             }

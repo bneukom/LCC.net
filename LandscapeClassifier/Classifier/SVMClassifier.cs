@@ -58,9 +58,9 @@ namespace LandscapeClassifier.Classifier
             return (LandcoverType) svm.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
 
-        public BitmapSource Predict(FeatureVector[,] features)
+        public int[] Predict(double[][] features)
         {
-            throw new NotImplementedException();
+            return svm.Decide(features);
         }
     }
 }

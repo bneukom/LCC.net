@@ -44,7 +44,7 @@ namespace LandscapeClassifier.Controls
 
             var posVec = _vecBuilder.DenseOfArray(new[] { position.X, position.Y, 1 });
 
-            var featureBands = viewModel.ClassifierViewModel.Bands.Where(b => b.IsFeature).ToList();
+            var featureBands = viewModel.Bands.Where(b => b.IsFeature).ToList();
 
             ushort[] bandIntensities = new ushort[featureBands.Count];
             for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)

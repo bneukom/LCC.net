@@ -18,6 +18,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private bool _canChangeIsFeature = true;
 
         private Brush _currentPositionBrush;
+        private bool _isRgb;
+
+        public readonly Matrix<double> Transform;
 
         /// <summary>
         /// Index of the band.
@@ -97,6 +100,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             }
         }
 
+        /// <summary>
+        /// True if this band represents the rgb of the satellite image.
+        /// </summary>
+        public bool IsRgb
+        {
+            get { return _isRgb; }
+            set { _isRgb = value; }
+        }
 
         /// <summary>
         /// Whether this band is active or not.
@@ -115,6 +126,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             set { _isFeature = value; OnPropertyChanged(nameof(IsFeature)); }
         }
 
+
         /// <summary>
         /// Whether this view model is enabled to be used as a feature.
         /// </summary>
@@ -128,12 +140,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         }
 
         public BandViewModel(string bandName, string bandPath, int bandNumber, double metersPerPixel, 
-            WriteableBitmap bandImage, Vector<double> upperLeft, Vector<double> bottomRight, 
-            int minCutScale, int maxCutScale, bool isFeature = true, bool canChangeIsFeature = true)
+            WriteableBitmap bandImage, Matrix<double> transform, Vector<double> upperLeft, Vector<double> bottomRight, 
+            int minCutScale, int maxCutScale, bool isRgb, bool isFeature = true, bool canChangeIsFeature = true)
         {
             MinCutScale = minCutScale;
             MaxCutScale = maxCutScale;
 
+            Transform = transform;
             BandNumber = bandNumber;
             BandPath = bandPath;
             BandImage = bandImage;
@@ -145,6 +158,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             IsFeature = isFeature;
             CanChangeIsFeature = canChangeIsFeature;
+
+            IsRgb = isRgb;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
