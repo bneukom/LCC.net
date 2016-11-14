@@ -64,7 +64,8 @@ namespace LandscapeClassifier.Controls
                 for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                 {
                     var band = featureBands[bandIndex];
-                    var bandPixelPosition = screenToView * mouseVec / band.MetersPerPixel;
+                    var bandScaleVec = _vecBuilder.DenseOfArray(new[] { band.ScaleX, band.ScaleY, 1 });
+                    var bandPixelPosition = screenToView * mouseVec / bandScaleVec;
 
                     ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
 
@@ -82,30 +83,47 @@ namespace LandscapeClassifier.Controls
             if (viewModel == null) return;
 
             var position = args.GetPosition(this);
-
-
-            var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
-            var viewToWorld = viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
-
             var posVec = _vecBuilder.DenseOfArray(new[] { position.X, position.Y, 1 });
 
-            var mouseWorld = viewToWorld * posVec;
+            {
+                var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                var viewToWorld = viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
-            viewModel.ClassifierViewModel.MouseScreenPoisition = position;
-            viewModel.ClassifierViewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
+                var mouseWorld = viewToWorld * posVec;
+
+                viewModel.ClassifierViewModel.MouseScreenPoisition = position;
+                viewModel.ClassifierViewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
+            }
 
             var featureBands = viewModel.Layers.Where(b => b.IsFeature).ToList();
 
             foreach (var band in featureBands)
             {
-                var bandPixelPosition = screenToView * posVec / band.MetersPerPixel;
+                var viewToWorld = band.InverseTransform * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
-                ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
-                
+                var bandPixelPosition = viewToWorld * posVec;
+
+                byte grayScale = 0;
+                if (band.Format == PixelFormats.Gray32Float)
+                {
+                    float bandIntensity = band.BandImage.GetFloatPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                    grayScale = (byte)((float)bandIntensity * byte.MaxValue);
+                }
+                else if (band.Format == PixelFormats.Gray16)
+                {
+                    ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0],
+                        (int)bandPixelPosition[1]);
+                    grayScale = (byte)((float)bandIntensity / ushort.MaxValue * byte.MaxValue);
+                }
+                else
+                {
+                    throw new InvalidOperationException();
+                }
+
+
                 //if (viewModel.ClassifierViewModel.PreviewBandIntensityScale)
                 //    bandIntensity = (ushort)MoreMath.Clamp((bandIntensity - band.MaxCutScale) / (double)(band.MaxCutScale - band.MinCutScale) * ushort.MaxValue, 0, ushort.MaxValue - 1);
 
-                byte grayScale = (byte)((float)bandIntensity / ushort.MaxValue * byte.MaxValue);
                 // Console.WriteLine($"pos ({bandPixelPosition[0]}, {bandPixelPosition[1]}) band {band.BandNumber}: {bandIntensity}, {grayScale}");
                 band.CurrentPositionBrush = new SolidColorBrush(Color.FromRgb(grayScale, grayScale, grayScale));
             }

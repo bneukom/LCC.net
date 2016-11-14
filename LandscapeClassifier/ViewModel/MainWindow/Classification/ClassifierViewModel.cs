@@ -24,8 +24,11 @@ using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View.Open;
+using LandscapeClassifier.ViewModel.Dialogs;
 using MathNet.Numerics.LinearAlgebra;
 using OSGeo.GDAL;
+using OSGeo.OGR;
+using OSGeo.OSR;
 using Application = System.Windows.Application;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification
@@ -48,7 +51,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
 
         private readonly MainWindowViewModel _mainWindowViewModel;
-        
+
         private bool _previewBandIntensityScale = true;
         private bool _areBandsUnscaled;
         private FeaturesViewModel _featuresViewModel;
@@ -278,7 +281,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         {
             _mainWindowViewModel = mainWindowViewModel;
 
-            ScreenToWorld = Matrix<double>.Build.DenseIdentity(3);
+            // TODO nono
+            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] { { 1, 0, 300000.0 }, { 0, -1, 5090220 }, { 0, 0, 1 } });
             WorldToScreen = ScreenToWorld.Inverse();
 
             mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
@@ -328,8 +332,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 BandsContrastEnhancement = !m.AreBandsUnscaled;
                 SatelliteType = m.SatelliteType;
                 AreBandsUnscaled = m.AreBandsUnscaled;
-                ScreenToWorld = m.ScreenToWorld;
-                WorldToScreen = m.ScreenToWorld.Inverse();
+                //ScreenToWorld = m.ScreenToWorld;
+                //WorldToScreen = m.ScreenToWorld.Inverse();
             });
 
         }
@@ -415,7 +419,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name);
                     outputStreamWriter.WriteLine(SatelliteType);
                     outputStreamWriter.WriteLine(BandsContrastEnhancement);
-                    outputStreamWriter.WriteLine(bands.Aggregate("", (a, b) => a + b.BandPath + ";"));
+                    outputStreamWriter.WriteLine(bands.Aggregate("", (a, b) => a + b.Path + ";"));
 
                     foreach (var feature in FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector))
                     {
@@ -458,7 +462,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                 string[] bandPaths = lines[2].Split(';');
 
-                var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => _mainWindowViewModel.Layers.All(b => b.BandPath != s)).Select(s =>
+                var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => _mainWindowViewModel.Layers.All(b => b.Path != s)).Select(s =>
                 {
                     string bandNumber = SatelliteType.GetBand(Path.GetFileName(s));
                     return new BandInfo(s, bandNumber == "04", bandNumber == "03", bandNumber == "02");

@@ -52,7 +52,10 @@ namespace LandscapeClassifier.Controls
             for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
             {
                 var band = featureBands[bandIndex];
-                var bandPixelPosition = screenToView * posVec / band.MetersPerPixel;
+                var bandScaleVec = _vecBuilder.DenseOfArray(new[] { band.ScaleX, band.ScaleY, 1 });
+                var bandPixelPosition = screenToView * posVec / bandScaleVec;
+
+
 
                 ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
                 bandIntensities[bandIndex] = bandIntensity;

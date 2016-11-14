@@ -1,15 +1,10 @@
-﻿using LandscapeClassifier.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+using LandscapeClassifier.Annotations;
 using LandscapeClassifier.Model;
 
-namespace LandscapeClassifier.ViewModel
+namespace LandscapeClassifier.ViewModel.Dialogs
 {
     public class AddBandsDialogViewModel : INotifyPropertyChanged
     {
@@ -18,6 +13,8 @@ namespace LandscapeClassifier.ViewModel
         private bool _bandContrastEnhancement = false;
         private SatelliteType _satelliteType = SatelliteType.Sentinel2;
         private bool _missingBandsImport;
+        private double _minCutOff = 2;
+        private double _maxCutOff = 98;
 
 
         /// <summary>
@@ -70,6 +67,24 @@ namespace LandscapeClassifier.ViewModel
         {
             get { return _missingBandsImport; }
             set { _missingBandsImport = value; OnPropertyChanged(nameof(MissingBandsImport)); }
+        }
+
+        /// <summary>
+        /// Min cut off for band enhancement
+        /// </summary>
+        public double MinCutOff
+        {
+            get { return _minCutOff; }
+            set { _minCutOff = value; OnPropertyChanged(nameof(MinCutOff)); }
+        }
+
+        /// <summary>
+        /// Max cut off for band enhancement.
+        /// </summary>
+        public double MaxCutOff
+        {
+            get { return _maxCutOff; }
+            set { _maxCutOff = value; OnPropertyChanged(nameof(MaxCutOff)); }
         }
 
         public AddBandsDialogViewModel()

@@ -46,8 +46,8 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Button x:Name="OpenOrthoImage" Command="{Binding OpenSatelliteBandsCommand}"  Content="Add Satellite Bands" HorizontalAlignment="Left" Margin="5,8,5,5" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
-            <Button x:Name="OpenDEM" IsEnabled="False"  Content="Add Layer" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="1" Click="OpenDEM_Click"/>
+            <Button x:Name="OpenOrthoImage" Command="{Binding OpenSatelliteBandsCommand}"  Content="Load Satellite Bands" HorizontalAlignment="Left" Margin="5,8,5,5" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
+            <Button x:Name="OpenDEM" Command="{Binding AddLayerCommand}"  Content="Add Layer" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="1"/>
             <TabControl Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
                 <TabItem  Header="Training">
                     <Grid>
@@ -176,7 +176,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Label Content="{Binding Name}" Background="{Binding CurrentPositionBrush}" Margin="0"/>
+                                            <Label Width="22" Background="{Binding CurrentPositionBrush}" Margin="0"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

@@ -11,7 +11,7 @@
         mc:Ignorable="d"
         Title="Open Bands" Height="423.056" Width="900"
         GlowBrush="{DynamicResource AccentColorBrush}"
-        DataContext="{StaticResource OpenImageViewModel}">
+        DataContext="{StaticResource AddBandsViewModel}">
     <Window.Resources>
         <converter:InverseBooleanConverter x:Key="InverseBoolConverter" />
         <ObjectDataProvider MethodName="GetValues"
@@ -37,10 +37,16 @@
             <ColumnDefinition Width="Auto"></ColumnDefinition>
         </Grid.ColumnDefinitions>
         <TextBlock Grid.ColumnSpan="3" x:Name="MissingBandsInfoTextBlock" Visibility="Visible" FontSize="18" Foreground="DarkRed" Margin="5">Some bands used in this training set are missing and need to be loaded. Cancel will abort import.</TextBlock>
-        <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Margin="5" IsChecked="{Binding BandContrastEnhancement}" IsEnabled="{Binding MissingBandsImport, Converter={StaticResource InverseBoolConverter}}" VerticalAlignment="Center">Band Contrast Enhancement</CheckBox>
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal">
+            <CheckBox Margin="5" IsChecked="{Binding BandContrastEnhancement}" IsEnabled="{Binding MissingBandsImport, Converter={StaticResource InverseBoolConverter}}" VerticalAlignment="Center">Band Contrast Enhancement</CheckBox>
+            <CheckBox Margin="5" IsChecked="{Binding RgbContrastEnhancement}" IsEnabled="{Binding AddRgb}" VerticalAlignment="Center">RGB Contrast Enhancement</CheckBox>
+            <Label Margin="5" VerticalAlignment="Center">Cumulative count cut:</Label>
+            <controls:NumericUpDown Margin="5" MinWidth="70" Minimum="0" Maximum="100" Interval="1" Value="{Binding MinCutOff}" ></controls:NumericUpDown>
+            <Label Margin="5" VerticalAlignment="Center">to</Label>
+            <controls:NumericUpDown Margin="5" MinWidth="70" Minimum="0" Maximum="100" Interval="1" IsEnabled="{Binding}" Value="{Binding MaxCutOff}"></controls:NumericUpDown>
+        </StackPanel>
         <controls:SplitButton  Grid.Row="1" Grid.Column="2" MinWidth="125" Margin="5" SelectedItem="{Binding SatelliteType}" IsEnabled="{Binding MissingBandsImport, Converter={StaticResource InverseBoolConverter}}" ItemsSource="{Binding Source={StaticResource SateliteDataProvider}}"></controls:SplitButton>
-        <CheckBox Grid.Row="2" Grid.Column="0" Margin="5" IsChecked="{Binding AddRgb}" VerticalAlignment="Center">Add RGB</CheckBox>
-        <CheckBox Grid.Row="2" Grid.Column="1" Margin="5" IsChecked="{Binding RgbContrastEnhancement}" IsEnabled="{Binding AddRgb}" VerticalAlignment="Center">RGB Contrast Enhancement</CheckBox>
+        <CheckBox Grid.Row="1" Grid.Column="0" Margin="5" IsChecked="{Binding AddRgb}" VerticalAlignment="Center">Add RGB</CheckBox>
         <DataGrid Grid.Row="3" Grid.ColumnSpan="3"  IsEnabled="{Binding MissingBandsImport, Converter={StaticResource InverseBoolConverter}}" AutoGenerateColumns="False" ItemsSource="{Binding Bands, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" x:Name="listView"   Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
             <DataGrid.Columns>
                 <DataGridTextColumn Width="*" Header="Path"
@@ -66,7 +72,7 @@
             <Button Width="90" Margin="5,5,5,5" HorizontalAlignment="Left" Content="Add Bands" Click="AddBandsClick" ></Button>
             <Button Width="125" Margin="5,5,5,5" HorizontalAlignment="Left" Content="Remove Selected" Click="AddBandsClick" ></Button>
         </StackPanel>
-    
+
         <StackPanel Grid.Row="5" Grid.Column="0"  Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
             <Button IsDefault="True" Content="Ok" Click="OkClick" Width="60"/>
             <Button IsCancel="True" Content="Cancel" Click="CancelClick" Width="60" Margin="5,0,0,0"/>

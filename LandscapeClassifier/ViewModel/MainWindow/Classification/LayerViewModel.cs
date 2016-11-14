@@ -18,9 +18,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private bool _canChangeIsFeature = true;
 
         private Brush _currentPositionBrush;
-        private bool _isRgb;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public readonly Matrix<double> Transform;
+
+        public readonly Matrix<double> InverseTransform;
 
         /// <summary>
         /// Layer name.
@@ -28,9 +32,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public string Name { get; }
 
         /// <summary>
-        /// Meters per pixel of the band.
+        /// Meters per pixel in dimension x of the band.
         /// </summary>
-        public double MetersPerPixel { get; }
+        public double ScaleX { get; }
+
+        /// <summary>
+        ///  Meters per pixel in dimension y of the band.
+        /// </summary>
+        public double ScaleY { get; }
 
         /// <summary>
         /// Current Color of the mouse position.
@@ -44,12 +53,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// Path to the file of this band.
         /// </summary>
-        public string BandPath { get; set; }
-
-        /// <summary>
-        /// Title of the tab.
-        /// </summary>
-        public string BandName { get; set; }
+        public string Path { get; set; }
 
         /// <summary>
         /// Band upper left in world coordinates.
@@ -82,6 +86,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public int MinCutScale { get; }
 
         /// <summary>
+        /// The format of this band.
+        /// </summary>
+        public PixelFormat Format => BandImage.Format;
+
+        /// <summary>
         /// The band image.
         /// </summary>
         public WriteableBitmap BandImage
@@ -100,14 +109,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             }
         }
 
-        /// <summary>
-        /// True if this band represents the rgb of the satellite image.
-        /// </summary>
-        public bool IsRgb
-        {
-            get { return _isRgb; }
-            set { _isRgb = value; }
-        }
 
         /// <summary>
         /// Whether this band is active or not.
@@ -139,28 +140,28 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             get { return _canChangeIsFeature; }
         }
 
-        public LayerViewModel(string bandName, string bandPath, string name, double metersPerPixel, 
+        public LayerViewModel(string name, string path, double xScale, double yScale, 
             WriteableBitmap bandImage, Matrix<double> transform, Vector<double> upperLeft, Vector<double> bottomRight, 
-            int minCutScale, int maxCutScale, bool isRgb, bool isFeature = true, bool canChangeIsFeature = true)
+            int minCutScale, int maxCutScale, bool isFeature = true, bool canChangeIsFeature = true)
         {
             MinCutScale = minCutScale;
             MaxCutScale = maxCutScale;
 
             Transform = transform;
+            InverseTransform = transform.Inverse();
             Name = name;
-            BandPath = bandPath;
+            Path = path;
             BandImage = bandImage;
             UpperLeft = upperLeft;
             BottomRight = bottomRight;
 
-            BandName = bandName;
-            MetersPerPixel = metersPerPixel;
+            ScaleX = xScale;
+            ScaleY = yScale;
 
             IsFeature = isFeature;
             CanChangeIsFeature = canChangeIsFeature;
-
-            IsRgb = isRgb;
         }
+
 
         public event PropertyChangedEventHandler PropertyChanged;
 

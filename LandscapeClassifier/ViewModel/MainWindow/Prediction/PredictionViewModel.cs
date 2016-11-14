@@ -134,8 +134,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             {
                 ScreenToWorld = m.ScreenToWorld;
                 WorldToScreen = m.ScreenToWorld.Inverse();
-                VisibleLayer = _mainWindowViewModel.Layers.FirstOrDefault(f => f.IsRgb) ??
-                           _mainWindowViewModel.Layers.First();
+                // TODO make selectable in UI
+                VisibleLayer = _mainWindowViewModel.Layers.First();
+
             });
         }
 
@@ -260,18 +261,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private void PredictAll()
         {
-            var firstBand = _mainWindowViewModel.Layers.FirstOrDefault(f => f.IsRgb) ??
-                            _mainWindowViewModel.Layers.First();
-
+            var firstBand = VisibleLayer;
             var numFeatures = _mainWindowViewModel.Layers.Count(f => f.IsFeature);
 
             var firstBandUpperLeftScreen = WorldToScreen * firstBand.UpperLeft;
             var firstBandBottomRightScreen = WorldToScreen * firstBand.BottomRight;
 
-            int pixelWidth = (int)((firstBandBottomRightScreen[0] - firstBandUpperLeftScreen[0]) / firstBand.MetersPerPixel);
-            int pixelHeight = (int)((firstBandBottomRightScreen[1] - firstBandUpperLeftScreen[1]) / firstBand.MetersPerPixel);
+            int pixelWidth = (int)((firstBandBottomRightScreen[0] - firstBandUpperLeftScreen[0]) / firstBand.ScaleX);
+            int pixelHeight = (int)((firstBandBottomRightScreen[1] - firstBandUpperLeftScreen[1]) / firstBand.ScaleY);
 
-            double firstBandScale = firstBand.MetersPerPixel;
+            double firstBandScaleY = firstBand.ScaleY;
+            double firstBandScaleX = firstBand.ScaleX;
 
             var featureBands = _mainWindowViewModel.Layers.Where(f => f.IsFeature).ToList();
 
@@ -302,7 +302,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         var right = (int)bandBottomRightScreen[0];
 
                         var width = right - left;
-                        int bandLine = (int)(line / band.MetersPerPixel * firstBandScale);
+                        int bandLine = (int)(line / band.ScaleY * firstBandScaleY);
 
                         unsafe
                         {
@@ -310,7 +310,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                             for (int i = 0; i < pixelWidth; ++i)
                             {
-                                var indexX = (int)(i / band.MetersPerPixel * firstBandScale);
+                                var indexX = (int)(i / band.ScaleX * firstBandScaleX);
                                 var pixelValue = *(dataPtr + bandLine * width + indexX);
                                 features[i][bandIndex] = (double)pixelValue / ushort.MaxValue;
                             }

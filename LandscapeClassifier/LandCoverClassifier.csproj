@@ -301,12 +301,16 @@
     <Compile Include="Model\Band.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\SatelliteType.cs" />
+    <Compile Include="ViewModel\Dialogs\AddLayerDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\FeaturesViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\AddBandsDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
+    <Compile Include="View\Dialogs\Open\AddLayerDialog.xaml.cs">
+      <DependentUpon>AddLayerDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\Dialogs\Open\AddBandsDialog.xaml.cs">
       <DependentUpon>AddBandsDialog.xaml</DependentUpon>
     </Compile>
@@ -340,6 +344,10 @@
       <DependentUpon>ExportWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\ValidationRules\DoubleValidationRule.cs" />
+    <Page Include="View\Dialogs\Open\AddLayerDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="View\Dialogs\Open\AddBandsDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
