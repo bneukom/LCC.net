@@ -9,7 +9,7 @@ using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.Classifier
 {
-    class DecisionTreeClassifier : ILandCoverClassifier
+    public class DecisionTreeClassifier : ILandCoverClassifier
     {
         private C45Learning _id3Learning;
         private DecisionTree _tree;
@@ -37,14 +37,19 @@ namespace LandscapeClassifier.Classifier
             _id3Learning.SplitStep = 10;
             _id3Learning.Learn(input, responses);
 
+
+
             Console.WriteLine(_tree.NumberOfOutputs);
-
-
         }
 
         public LandcoverType Predict(FeatureVector feature)
         {
             return (LandcoverType) _tree.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
+        }
+
+        public double PredictionProbabilty(FeatureVector feature)
+        {
+            throw new NotImplementedException();
         }
 
         public int[] Predict(double[][] features)

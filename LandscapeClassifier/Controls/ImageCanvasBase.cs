@@ -46,8 +46,6 @@ namespace LandscapeClassifier.Controls
             // redraw timer
             _timer = new Timer((o) =>
             {
-                if (!_isMouseInside) return;
-
                 if (Application.Current != null)
                 {
                     Application.Current.Dispatcher.Invoke(InvalidateVisual);
@@ -64,6 +62,8 @@ namespace LandscapeClassifier.Controls
             MouseDown += OnMouseDown;
             MouseMove += OnMove;
             MouseWheel += OnMouseWheel;
+
+            RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
         }
 
         private void OnMove(object sender, MouseEventArgs args)
@@ -135,16 +135,16 @@ namespace LandscapeClassifier.Controls
             _scaleMat = scaleMat;
         }
 
-        protected void DrawBand(BandViewModel band, DrawingContext dc, Matrix<double> worldToScreen)
+        protected void DrawBand(LayerViewModel layer, DrawingContext dc, Matrix<double> worldToScreen)
         {
             var worldToScreenScaled = _scaleMat * worldToScreen;
 
             var worldToView = _screenToViewMat * worldToScreenScaled;
 
-            var upperLeft = worldToView * band.UpperLeft;
-            var bottomRight = worldToView * band.BottomRight;
+            var upperLeft = worldToView * layer.UpperLeft;
+            var bottomRight = worldToView * layer.BottomRight;
 
-            dc.DrawImage(band.BandImage, new Rect(new Point(upperLeft[0], upperLeft[1]), new Point(bottomRight[0], bottomRight[1])));
+            dc.DrawImage(layer.BandImage, new Rect(new Point(upperLeft[0], upperLeft[1]), new Point(bottomRight[0], bottomRight[1])));
         }
     }
 }

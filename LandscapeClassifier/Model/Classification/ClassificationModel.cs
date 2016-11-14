@@ -9,10 +9,10 @@ namespace LandscapeClassifier.Model.Classification
     public class ClassificationModel
     {
         public readonly string Projection;
-        public readonly List<int> Bands;
+        public readonly List<string> Bands;
         public readonly List<ClassifiedFeatureVector> ClassifiedFeatureVectors;
 
-        public ClassificationModel(string projection, List<int> bands, List<ClassifiedFeatureVector> classifiedFeatureVectors)
+        public ClassificationModel(string projection, List<string> bands, List<ClassifiedFeatureVector> classifiedFeatureVectors)
         {
             Projection = projection;
             Bands = bands;

@@ -34,15 +34,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         public ClassifierViewModel ClassifierViewModel { get; set; }
         public PredictionViewModel PredictionViewModel { get; set; }
 
-
-        private BitmapSource _predictedLandcoverImage;
-        private double _overlayOpacity = 0.5d;
         private bool _windowEnabled = true;
 
         /// <summary>
         /// The bands of the image.
         /// </summary>
-        public ObservableCollection<BandViewModel> Bands { get; set; }
+        public ObservableCollection<LayerViewModel> Layers { get; set; }
 
         /// <summary>
         /// Exports a height map
@@ -75,38 +72,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         public ICommand OpenSatelliteBandsCommand { set; get; }
 
         /// <summary>
-        /// Prediction bitmap overlay.
-        /// </summary>
-        public BitmapSource PredictedLandcoverImage
-        {
-            get { return _predictedLandcoverImage; }
-            set
-            {
-                if (value != _predictedLandcoverImage)
-                {
-                    _predictedLandcoverImage = value;
-                    NotifyPropertyChanged("PredictedLandcoverImage");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Opacity overlay.
-        /// </summary>
-        public double OverlayOpacity
-        {
-            get { return _overlayOpacity; }
-            set
-            {
-                if (value != _overlayOpacity)
-                {
-                    _overlayOpacity = value;
-                    NotifyPropertyChanged("OverlayOpacity");
-                }
-            }
-        }
-
-        /// <summary>
         /// Block the main window.
         /// </summary>
         public bool WindowEnabled
@@ -127,7 +92,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             CreateSlopeFromDEM = new RelayCommand(() => new CreateSlopeFromDEMDialog().ShowDialog(), () => true);
             OpenSatelliteBandsCommand = new RelayCommand(OpenBands, () => true);
 
-            Bands = new ObservableCollection<BandViewModel>();
+            Layers = new ObservableCollection<LayerViewModel>();
 
             ClassifierViewModel = new ClassifierViewModel(this);
             PredictionViewModel = new PredictionViewModel(this);
@@ -309,13 +274,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                             var builder = Matrix<double>.Build;
                             var transformMat = builder.DenseOfArray(matArray);
 
-                            int bandNumber = viewModel.SatelliteType.GetBand(Path.GetFileName(bandInfo.Path));
-                            var imageBandViewModel = new BandViewModel("Band " + bandNumber, bandInfo.Path, bandNumber,
+                            string bandNumber = viewModel.SatelliteType.GetBand(Path.GetFileName(bandInfo.Path));
+                            var imageBandViewModel = new LayerViewModel("Band " + bandNumber, bandInfo.Path, bandNumber,
                                 meterPerPixel, bandImage, transformMat, upperLeft, bottomRight, minCutValue, maxCutValue, false, true,
                                 ClassifierViewModel.FeaturesViewModel.HasFeatures());
 
-                            Bands.AddSorted(imageBandViewModel,
-                                Comparer<BandViewModel>.Create((a, b) => a.BandNumber - b.BandNumber));
+                            Layers.AddSorted(imageBandViewModel,
+                                Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
                         });
 
                         Marshal.FreeHGlobal(data);
@@ -329,7 +294,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                         // Create RGB image
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            var rgbStride = rgbDataSet.RasterXSize * 4;
+                            var rgbStride = rgbDataSet.RasterXSize*4;
 
                             var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96,
                                 PixelFormats.Bgra32, null, bgra,
@@ -339,7 +304,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                             double[] rgbTransform = new double[6];
                             rgbDataSet.GetGeoTransform(rgbTransform);
                             var vecBuilder = Vector<double>.Build;
-                            var upperLeft = vecBuilder.DenseOfArray(new[] { rgbTransform[0], rgbTransform[3], 1 });
+                            var upperLeft = vecBuilder.DenseOfArray(new[] {rgbTransform[0], rgbTransform[3], 1});
                             var meterPerPixel = rgbTransform[1];
                             var xRes = rgbTransform[1];
                             var yRes = rgbTransform[5];
@@ -352,7 +317,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
 
                             double[,] matArray =
-{
+                            {
                                 {rgbTransform[1], rgbTransform[2], rgbTransform[0]},
                                 {rgbTransform[4], rgbTransform[5], rgbTransform[3]},
                                 {0, 0, 1}
@@ -360,8 +325,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                             var builder = Matrix<double>.Build;
                             var transformMat = builder.DenseOfArray(matArray);
 
-                            Bands.Insert(0,
-                                new BandViewModel("RGB", null, -1, meterPerPixel, new WriteableBitmap(rgbImage),
+                            Layers.Insert(0,
+                                new LayerViewModel("RGB", null, "-1", meterPerPixel, new WriteableBitmap(rgbImage),
                                     transformMat, upperLeft, bottomRight, 0, 0, true, false,
                                     ClassifierViewModel.FeaturesViewModel.HasFeatures()));
 
@@ -387,7 +352,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                         var message = new BandsLoadedMessage
                         {
                             SatelliteType = viewModel.SatelliteType,
-                            BandsContrastEnhancement = viewModel.RgbContrastEnhancement,
+                            RgbContrastEnhancement = viewModel.RgbContrastEnhancement,
                             AreBandsUnscaled = !viewModel.BandContrastEnhancement,
                             ProjectionName = firstDataSet.GetProjection(),
                             ScreenToWorld = transformMat,
@@ -396,6 +361,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                         Messenger.Default.Send(message);
                         WindowEnabled = true;
                     });
+                }
+                else
+                {
+                    WindowEnabled = true;
                 }
             }
             catch
@@ -431,7 +400,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
     public class BandsLoadedMessage
     {
         public SatelliteType SatelliteType { get; set; }
-        public bool BandsContrastEnhancement { get; set; }
+        public bool RgbContrastEnhancement { get; set; }
         public bool AreBandsUnscaled { get; set; }
         public string ProjectionName { get; set; }
         public Matrix<double> ScreenToWorld { get; set; }

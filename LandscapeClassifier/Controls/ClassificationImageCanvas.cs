@@ -23,7 +23,7 @@ namespace LandscapeClassifier.Controls
 {
     public class ClassificationImageCanvas : ImageCanvasBase
     {
-    
+
         private readonly VectorBuilder<double> _vecBuilder = Vector<double>.Build;
 
         public ClassificationImageCanvas()
@@ -31,11 +31,8 @@ namespace LandscapeClassifier.Controls
             MouseMove += OnMove;
             MouseDown += OnMouseDown;
             MouseLeave += OnMouseLeave;
-            
-            RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
+
         }
-
-
 
         private void OnMouseLeave(object sender, MouseEventArgs mouseEventArgs)
         {
@@ -60,7 +57,7 @@ namespace LandscapeClassifier.Controls
 
                 var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
-                var featureBands = viewModel.Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber).ToList();
+                var featureBands = viewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
 
                 ushort[] bandPixels = new ushort[featureBands.Count];
 
@@ -97,18 +94,19 @@ namespace LandscapeClassifier.Controls
             viewModel.ClassifierViewModel.MouseScreenPoisition = position;
             viewModel.ClassifierViewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
 
-            var featureBands = viewModel.Bands.Where(b => b.IsFeature).ToList();
+            var featureBands = viewModel.Layers.Where(b => b.IsFeature).ToList();
 
             foreach (var band in featureBands)
             {
                 var bandPixelPosition = screenToView * posVec / band.MetersPerPixel;
 
                 ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
-
-                if (viewModel.ClassifierViewModel.PreviewBandIntensityScale)
-                    bandIntensity = (ushort)MoreMath.Clamp((bandIntensity - band.MaxCutScale) / (double)(band.MaxCutScale - band.MinCutScale) * ushort.MaxValue, 0, ushort.MaxValue - 1);
+                
+                //if (viewModel.ClassifierViewModel.PreviewBandIntensityScale)
+                //    bandIntensity = (ushort)MoreMath.Clamp((bandIntensity - band.MaxCutScale) / (double)(band.MaxCutScale - band.MinCutScale) * ushort.MaxValue, 0, ushort.MaxValue - 1);
 
                 byte grayScale = (byte)((float)bandIntensity / ushort.MaxValue * byte.MaxValue);
+                // Console.WriteLine($"pos ({bandPixelPosition[0]}, {bandPixelPosition[1]}) band {band.BandNumber}: {bandIntensity}, {grayScale}");
                 band.CurrentPositionBrush = new SolidColorBrush(Color.FromRgb(grayScale, grayScale, grayScale));
             }
 
@@ -126,8 +124,8 @@ namespace LandscapeClassifier.Controls
             if (viewModel == null) return;
 
             // White background if there are visible bands
-            if (viewModel.Bands.Any(b => b.IsVisible)) dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
-            foreach (var band in viewModel.Bands)
+            if (viewModel.Layers.Any(b => b.IsVisible)) dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
+            foreach (var band in viewModel.Layers)
             {
                 if (!band.IsVisible) continue;
                 DrawBand(band, dc, viewModel.ClassifierViewModel.WorldToScreen);

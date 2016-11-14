@@ -7,7 +7,7 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 {
-    public class BandViewModel : INotifyPropertyChanged
+    public class LayerViewModel : INotifyPropertyChanged
     {
         private WriteableBitmap _bandImage;
 
@@ -23,9 +23,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public readonly Matrix<double> Transform;
 
         /// <summary>
-        /// Index of the band.
+        /// Layer name.
         /// </summary>
-        public int BandNumber { get; }
+        public string Name { get; }
 
         /// <summary>
         /// Meters per pixel of the band.
@@ -139,7 +139,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             get { return _canChangeIsFeature; }
         }
 
-        public BandViewModel(string bandName, string bandPath, int bandNumber, double metersPerPixel, 
+        public LayerViewModel(string bandName, string bandPath, string name, double metersPerPixel, 
             WriteableBitmap bandImage, Matrix<double> transform, Vector<double> upperLeft, Vector<double> bottomRight, 
             int minCutScale, int maxCutScale, bool isRgb, bool isFeature = true, bool canChangeIsFeature = true)
         {
@@ -147,7 +147,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             MaxCutScale = maxCutScale;
 
             Transform = transform;
-            BandNumber = bandNumber;
+            Name = name;
             BandPath = bandPath;
             BandImage = bandImage;
             UpperLeft = upperLeft;

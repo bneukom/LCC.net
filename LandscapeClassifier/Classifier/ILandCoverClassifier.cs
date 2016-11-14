@@ -24,6 +24,13 @@ namespace LandscapeClassifier.Classifier
         LandcoverType Predict(FeatureVector feature);
 
         /// <summary>
+        /// Returns the probabilty for the given feature vector prediction.
+        /// </summary>
+        /// <param name="feature"></param>
+        /// <returns></returns>
+        double PredictionProbabilty(FeatureVector feature);
+
+        /// <summary>
         /// Predicts all land cover types for the given feature vectors. <see cref="Train"/> must be called first.
         /// </summary>
         /// <param name="features"></param>

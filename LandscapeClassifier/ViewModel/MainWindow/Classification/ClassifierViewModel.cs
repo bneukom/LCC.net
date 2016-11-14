@@ -281,7 +281,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ScreenToWorld = Matrix<double>.Build.DenseIdentity(3);
             WorldToScreen = ScreenToWorld.Inverse();
 
-            mainWindowViewModel.Bands.CollectionChanged += BandsOnCollectionChanged;
+            mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
             ClassifiersEnumerable = Enum.GetNames(typeof(Classifier.Classifier));
@@ -309,7 +309,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 if (args.PropertyName == FeaturesViewModel.FeatureProperty)
                 {
                     MarkClassifierNotTrained();
-                    foreach (var bandViewModel in _mainWindowViewModel.Bands)
+                    foreach (var bandViewModel in _mainWindowViewModel.Layers)
                     {
                         bandViewModel.CanChangeIsFeature = !FeaturesViewModel.HasFeatures();
                     }
@@ -325,7 +325,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             Messenger.Default.Register<BandsLoadedMessage>(this, m =>
             {
-                BandsContrastEnhancement = m.BandsContrastEnhancement;
+                BandsContrastEnhancement = !m.AreBandsUnscaled;
                 SatelliteType = m.SatelliteType;
                 AreBandsUnscaled = m.AreBandsUnscaled;
                 ScreenToWorld = m.ScreenToWorld;
@@ -348,14 +348,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         {
             if (changedEvents.NewItems != null)
             {
-                foreach (BandViewModel bandViewModel in changedEvents.NewItems)
+                foreach (LayerViewModel bandViewModel in changedEvents.NewItems)
                 {
                     bandViewModel.PropertyChanged += BandViewModelOnPropertyChanged;
                 }
             }
             if (changedEvents.OldItems != null)
             {
-                foreach (BandViewModel bandViewModel in changedEvents.OldItems)
+                foreach (LayerViewModel bandViewModel in changedEvents.OldItems)
                 {
                     bandViewModel.PropertyChanged -= BandViewModelOnPropertyChanged;
                 }
@@ -366,12 +366,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         {
             if (MultipleBandsEnabled) return;
 
-            BandViewModel changedBand = (BandViewModel)sender;
-            if (propertyChangedEventArgs.PropertyName == nameof(BandViewModel.IsVisible))
+            LayerViewModel changedLayer = (LayerViewModel)sender;
+            if (propertyChangedEventArgs.PropertyName == nameof(LayerViewModel.IsVisible))
             {
-                foreach (BandViewModel bandViewModel in _mainWindowViewModel.Bands)
+                foreach (LayerViewModel bandViewModel in _mainWindowViewModel.Layers)
                 {
-                    if (bandViewModel == changedBand) continue;
+                    if (bandViewModel == changedLayer) continue;
 
                     bandViewModel.PropertyChanged -= BandViewModelOnPropertyChanged;
                     bandViewModel.IsVisible = false;
@@ -412,7 +412,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 using (var outputStreamWriter = new StreamWriter(csvPath))
                 {
 
-                    var bands = _mainWindowViewModel.Bands.Where(b => b.IsFeature).OrderBy(b => b.BandNumber);
+                    var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name);
                     outputStreamWriter.WriteLine(SatelliteType);
                     outputStreamWriter.WriteLine(BandsContrastEnhancement);
                     outputStreamWriter.WriteLine(bands.Aggregate("", (a, b) => a + b.BandPath + ";"));
@@ -458,10 +458,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                 string[] bandPaths = lines[2].Split(';');
 
-                var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => _mainWindowViewModel.Bands.All(b => b.BandPath != s)).Select(s =>
+                var missingBands = bandPaths.Where(s => s.Trim().Length > 0).Where(s => _mainWindowViewModel.Layers.All(b => b.BandPath != s)).Select(s =>
                 {
-                    int bandNumber = SatelliteType.GetBand(Path.GetFileName(s));
-                    return new BandInfo(s, bandNumber == 4, bandNumber == 3, bandNumber == 2);
+                    string bandNumber = SatelliteType.GetBand(Path.GetFileName(s));
+                    return new BandInfo(s, bandNumber == "04", bandNumber == "03", bandNumber == "02");
                 }).ToList();
 
                 // Check if some bands have to be added.
@@ -504,7 +504,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private void Train()
         {
             var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
-            var bands = _mainWindowViewModel.Bands.Where(b => b.IsFeature).Select(b => b.BandNumber).ToList();
+            var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
             _currentClassifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
             IsTrained = true;

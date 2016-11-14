@@ -12,16 +12,14 @@ using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.Classifier
 {
-    class SVMClassifier : ILandCoverClassifier
+    public class SVMClassifier : ILandCoverClassifier
     {
-        private MulticlassSupportVectorMachine<Linear> svm;
+        private MulticlassSupportVectorMachine<Gaussian> _svm;
+        private MulticlassSupportVectorLearning<Gaussian> _calibration;
 
         public void Train(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
-            int numClasses = Enum.GetValues(typeof(LandcoverType)).Length;
-            DecisionVariable[]  decisionVariables = classificationModel.Bands.Select(
-                b => DecisionVariable.Continuous(b.ToString())).ToArray();
 
             double[][] input = new double[numFeatures][];
             int[] responses = new int[numFeatures];
@@ -36,31 +34,53 @@ namespace LandscapeClassifier.Classifier
             }
 
             // Create a one-vs-one multi-class SVM learning algorithm 
-            var teacher = new MulticlassSupportVectorLearning<Linear>()
+            var teacher = new MulticlassSupportVectorLearning<Gaussian>()
             {
                 // using LIBLINEAR's L2-loss SVC dual for each SVM
-                Learner = (p) => new LinearDualCoordinateDescent()
+                Learner = (p) => new SequentialMinimalOptimization<Gaussian>()
                 {
-                    Loss = Loss.L2
+                    UseKernelEstimation = true,
+                    Tolerance = 5,
                 }
             };
 
+            _svm = teacher.Learn(input, responses);
 
-            svm = teacher.Learn(input, responses);
+            /*
+            // Create the multi-class learning algorithm for the machine
+            _calibration = new MulticlassSupportVectorLearning<Gaussian>()
+            {
+                Model = _svm, // We will start with an existing machine
 
-            Console.WriteLine();
+                // Configure the learning algorithm to use SMO to train the
+                //  underlying SVMs in each of the binary class subproblems.
+                Learner = (param) => new SequentialMinimalOptimization<Gaussian>()
+                {
+                    Model = param.Model // Start with an existing machine
+                }
+            };
 
-
+            _calibration.Learn(input, responses);
+            */
+            
         }
 
         public LandcoverType Predict(FeatureVector feature)
         {
-            return (LandcoverType) svm.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
+            var features = Array.ConvertAll(feature.BandIntensities, s => (double) s/ushort.MaxValue);
+           
+            return (LandcoverType) _svm.Decide(features);
+        }
+
+        public double PredictionProbabilty(FeatureVector feature)
+        {
+            var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
+            return _svm.Score(features);
         }
 
         public int[] Predict(double[][] features)
         {
-            return svm.Decide(features);
+            return _svm.Decide(features);
         }
     }
 }

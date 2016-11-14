@@ -126,9 +126,9 @@ namespace LandscapeClassifier.View.Open
                 for (int pathIndex = 0; pathIndex < openFileDialog.FileNames.Length; ++pathIndex)
                 {
                     string fileName = Path.GetFileName(openFileDialog.FileNames[pathIndex]);
-                    int bandNumber = DialogViewModel.SatelliteType.GetBand(fileName);
+                    string bandNumber = DialogViewModel.SatelliteType.GetBand(fileName);
 
-                    DialogViewModel.Bands.Add(new BandInfo(openFileDialog.FileNames[pathIndex], bandNumber == 4, bandNumber == 3, bandNumber == 2));
+                    DialogViewModel.Bands.Add(new BandInfo(openFileDialog.FileNames[pathIndex], bandNumber == "04", bandNumber == "03", bandNumber == "02"));
                 }
             }
         }

@@ -13,19 +13,21 @@ namespace LandscapeClassifier.Model
 
     public static class SatelliteTypeExtensions
     {
-        public static int GetBand(this SatelliteType satelliteType, string fileName)
+        public static string GetBand(this SatelliteType satelliteType, string fileName)
         {
-            int bandNumber = -1;
 
             switch (satelliteType)
             {
                 case SatelliteType.Sentinel2:
-                    var bandNumberString = fileName.Substring(fileName.Length - 6, 2);
-                    bandNumber = int.Parse(bandNumberString);
-                    break;
+                    return fileName.Substring(fileName.Length - 6, 2);
             }
 
-            return bandNumber;
+            return null;
+        }
+
+        public static bool isRedBand(this SatelliteType satelliteType, string band)
+        {
+            return false;
         }
     }
 }

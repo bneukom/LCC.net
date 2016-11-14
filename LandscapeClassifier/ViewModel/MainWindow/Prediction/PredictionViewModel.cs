@@ -23,9 +23,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 {
     public class PredictionViewModel : ViewModelBase
     {
+        private readonly MainWindowViewModel _mainWindowViewModel;
+
         private LandcoverType _mousePredictionType;
+        private double _mousePredictionProbability;
+
         private bool _isAllPredicted;
-        private MainWindowViewModel _mainWindowViewModel;
+        private BitmapSource _classificationOverlay;
+        private double _overlayOpacity = 0.5d;
+        private double _acceptanceProbabilty;
+        
 
         /// <summary>
         /// Predict all.
@@ -45,7 +52,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// <summary>
         /// Band to display.
         /// </summary>
-        public BandViewModel VisibleBand { set; get; }
+        public LayerViewModel VisibleLayer { set; get; }
+
+        /// <summary>
+        /// Classification bitmap.
+        /// </summary>
+        public BitmapSource ClassificationOverlay
+        {
+            set { _classificationOverlay = value; RaisePropertyChanged(); }
+            get { return _classificationOverlay; }
+        }
 
         /// <summary>
         /// Landcover type at mouse position.
@@ -66,6 +82,24 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// </summary>
         public Matrix<double> WorldToScreen;
 
+        /// <summary>
+        /// Opacity overlay.
+        /// </summary>
+        public double OverlayOpacity
+        {
+            get { return _overlayOpacity; }
+            set { _overlayOpacity = value; RaisePropertyChanged(); }
+
+        }
+
+        /// <summary>
+        /// Acceptance probabilty of the underlying machine learning algorithm for a certain land cover type.
+        /// </summary>
+        public double AcceptanceProbabilty
+        {
+            get { return _acceptanceProbabilty; }
+            set { _acceptanceProbabilty = value; RaisePropertyChanged(); }
+        }
 
         /// <summary>
         /// True if all pixels have been predicted.
@@ -76,6 +110,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             set { _isAllPredicted = value; RaisePropertyChanged(); }
         }
 
+        /// <summary>
+        /// Probabilty of landcover type at mouse position.
+        /// </summary>
+        public double MousePredictionProbability
+        {
+            get { return _mousePredictionProbability; }
+            set { _mousePredictionProbability = value; RaisePropertyChanged(); }
+        }
 
         public PredictionViewModel(MainWindowViewModel mainWindowViewModel)
         {
@@ -92,8 +134,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             {
                 ScreenToWorld = m.ScreenToWorld;
                 WorldToScreen = m.ScreenToWorld.Inverse();
-                VisibleBand = _mainWindowViewModel.Bands.FirstOrDefault(f => f.IsRgb) ??
-                           _mainWindowViewModel.Bands.First();
+                VisibleLayer = _mainWindowViewModel.Layers.FirstOrDefault(f => f.IsRgb) ??
+                           _mainWindowViewModel.Layers.First();
             });
         }
 
@@ -218,10 +260,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private void PredictAll()
         {
-            var firstBand = _mainWindowViewModel.Bands.FirstOrDefault(f => f.IsRgb) ??
-                            _mainWindowViewModel.Bands.First();
+            var firstBand = _mainWindowViewModel.Layers.FirstOrDefault(f => f.IsRgb) ??
+                            _mainWindowViewModel.Layers.First();
 
-            var numFeatures = _mainWindowViewModel.Bands.Count(f => f.IsFeature);
+            var numFeatures = _mainWindowViewModel.Layers.Count(f => f.IsFeature);
 
             var firstBandUpperLeftScreen = WorldToScreen * firstBand.UpperLeft;
             var firstBandBottomRightScreen = WorldToScreen * firstBand.BottomRight;
@@ -231,14 +273,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
             double firstBandScale = firstBand.MetersPerPixel;
 
-            var featureBands = _mainWindowViewModel.Bands.Where(f => f.IsFeature).ToList();
+            var featureBands = _mainWindowViewModel.Layers.Where(f => f.IsFeature).ToList();
 
             IntPtr[] data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
 
             int[][] result = new int[pixelHeight][];
 
             // TODO iterate over world coordinates (scale with global world to screen)?
-            Parallel.For(0, pixelHeight, line =>
+            Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, pixelHeight), range =>
             {
                 double[][] features = new double[pixelWidth][];
 
@@ -246,67 +288,89 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 {
                     features[i] = new double[numFeatures];
                 }
-                
-                for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
+
+                for (int line = range.Item1; line < range.Item2; ++line)
                 {
-                    var band = featureBands[bandIndex];
-
-                    var inverseTransform = band.Transform.Inverse();
-                    var bandUpperLeftScreen = inverseTransform*band.UpperLeft;
-                    var bandBottomRightScreen = inverseTransform*band.BottomRight;
-                    var left = (int) bandUpperLeftScreen[0];
-                    var right = (int) bandBottomRightScreen[0];
-
-                    var width = right - left;
-                    int bandLine = (int) (line/ band.MetersPerPixel*firstBandScale);
-
-                    unsafe
+                    for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                     {
-                        ushort* dataPtr = (ushort*) data[bandIndex].ToPointer();
+                        var band = featureBands[bandIndex];
 
-                        for (int i = 0; i < pixelWidth; ++i)
+                        var inverseTransform = band.Transform.Inverse();
+                        var bandUpperLeftScreen = inverseTransform * band.UpperLeft;
+                        var bandBottomRightScreen = inverseTransform * band.BottomRight;
+                        var left = (int)bandUpperLeftScreen[0];
+                        var right = (int)bandBottomRightScreen[0];
+
+                        var width = right - left;
+                        int bandLine = (int)(line / band.MetersPerPixel * firstBandScale);
+
+                        unsafe
                         {
-                            var indexX = (int)(i/band.MetersPerPixel*firstBandScale);
-                            var pixelValue = *(dataPtr + bandLine * width + indexX);
-                            features[i][bandIndex] = (double) pixelValue/ushort.MaxValue;
+                            ushort* dataPtr = (ushort*)data[bandIndex].ToPointer();
+
+                            for (int i = 0; i < pixelWidth; ++i)
+                            {
+                                var indexX = (int)(i / band.MetersPerPixel * firstBandScale);
+                                var pixelValue = *(dataPtr + bandLine * width + indexX);
+                                features[i][bandIndex] = (double)pixelValue / ushort.MaxValue;
+                            }
                         }
                     }
+
+
+                    result[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
                 }
+            }));
 
-
-                result[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
-            });
-
-            int stride = pixelWidth * 4;
-            int size = pixelHeight * stride;
-            byte[] imageData = new byte[size];
-
-            Parallel.For(0, pixelWidth, x =>
-                //for (int x = 0; x < pixelWidth; ++x)
+            predict.ContinueWith(t =>
             {
-                for (int y = 0; y < pixelHeight; ++y)
+                int stride = pixelWidth * 4;
+                int size = pixelHeight * stride;
+                byte[] imageData = new byte[size];
+
+                // TODO add majority filter tool
+                /*
+                int[,] majorityFiltered = new int[pixelHeight, pixelWidth];
+                int numTypes = Enum.GetValues(typeof(LandcoverType)).Length - 1;
+
+                int[] occurence = new int[numTypes];
+                for (int x = 0; x < pixelWidth; ++x)
                 {
-                    int index = 4*y*pixelWidth + 4*x;
-                    LandcoverType type = (LandcoverType) result[y][x];
-                    var color = type.GetColor();
-                    imageData[index + 0] = color.B;
-                    imageData[index + 1] = color.G;
-                    imageData[index + 2] = color.R;
-                    imageData[index + 3] = color.A;
+                    for (int y = 0; y < pixelHeight; ++y)
+                    {
+                        for (int i = 0; i < numTypes; ++i) occurence[i] = 0;
+
+                        occurence[result[y][x]]++;
+                        if (y - 1 >= 0) occurence[result[y - 1][x]]++;
+                        if (x - 1 >= 0) occurence[result[y][x - 1]]++;
+                        if (y + 1 < pixelHeight) occurence[result[y + 1][x]]++;
+                        if (x + 1 < pixelWidth) occurence[result[y][x + 1]]++;
+
+                        majorityFiltered[y, x] = Array.IndexOf(occurence, occurence.Max());
+                    }
                 }
+                */
+
+                Parallel.For(0, pixelWidth, x =>
+                {
+                    for (int y = 0; y < pixelHeight; ++y)
+                    {
+                        int index = 4 * y * pixelWidth + 4 * x;
+                        LandcoverType type = (LandcoverType)result[y][x];
+                        var color = type.GetColor();
+                        imageData[index + 0] = color.B;
+                        imageData[index + 1] = color.G;
+                        imageData[index + 2] = color.R;
+                        imageData[index + 3] = color.A;
+                    }
+                });
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ClassificationOverlay = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
+                    IsAllPredicted = true;
+                });
             });
-                                               
-
-            var folder = "c:/temp";
-            using (var fileStream = new FileStream(System.IO.Path.Combine(folder, "test.png"), FileMode.Create))
-            {
-                var encoder = new PngBitmapEncoder();
-                var slopeImage = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
-
-                encoder.Frames.Add(BitmapFrame.Create(slopeImage));
-                encoder.Save(fileStream);
-            }
-
         }
 
         private bool CanPredictAll() => true;
