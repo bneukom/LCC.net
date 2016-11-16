@@ -10,12 +10,18 @@
         xmlns:validationRules="clr-namespace:LandscapeClassifier.View.ValidationRules"
         xmlns:classifierControls="clr-namespace:LandscapeClassifier.Controls"
         xmlns:classification="clr-namespace:LandscapeClassifier.ViewModel.MainWindow.Classification"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         mc:Ignorable="d"
         GlowBrush="{DynamicResource AccentColorBrush}"
         Title="Land Cover Classifier" DataContext="{StaticResource MainWindowViewModel}"  Icon="/Resources/Icons/Icon128_3.png" WindowTitleBrush="#DDDDDD" Height="900" Width="1440" UseLayoutRounding="True">
 
     <Window.Resources>
-        <converter:DoubleRoundingConverter x:Key="DoubleRoundingConverter" />
+        <ResourceDictionary>
+            <converter:DoubleRoundingConverter x:Key="DoubleRoundingConverter" />
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Icons.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Window.Resources>
 
     <DockPanel IsEnabled="{Binding WindowEnabled}">
@@ -46,8 +52,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Button x:Name="OpenOrthoImage" Command="{Binding OpenSatelliteBandsCommand}"  Content="Load Satellite Bands" HorizontalAlignment="Left" Margin="5,8,5,5" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
-            <Button x:Name="OpenDEM" Command="{Binding AddLayerCommand}"  Content="Add Layer" HorizontalAlignment="Left" Margin="5,5,0,5" VerticalAlignment="Center" Grid.Column="0" Grid.Row="1"/>
+            <Button x:Name="OpenOrthoImage" Command="{Binding OpenSatelliteBandsCommand}"  Content="Add Layer" HorizontalAlignment="Left" Margin="5,8,5,5" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
             <TabControl Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
                 <TabItem  Header="Training">
                     <Grid>
@@ -65,7 +70,21 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <CheckBox Grid.Column="0" Margin="5" VerticalAlignment="Center" IsChecked="{Binding ClassifierViewModel.MultipleBandsEnabled}" HorizontalAlignment="Left">Multiple Layers Visible</CheckBox>
+                            <Grid  Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    <ColumnDefinition Width="*"></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0"  Margin="5" VerticalAlignment="Center" IsChecked="{Binding ClassifierViewModel.MultipleBandsEnabled}" HorizontalAlignment="Left">Multiple Layers Visible</CheckBox>
+                                <StackPanel Margin="5" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Width="32" Height="32" Margin="5,0,0,0" Command="{Binding MoveLayerDownCommand}">
+                                        <iconPacks:PackIconMaterial Kind="ArrowDown" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                    </Button>
+                                    <Button Width="32" Height="32" Margin="5,0,0,0" Command="{Binding MoveLayerUpCommand}">
+                                        <iconPacks:PackIconMaterial Kind="ArrowUp" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
                             <!--
                             <ListBox Grid.Column="0" Grid.Row="1" MinWidth="250" ItemsSource="{Binding Layers}">
                                 <ListBox.ItemTemplate>
@@ -78,7 +97,7 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             -->
-                            <DataGrid Grid.Column="0" CanUserResizeColumns="False" MaxWidth="250" Grid.Row="1"  AutoGenerateColumns="False" ItemsSource="{Binding Layers}" Margin="5" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <DataGrid SelectionMode="Single" SelectedItem="{Binding SelectedLayer}" x:Name="LayersGrid" Grid.Column="0" AllowDrop="True" CanUserResizeColumns="False" MaxWidth="250" Grid.Row="1"  AutoGenerateColumns="False" ItemsSource="{Binding Layers}" Margin="5" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Width="*" Header="Layer" Binding="{Binding Name}" />
                                     <DataGridCheckBoxColumn ElementStyle="{DynamicResource MetroDataGridCheckBox}"

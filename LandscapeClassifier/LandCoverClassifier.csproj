@@ -156,8 +156,12 @@
       <HintPath>..\packages\GeoAPI.1.7.2\lib\net403-client\GeoAPI.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MahApps.Metro, Version=1.2.4.0, Culture=neutral, PublicKeyToken=f4fb5a3c4d1e5b4f, processorArchitecture=MSIL">
-      <HintPath>..\packages\MahApps.Metro.1.2.4.0\lib\net45\MahApps.Metro.dll</HintPath>
+    <Reference Include="MahApps.Metro, Version=1.3.0.0, Culture=neutral, PublicKeyToken=f4fb5a3c4d1e5b4f, processorArchitecture=MSIL">
+      <HintPath>..\packages\MahApps.Metro.1.3.0\lib\net45\MahApps.Metro.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="MahApps.Metro.IconPacks, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MahApps.Metro.IconPacks.1.6.0\lib\net46\MahApps.Metro.IconPacks.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="MathNet.Numerics, Version=3.13.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -237,7 +241,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Windows.Interactivity, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\MvvmLightLibs.5.3.0.0\lib\net45\System.Windows.Interactivity.dll</HintPath>
+      <HintPath>..\packages\MahApps.Metro.1.3.0\lib\net45\System.Windows.Interactivity.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Xml" />
@@ -295,24 +299,21 @@
     <Compile Include="Converter\DoubleRoundingConverter.cs" />
     <Compile Include="Converter\InverseBoolConverter.cs" />
     <Compile Include="Converter\PointToStringConverter.cs" />
+    <Compile Include="Extensions\DataTypeExtensions.cs" />
     <Compile Include="Extensions\LandCoverTypeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
     <Compile Include="Model\Band.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\SatelliteType.cs" />
-    <Compile Include="ViewModel\Dialogs\AddLayerDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\FeaturesViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
-    <Compile Include="ViewModel\Dialogs\AddBandsDialogViewModel.cs" />
+    <Compile Include="ViewModel\Dialogs\AddLayersDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
-    <Compile Include="View\Dialogs\Open\AddLayerDialog.xaml.cs">
-      <DependentUpon>AddLayerDialog.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="View\Dialogs\Open\AddBandsDialog.xaml.cs">
-      <DependentUpon>AddBandsDialog.xaml</DependentUpon>
+    <Compile Include="View\Dialogs\Open\AddLayersDialog.xaml.cs">
+      <DependentUpon>AddLayersDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Extensions\ColorExtensions.cs" />
     <Compile Include="GdalConfiguration.cs" />
@@ -344,11 +345,15 @@
       <DependentUpon>ExportWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\ValidationRules\DoubleValidationRule.cs" />
-    <Page Include="View\Dialogs\Open\AddLayerDialog.xaml">
+    <Page Include="Resources\Icons.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="View\Dialogs\Open\AddBandsDialog.xaml">
+    <Page Include="Resources\IconsNonShared.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\Dialogs\Open\AddLayersDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -405,6 +410,7 @@
     </EmbeddedResource>
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
+    <Resource Include="Resources\Entypo.ttf" />
     <None Include="Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -413,24 +419,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Selen.Wpf.Core\Selen.Wpf.Core.csproj">
-      <Project>{c94c1bdd-11f9-4a3f-8929-86b1b67ae1d5}</Project>
-      <Name>Selen.Wpf.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Selen.Wpf.GenericAppTree.Contracts\Selen.Wpf.GenericAppTree.Contracts.csproj">
-      <Project>{fc32ab02-5705-48e0-bcfd-78eb6c137aeb}</Project>
-      <Name>Selen.Wpf.GenericAppTree.Contracts</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Selen.Wpf.GenericAppTree\Selen.Wpf.GenericAppTree.csproj">
-      <Project>{8615a3c0-298c-4b9d-8ffc-d5aca466523d}</Project>
-      <Name>Selen.Wpf.GenericAppTree</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Selen.Wpf.SystemStyles\Selen.Wpf.SystemStyles.csproj">
-      <Project>{a468315f-fa11-4bc2-8e5f-ea3c48b24c74}</Project>
-      <Name>Selen.Wpf.SystemStyles</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
@@ -458,6 +446,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="GdalConfiguration.vb" />
+    <Resource Include="Resources\Entypo-license.txt" />
+    <Resource Include="Resources\WindowsIcons-license.txt" />
+    <Resource Include="Navigation-Down-24.png" />
+    <Resource Include="Navigation-Down-32.png" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

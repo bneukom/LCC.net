@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media;
-using LandscapeClassifier.Model;
 
-namespace LandscapeClassifier.ViewModel
+namespace LandscapeClassifier.Model
 {
     public static class LandcoverTypeExtensions
     {

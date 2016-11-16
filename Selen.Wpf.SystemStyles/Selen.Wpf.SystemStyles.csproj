@@ -160,16 +160,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Selen.Wpf.Core\Selen.Wpf.Core.csproj">
-      <Project>{c94c1bdd-11f9-4a3f-8929-86b1b67ae1d5}</Project>
-      <Name>Selen.Wpf.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Selen.Wpf.GenericAppTree\Selen.Wpf.GenericAppTree.csproj">
-      <Project>{8615a3c0-298c-4b9d-8ffc-d5aca466523d}</Project>
-      <Name>Selen.Wpf.GenericAppTree</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

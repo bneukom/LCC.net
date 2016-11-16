@@ -17,20 +17,30 @@ namespace LandscapeClassifier.View.Open
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml
     /// </summary>
-    public partial class AddLayerDialog : MetroWindow
+    public partial class AddLayersDialog : MetroWindow
     {
-        public AddLayerDialogViewModel DialogViewModel { get; private set; }
+        public AddLayersDialogViewModel DialogViewModel { get; private set; }
 
-        public AddLayerDialog()
+        public AddLayersDialog()
         {
             InitializeComponent();
 
-            DialogViewModel = (AddLayerDialogViewModel)DataContext;
+            DialogViewModel = (AddLayersDialogViewModel)DataContext;
         }
 
+        public bool? ShowImportMissingBandsDialog(List<BandInfoViewModel> bandInfo)
+        {
+            MissingBandsInfoTextBlock.Visibility = Visibility.Visible;
+            AddRemoveBandsStackPanel.Visibility = Visibility.Collapsed;
+            DialogViewModel.Reset();
+            bandInfo.ForEach(b => DialogViewModel.Bands.Add(b));
+            DialogViewModel.MissingBandsImport = true;
+            return ShowDialog();
+        }
 
         public bool? ShowAddBandsDialog()
         {
+            MissingBandsInfoTextBlock.Visibility = Visibility.Collapsed;
             AddRemoveBandsStackPanel.Visibility = Visibility.Visible;
             DialogViewModel.Reset();
             return ShowDialog();
@@ -38,7 +48,24 @@ namespace LandscapeClassifier.View.Open
 
         private void OkClick(object sender, RoutedEventArgs e)
         {
-            DialogResult = true;
+            if (DialogViewModel.AddRgb)
+            {
+                if (!DialogViewModel.Bands.Any(b => b.B)
+                    || !DialogViewModel.Bands.Any(b => b.G)
+                    || !DialogViewModel.Bands.Any(b => b.R))
+                {
+                    MessageBox.Show(this, "Not all RGB channels have been specified.", "RGB Channel Missing",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    DialogResult = true;
+                }
+            }
+            else
+            {
+                DialogResult = true;
+            }
         }
 
 
@@ -47,7 +74,7 @@ namespace LandscapeClassifier.View.Open
         }
 
         // TODO Command
-        private void AddLayerClick(object sender, RoutedEventArgs e)
+        private void AddBandsClick(object sender, RoutedEventArgs e)
         {
             // Get GDAL extensions
             StringBuilder allImageExtensions = new StringBuilder();
@@ -97,14 +124,9 @@ namespace LandscapeClassifier.View.Open
             {
                 for (int pathIndex = 0; pathIndex < openFileDialog.FileNames.Length; ++pathIndex)
                 {
-                    DialogViewModel.Layers.Add(new LayerInfo(openFileDialog.FileNames[pathIndex], false));
+                    DialogViewModel.Bands.Add(new BandInfoViewModel(openFileDialog.FileNames[pathIndex]));
                 }
             }
-        }
-
-        private void RemoveLayerClick(object sender, RoutedEventArgs e)
-        {
-            throw new NotImplementedException();
         }
     }
 }

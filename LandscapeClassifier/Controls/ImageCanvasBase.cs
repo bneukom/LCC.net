@@ -31,8 +31,8 @@ namespace LandscapeClassifier.Controls
 
             _scaleMat = _matrixBuilder.DenseOfArray(new[,]
 {
-                {1/50.0, 0, 0},
-                {0, 1/50.0, 0},
+                {1/150.0, 0, 0},
+                {0, 1/150.0, 0},
                 {0, 0, 1}
             });
 

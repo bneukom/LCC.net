@@ -19,9 +19,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private Brush _currentPositionBrush;
 
-        /// <summary>
-        /// 
-        /// </summary>
         public readonly Matrix<double> Transform;
 
         public readonly Matrix<double> InverseTransform;
