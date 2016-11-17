@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace LandscapeClassifier.Extensions
@@ -30,5 +27,34 @@ namespace LandscapeClassifier.Extensions
             }
         }
 
+
+        public static ushort GetScaledToUshort(this WriteableBitmap writeableBitmap, int posX, int posY)
+        {
+            if (writeableBitmap.Format == PixelFormats.Gray32Float)
+            {
+                float bandIntensity = writeableBitmap.GetFloatPixelValue(posX, posY);
+                return (ushort)(bandIntensity * ushort.MaxValue);
+            }
+            if (writeableBitmap.Format == PixelFormats.Gray16)
+            {
+                return writeableBitmap.GetUshortPixelValue(posX, posY);
+            }
+            throw new InvalidOperationException();
+        }
+
+        public static byte GetScaledToByte(this WriteableBitmap writeableBitmap, int posX, int posY)
+        {
+            if (writeableBitmap.Format == PixelFormats.Gray32Float)
+            {
+                float bandIntensity = writeableBitmap.GetFloatPixelValue(posX, posY);
+                return (byte)(bandIntensity * byte.MaxValue);
+            }
+            if (writeableBitmap.Format == PixelFormats.Gray16)
+            {
+                ushort bandIntensity = writeableBitmap.GetUshortPixelValue(posX, posY);
+                return (byte)((float)bandIntensity / ushort.MaxValue * byte.MaxValue);
+            }
+            throw new InvalidOperationException();
+        }
     }
 }

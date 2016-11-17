@@ -14,7 +14,7 @@ namespace LandscapeClassifier.Classifier
 {
     public class SVMClassifier : ILandCoverClassifier
     {
-        private MulticlassSupportVectorMachine<Gaussian> _svm;
+        private MulticlassSupportVectorMachine<Linear> _svm;
         private MulticlassSupportVectorLearning<Gaussian> _calibration;
 
         public void Train(ClassificationModel classificationModel)
@@ -34,13 +34,11 @@ namespace LandscapeClassifier.Classifier
             }
 
             // Create a one-vs-one multi-class SVM learning algorithm 
-            var teacher = new MulticlassSupportVectorLearning<Gaussian>()
+            var teacher = new MulticlassSupportVectorLearning<Linear>()
             {
                 // using LIBLINEAR's L2-loss SVC dual for each SVM
-                Learner = (p) => new SequentialMinimalOptimization<Gaussian>()
+                Learner = (p) => new LinearCoordinateDescent()
                 {
-                    UseKernelEstimation = true,
-                    Tolerance = 5,
                 }
             };
 
@@ -75,7 +73,7 @@ namespace LandscapeClassifier.Classifier
         public double PredictionProbabilty(FeatureVector feature)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
-            return _svm.Score(features);
+            return _svm.Probability(features);
         }
 
         public int[] Predict(double[][] features)

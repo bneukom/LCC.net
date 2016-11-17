@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
@@ -55,8 +56,6 @@ namespace LandscapeClassifier.Controls
                 var mousePosition = mouseButtonEventArgs.GetPosition(this);
                 Vector<double> mouseVec = _vecBuilder.DenseOfArray(new[] { mousePosition.X, mousePosition.Y, 1.0f });
 
-                var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
-
                 var featureBands = viewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
 
                 ushort[] bandPixels = new ushort[featureBands.Count];
@@ -64,10 +63,10 @@ namespace LandscapeClassifier.Controls
                 for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                 {
                     var band = featureBands[bandIndex];
-                    var bandScaleVec = _vecBuilder.DenseOfArray(new[] { band.ScaleX, band.ScaleY, 1 });
-                    var bandPixelPosition = screenToView * mouseVec / bandScaleVec;
+                    var viewToPixelMat = band.WorldToImage * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                    var bandPixelPosition = viewToPixelMat * mouseVec;
 
-                    ushort bandPixelValue = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                    ushort bandPixelValue = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
 
                     bandPixels[bandIndex] = bandPixelValue;
                 }
@@ -86,7 +85,6 @@ namespace LandscapeClassifier.Controls
             var posVec = _vecBuilder.DenseOfArray(new[] { position.X, position.Y, 1 });
 
             {
-                var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
                 var viewToWorld = viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
                 var mouseWorld = viewToWorld * posVec;
@@ -99,27 +97,11 @@ namespace LandscapeClassifier.Controls
 
             foreach (var band in featureBands)
             {
-                var viewToWorld = band.InverseTransform * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                var viewToPixelMat = band.WorldToImage * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
-                var bandPixelPosition = viewToWorld * posVec;
+                  var bandPixelPosition = viewToPixelMat * posVec;
 
-                byte grayScale = 0;
-                if (band.Format == PixelFormats.Gray32Float)
-                {
-                    float bandIntensity = band.BandImage.GetFloatPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
-                    grayScale = (byte)((float)bandIntensity * byte.MaxValue);
-                }
-                else if (band.Format == PixelFormats.Gray16)
-                {
-                    ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0],
-                        (int)bandPixelPosition[1]);
-                    grayScale = (byte)((float)bandIntensity / ushort.MaxValue * byte.MaxValue);
-                }
-                else
-                {
-                    throw new InvalidOperationException();
-                }
-
+                byte grayScale = band.BandImage.GetScaledToByte((int) bandPixelPosition[0], (int) bandPixelPosition[1]);
 
                 //if (viewModel.ClassifierViewModel.PreviewBandIntensityScale)
                 //    bandIntensity = (ushort)MoreMath.Clamp((bandIntensity - band.MaxCutScale) / (double)(band.MaxCutScale - band.MinCutScale) * ushort.MaxValue, 0, ushort.MaxValue - 1);
@@ -146,7 +128,7 @@ namespace LandscapeClassifier.Controls
             foreach (var band in viewModel.Layers)
             {
                 if (!band.IsVisible) continue;
-                DrawBand(band, dc, viewModel.ClassifierViewModel.WorldToScreen);
+                DrawBand(dc, band, viewModel.ClassifierViewModel.WorldToScreen);
             }
         }
     }

@@ -40,13 +40,13 @@
             <ColumnDefinition Width="*"></ColumnDefinition>
             <ColumnDefinition Width="Auto"></ColumnDefinition>
         </Grid.ColumnDefinitions>
-        <TextBlock Grid.ColumnSpan="3" x:Name="MissingBandsInfoTextBlock" Visibility="Visible" FontSize="18" Foreground="DarkRed" Margin="5">Some bands used in this training set are missing and need to be loaded. Cancel will abort import.</TextBlock>
+        <TextBlock Grid.ColumnSpan="3" x:Name="MissingBandsInfoTextBlock" Visibility="Visible" Foreground="DarkRed" Margin="5">Some layers used in this training set are missing and need to be loaded. Cancel will abort import.</TextBlock>
 
         <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
-            <CheckBox  Margin="5" IsChecked="{Binding AddRgb}" VerticalAlignment="Center">Add RGB</CheckBox>
-            <CheckBox Margin="5" IsChecked="{Binding RgbContrastEnhancement}" IsEnabled="{Binding AddRgb}" VerticalAlignment="Center">RGB Contrast Enhancement</CheckBox>
+            <CheckBox  Margin="5" IsChecked="{Binding AddRgb, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding AllRgbChannelsAdded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center">Add RGB</CheckBox>
+            <CheckBox Margin="5" IsChecked="{Binding RgbContrastEnhancement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding AddRgb, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center">RGB Contrast Enhancement</CheckBox>
         </StackPanel>
-        <DataGrid Grid.Row="2" Grid.ColumnSpan="3"  IsEnabled="{Binding MissingBandsImport, Converter={StaticResource InverseBoolConverter}}" AutoGenerateColumns="False" ItemsSource="{Binding Bands, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
+        <DataGrid Grid.Row="2" Grid.ColumnSpan="3"  IsEnabled="{Binding MissingBandsImport, Converter={StaticResource InverseBoolConverter}}" AutoGenerateColumns="False" ItemsSource="{Binding Layers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
             <DataGrid.Resources>
                 <ObjectDataProvider x:Key="SatelliteTypeDataProvider" 
                         MethodName="GetValues" 
@@ -67,7 +67,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <controls:NumericUpDown 
-                                Minimum="0" Maximum="100" Interval="1" 
+                                Minimum="0" Maximum="1" Interval="0.01" 
                                 Value="{Binding MinCutOff, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                 IsEnabled="{Binding ContrastEnhancement}"/>
                         </DataTemplate>
@@ -77,7 +77,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <controls:NumericUpDown 
-                                Minimum="0" Maximum="100" Interval="1" 
+                                Minimum="0" Maximum="1" Interval="0.01" 
                                 Value="{Binding MaxCutOff, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                 IsEnabled="{Binding ContrastEnhancement}"/>
                         </DataTemplate>

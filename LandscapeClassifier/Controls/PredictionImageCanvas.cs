@@ -13,17 +13,22 @@ using LandscapeClassifier.Util;
 using LandscapeClassifier.ViewModel.MainWindow;
 using LandscapeClassifier.ViewModel.MainWindow.Prediction;
 using MathNet.Numerics.LinearAlgebra;
+using Brushes = System.Windows.Media.Brushes;
+using Point = System.Windows.Point;
 
 namespace LandscapeClassifier.Controls
 {
     public class PredictionImageCanvas : ImageCanvasBase
     {
         private readonly VectorBuilder<double> _vecBuilder = Vector<double>.Build;
+        private readonly Pen _predictionBorderAreaPen;
 
         public PredictionImageCanvas()
         {
             MouseMove += OnMove;
             MouseLeave += OnMouseLeave;
+
+            _predictionBorderAreaPen = new Pen(Brushes.DarkGreen, 5.0) {DashStyle = DashStyles.Dot};
         }
 
         private void OnMouseLeave(object sender, MouseEventArgs mouseEventArgs)
@@ -38,12 +43,10 @@ namespace LandscapeClassifier.Controls
         private void OnMove(object sender, MouseEventArgs args)
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+
             if (viewModel == null) return;
 
             var position = args.GetPosition(this);
-
-            var screenToView = _scaleMat.Inverse() * _screenToViewMat.Inverse();
-
             var posVec = _vecBuilder.DenseOfArray(new[] { position.X, position.Y, 1 });
 
             var featureBands = viewModel.Layers.Where(b => b.IsFeature).ToList();
@@ -52,12 +55,11 @@ namespace LandscapeClassifier.Controls
             for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
             {
                 var band = featureBands[bandIndex];
-                var bandScaleVec = _vecBuilder.DenseOfArray(new[] { band.ScaleX, band.ScaleY, 1 });
-                var bandPixelPosition = screenToView * posVec / bandScaleVec;
+                var viewToPixelMat = band.WorldToImage * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
 
+                var bandPixelPosition = viewToPixelMat * posVec;
 
-
-                ushort bandIntensity = band.BandImage.GetUshortPixelValue((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                ushort bandIntensity = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
                 bandIntensities[bandIndex] = bandIntensity;
             }
 
@@ -92,21 +94,40 @@ namespace LandscapeClassifier.Controls
         {
             base.OnRender(dc);
 
+
             // Background
-            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
+            dc.DrawRectangle(Brushes.Gray, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
             // Draw bands
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-
             if (viewModel == null) return;
 
-            DrawBand(viewModel.PredictionViewModel.VisibleLayer, dc, viewModel.PredictionViewModel.WorldToScreen);
+            // White background if there are visible bands
+            if (viewModel.Layers.Any(b => b.IsVisible)) dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
-            if (viewModel.PredictionViewModel.ClassificationOverlay != null)
+            var predictionViewModel = viewModel.PredictionViewModel;
+            foreach (var band in viewModel.Layers)
             {
-                var bandUpperLeft = viewModel.PredictionViewModel.VisibleLayer.UpperLeft;
-                var bandBottomRight = viewModel.PredictionViewModel.VisibleLayer.BottomRight;
+                if (!band.IsVisible) continue;
+                DrawBand(dc, band, predictionViewModel.WorldToScreen);
+            }
+
+            if (predictionViewModel.PredictionUpperLeft != null &&
+                predictionViewModel.PredictionBottomRight != null)
+            {
+                dc.PushOpacity(0.5);
+                DrawProjectedRect(dc, predictionViewModel.PredictionUpperLeft, predictionViewModel.PredictionBottomRight, _predictionBorderAreaPen, viewModel.ClassifierViewModel.WorldToScreen);
+                dc.Pop();
+            }
+            
+
+            if (predictionViewModel.ClassificationOverlay != null)
+            {
+                dc.PushOpacity(viewModel.PredictionViewModel.OverlayOpacity);
+                var bandUpperLeft = viewModel.PredictionViewModel.PredictionUpperLeft;
+                var bandBottomRight = viewModel.PredictionViewModel.PredictionBottomRight;
                 DrawClassification(dc, bandUpperLeft, bandBottomRight);
+                dc.Pop();
             }
 
         }

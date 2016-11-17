@@ -28,12 +28,12 @@ namespace LandscapeClassifier.View.Open
             DialogViewModel = (AddLayersDialogViewModel)DataContext;
         }
 
-        public bool? ShowImportMissingBandsDialog(List<BandInfoViewModel> bandInfo)
+        public bool? ShowImportMissingBandsDialog(List<CreateLayerViewModel> bandInfo)
         {
             MissingBandsInfoTextBlock.Visibility = Visibility.Visible;
             AddRemoveBandsStackPanel.Visibility = Visibility.Collapsed;
             DialogViewModel.Reset();
-            bandInfo.ForEach(b => DialogViewModel.Bands.Add(b));
+            bandInfo.ForEach(b => DialogViewModel.Layers.Add(b));
             DialogViewModel.MissingBandsImport = true;
             return ShowDialog();
         }
@@ -50,9 +50,9 @@ namespace LandscapeClassifier.View.Open
         {
             if (DialogViewModel.AddRgb)
             {
-                if (!DialogViewModel.Bands.Any(b => b.B)
-                    || !DialogViewModel.Bands.Any(b => b.G)
-                    || !DialogViewModel.Bands.Any(b => b.R))
+                if (!DialogViewModel.Layers.Any(b => b.B)
+                    || !DialogViewModel.Layers.Any(b => b.G)
+                    || !DialogViewModel.Layers.Any(b => b.R))
                 {
                     MessageBox.Show(this, "Not all RGB channels have been specified.", "RGB Channel Missing",
                         MessageBoxButton.OK, MessageBoxImage.Error);
@@ -124,7 +124,7 @@ namespace LandscapeClassifier.View.Open
             {
                 for (int pathIndex = 0; pathIndex < openFileDialog.FileNames.Length; ++pathIndex)
                 {
-                    DialogViewModel.Bands.Add(new BandInfoViewModel(openFileDialog.FileNames[pathIndex]));
+                    DialogViewModel.Layers.Add(new CreateLayerViewModel(openFileDialog.FileNames[pathIndex]));
                 }
             }
         }

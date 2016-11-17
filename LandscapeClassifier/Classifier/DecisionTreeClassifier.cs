@@ -34,12 +34,9 @@ namespace LandscapeClassifier.Classifier
 
             _tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
             _id3Learning = new C45Learning(_tree);
-            _id3Learning.SplitStep = 10;
+            _id3Learning.SplitStep = 1;
             _id3Learning.Learn(input, responses);
 
-
-
-            Console.WriteLine(_tree.NumberOfOutputs);
         }
 
         public LandcoverType Predict(FeatureVector feature)
@@ -49,7 +46,7 @@ namespace LandscapeClassifier.Classifier
 
         public double PredictionProbabilty(FeatureVector feature)
         {
-            throw new NotImplementedException();
+            return 0.0;
         }
 
         public int[] Predict(double[][] features)

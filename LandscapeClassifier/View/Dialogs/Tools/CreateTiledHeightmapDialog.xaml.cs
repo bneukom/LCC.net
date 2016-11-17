@@ -1,27 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using MahApps.Metro.Controls;
 using Microsoft.Win32;
 
-namespace LandscapeClassifier.View
+namespace LandscapeClassifier.View.Tools
 {
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml
     /// </summary>
-    public partial class CreateSlopeFromDEMDialog : MetroWindow
+    public partial class CreateTiledHeightmapDialog : MetroWindow
     {
-        public CreateSlopeFromDEMDialog()
+        public CreateTiledHeightmapDialog()
         {
             InitializeComponent();
         }
@@ -30,7 +22,7 @@ namespace LandscapeClassifier.View
         {
             var openFileDialog = new OpenFileDialog()
             {
-                Filter = "PNG Files (.png)|*.png",
+                Filter = "TIFF Files (.png)|*.png",
                 FilterIndex = 1,
             };
 

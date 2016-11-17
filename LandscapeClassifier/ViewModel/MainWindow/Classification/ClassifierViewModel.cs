@@ -56,7 +56,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             _mainWindowViewModel = mainWindowViewModel;
 
             // TODO nono
-            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] {{1, 0, 300000.0}, {0, -1, 5090220}, {0, 0, 1}});
+            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] { { 1, 0, 300000.0 }, { 0, -1, 5090220 }, { 0, 0, 1 } });
             WorldToScreen = ScreenToWorld.Inverse();
 
             mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
@@ -347,7 +347,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         {
             if (MultipleBandsEnabled) return;
 
-            var changedLayer = (LayerViewModel) sender;
+            var changedLayer = (LayerViewModel)sender;
             if (propertyChangedEventArgs.PropertyName == nameof(LayerViewModel.IsVisible))
             {
                 foreach (var bandViewModel in _mainWindowViewModel.Layers)
@@ -393,9 +393,18 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 using (var outputStreamWriter = new StreamWriter(csvPath))
                 {
                     var layers = _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name);
-                    //outputStreamWriter.WriteLine(SatelliteType);
-                    //outputStreamWriter.WriteLine(BandsContrastEnhancement);
-                    outputStreamWriter.WriteLine(layers.Aggregate("", (a, b) => a + b.Path + ";"));
+                    outputStreamWriter.WriteLine(layers.Count());
+                    foreach (var layerViewModel in layers)
+                    {
+                        outputStreamWriter.WriteLine(layerViewModel.Path);
+                        outputStreamWriter.WriteLine(layerViewModel.ContrastEnhanced);
+                        outputStreamWriter.WriteLine(layerViewModel.SatelliteType);
+                        outputStreamWriter.WriteLine(layerViewModel.IsRed);
+                        outputStreamWriter.WriteLine(layerViewModel.IsGreen);
+                        outputStreamWriter.WriteLine(layerViewModel.IsBlue);
+                        outputStreamWriter.WriteLine(layerViewModel.MinCutPercentage);
+                        outputStreamWriter.WriteLine(layerViewModel.MaxCutPercentage);
+                    }
 
                     foreach (var feature in FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector))
                     {
@@ -429,46 +438,59 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             {
                 FeaturesViewModel.RemoveAllFeatures();
 
-                var path = openFileDialog.FileName;
-                var lines = File.ReadAllLines(path);
-
-                //SatelliteType satelliteType;
-                //Enum.TryParse(lines[0], true, out satelliteType);
-                //var bandContrastEnhancement = bool.Parse(lines[1]);
-
-                var bandPaths = lines[2].Split(';');
-
-                var missingBands =
-                    bandPaths.Where(s => s.Trim().Length > 0)
-                        .Where(s => _mainWindowViewModel.Layers.All(b => b.Path != s))
-                        .Select(s => new BandInfoViewModel(s)).ToList();
-
-                // Check if some bands have to be added.
-                if (missingBands.Count > 0)
+                using (var file = new StreamReader(openFileDialog.FileName))
                 {
-                    var dialog = new AddLayersDialog();
-
-                    if (dialog.ShowImportMissingBandsDialog(missingBands) ==
-                        true && dialog.DialogViewModel.Bands.Count > 0)
+                    int numLayers = int.Parse(file.ReadLine());
+                    var layers = new List<CreateLayerViewModel>();
+                    for (int i = 0; i < numLayers; ++i)
                     {
-                        _mainWindowViewModel.AddBands(dialog.DialogViewModel);
+                        string path = file.ReadLine();
+                        bool contrastEnhancement = bool.Parse(file.ReadLine());
+                        SatelliteType satelliteType = (SatelliteType)Enum.Parse(typeof(SatelliteType), file.ReadLine());
+                        bool isRed = bool.Parse(file.ReadLine());
+                        bool isGreen = bool.Parse(file.ReadLine());
+                        bool isBlue = bool.Parse(file.ReadLine());
+                        double minCutPercentage = double.Parse(file.ReadLine());
+                        double maxCutPercentage = double.Parse(file.ReadLine());
+                        layers.Add(new CreateLayerViewModel(path, contrastEnhancement, satelliteType, isRed, isGreen, isBlue, minCutPercentage, maxCutPercentage)); ;
                     }
-                    else
+
+                    var missingLayers = layers.Where(s => _mainWindowViewModel.Layers.All(b => b.Path != s.Path)).ToList();
+
+                    // Check if some bands have to be added.
+                    if (missingLayers.Count > 0)
                     {
-                        // Abort import
-                        return;
+                        var dialog = new AddLayersDialog();
+
+                        if (dialog.ShowImportMissingBandsDialog(missingLayers) ==
+                            true && dialog.DialogViewModel.Layers.Count > 0)
+                        {
+                            _mainWindowViewModel.AddBands(dialog.DialogViewModel);
+                        }
+                        else
+                        {
+                            // Abort import
+                            return;
+                        }
+                    }
+
+                    string featureLine;
+
+                    while ((featureLine = file.ReadLine()) != null)
+                    {
+                        string[] feature = featureLine.Split(';');
+                        LandcoverType type;
+                        Enum.TryParse(feature[0], true, out type);
+                        var intensities = feature.Skip(1).Select(ushort.Parse).ToArray();
+
+                        FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type,
+                            new FeatureVector(intensities))));
                     }
                 }
 
-                foreach (var line in lines.Skip(3).Select(line => line.Split(';')))
-                {
-                    LandcoverType type;
-                    Enum.TryParse(line[0], true, out type);
-                    var intensities = line.Skip(1).Select(ushort.Parse).ToArray();
 
-                    FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type,
-                        new FeatureVector(intensities))));
-                }
+
+
             }
         }
 

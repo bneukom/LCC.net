@@ -22,6 +22,7 @@ using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View;
 using LandscapeClassifier.View.Open;
+using LandscapeClassifier.View.Tools;
 using LandscapeClassifier.ViewModel.Dialogs;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using LandscapeClassifier.ViewModel.MainWindow.Prediction;
@@ -37,11 +38,21 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
         private bool _windowEnabled = true;
         private LayerViewModel _selectedLayer;
+        private ObservableCollection<LayerViewModel> _featureLayerView;
 
         /// <summary>
         /// The bands of the image.
         /// </summary>
         public ObservableCollection<LayerViewModel> Layers { get; set; }
+
+        /// <summary>
+        /// Feature Layer View
+        /// </summary>
+        public ObservableCollection<LayerViewModel> FeatureLayerView
+        {
+            get { return _featureLayerView; }
+            set { _featureLayerView = value; RaisePropertyChanged(); }
+        }
 
         /// <summary>
         /// Selected layer.
@@ -68,9 +79,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         public ICommand ExportCurvatureImageCommand { set; get; }
 
         /// <summary>
-        /// Create slope texture from a DEM.
+        /// Create slope texture from a height map.
         /// </summary>
-        public ICommand CreateSlopeFromDEM { set; get; }
+        public ICommand CreateSlopeFromHeightmapCommand { set; get; }
+
+        /// <summary>
+        /// Create tiled heightmap images.
+        /// </summary>
+        public ICommand CreateTiledHeightmapCommand { get; set; }
 
         /// <summary>
         /// Exit command.
@@ -106,16 +122,18 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             GdalConfiguration.ConfigureGdal();
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
 
-            // ExportSlopeImageCommand = new RelayCommand(() => ExportSlopeFromDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
-            // ExportCurvatureImageCommand = new RelayCommand(() => ExportCurvatureFromDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
-            // ExportSmoothedHeightImageCommand = new RelayCommand(() => ExportSmoothedDEMDialog.ShowDialog(_ascFile), () => AscFile != null);
-            CreateSlopeFromDEM = new RelayCommand(() => new CreateSlopeFromDEMDialog().ShowDialog(), () => true);
+            CreateSlopeFromHeightmapCommand = new RelayCommand(() => new CreateSlopeFromHeightmapDialog().ShowDialog(), () => true);
+            CreateTiledHeightmapCommand = new RelayCommand(() => new CreateTiledHeightmapDialog().ShowDialog(), () => true);
             OpenSatelliteBandsCommand = new RelayCommand(AddBands, () => true);
 
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);
 
             Layers = new ObservableCollection<LayerViewModel>();
+            Layers.CollectionChanged += (sender, args) =>
+            {
+                FeatureLayerView = new ObservableCollection<LayerViewModel>(Layers.Where(l => l.IsFeature).ToList());
+            };
 
             ClassifierViewModel = new ClassifierViewModel(this);
             PredictionViewModel = new PredictionViewModel(this);
@@ -150,13 +168,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         {
             AddLayersDialog dialog = new AddLayersDialog();
 
-            if (dialog.ShowAddBandsDialog() == true && dialog.DialogViewModel.Bands.Count > 0)
+            if (dialog.ShowAddBandsDialog() == true && dialog.DialogViewModel.Layers.Count > 0)
             {
                 AddBands(dialog.DialogViewModel);
             }
         }
 
-     /// <summary>
+        /// <summary>
         /// Adds the bands from the bands view model.
         /// </summary>
         /// <param name="viewModel"></param>
@@ -171,29 +189,31 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                 Dataset rgbDataSet = null;
                 if (viewModel.AddRgb)
                 {
-                    var firstRgbBand = viewModel.Bands.First(b => b.B || b.G || b.R);
+                    var firstRgbBand = viewModel.Layers.First(b => b.B || b.G || b.R);
                     rgbDataSet = Gdal.Open(firstRgbBand.Path, Access.GA_ReadOnly);
                     bgra = new byte[rgbDataSet.RasterXSize * rgbDataSet.RasterYSize * 4];
                 }
 
-                var firstBand = viewModel.Bands.First();
+                var firstBand = viewModel.Layers.First();
                 var firstDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
 
                 // Parallel band loading
-                Task loadBands = Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Bands, (currentLayer, _, bandIndex) =>
+                Task loadBands = Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Layers, (currentLayer, _, bandIndex) =>
                     {
                         // Load raster
                         var dataSet = Gdal.Open(currentLayer.Path, Access.GA_ReadOnly);
                         var rasterBand = dataSet.GetRasterBand(1);
-                        int stride = (rasterBand.XSize * 16 + 7) / 8;
+
+                        var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
+                        int stride = (rasterBand.XSize * bitsPerPixel + 7) / 8;
                         IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
 
                         rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize,
-                            rasterBand.YSize, rasterBand.DataType, 2, stride);
+                            rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, stride);
 
                         // Cutoff
                         int minCutValue, maxCutValue;
-                        CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff / 100.0, currentLayer.MaxCutOff / 100.0, out minCutValue, out maxCutValue);
+                        CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff, currentLayer.MaxCutOff, out minCutValue, out maxCutValue);
 
                         // Apply RGB contrast enhancement
                         if (viewModel.AddRgb && viewModel.RgbContrastEnhancement && (currentLayer.B || currentLayer.G || currentLayer.R))
@@ -227,7 +247,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, rasterBand.DataType.ToPixelFormat(), currentLayer.GetName(), currentLayer.Path, minCutValue, maxCutValue);
+                            var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, rasterBand.DataType.ToPixelFormat(), currentLayer);
 
                             Layers.AddSorted(imageBandViewModel,
                                 Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
@@ -273,15 +293,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                                 {rgbTransform[4], rgbTransform[5], rgbTransform[3]},
                                 {0, 0, 1}
                             };
+
                             var builder = Matrix<double>.Build;
                             var transformMat = builder.DenseOfArray(matArray);
 
                             Layers.Insert(0,
-                                new LayerViewModel("RGB", null, xRes, yRes, new WriteableBitmap(rgbImage),
-                                    transformMat, upperLeft, bottomRight, 0, 0, false,
+                                new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
+                                    transformMat, upperLeft, bottomRight, 0, 0, false, false, false, false,
                                     ClassifierViewModel.FeaturesViewModel.HasFeatures()));
-
-
                         });
                     });
 
@@ -323,7 +342,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             }
         }
 
-        private LayerViewModel CreateLayerViewModel(Dataset dataSet, OSGeo.GDAL.Band rasterBand, int stride, IntPtr data, PixelFormat format, string name, string path, int minCutValue, int maxCutValue)
+        private LayerViewModel CreateLayerViewModel(Dataset dataSet, OSGeo.GDAL.Band rasterBand, int stride, IntPtr data, PixelFormat format, CreateLayerViewModel layer)
         {
             WriteableBitmap bandImage = new WriteableBitmap(rasterBand.XSize, rasterBand.YSize, 96, 96, format, null);
             bandImage.Lock();
@@ -357,8 +376,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             var transformMat = builder.DenseOfArray(matArray);
 
             var imageBandViewModel = new LayerViewModel(
-                name, path, xRes, yRes, bandImage, transformMat, upperLeft,
-                bottomRight, minCutValue, maxCutValue, true,
+                layer.GetName(), layer.SatelliteType, layer.Path, layer.ContrastEnhancement, xRes, yRes, bandImage, transformMat, upperLeft,
+                bottomRight, layer.MinCutOff, layer.MaxCutOff, layer.R, layer.G, layer.B, true,
                 ClassifierViewModel.FeaturesViewModel.HasFeatures());
 
             return imageBandViewModel;
@@ -371,8 +390,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             int min = (int)minMax[0];
             int max = (int)minMax[1];
             int[] histogram = new int[max - min];
-            rasterBand.GetHistogram(min, max, max - min, histogram, 1, 0,
-                ProgressFunc, "");
+            rasterBand.GetHistogram(min, max, max - min, histogram, 1, 0, ProgressFunc, "");
 
             int totalPixels = 0;
             for (int bucket = 0; bucket < histogram.Length; ++bucket)
@@ -412,7 +430,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             // Select appropriate datatype
             if (rasterBand.DataType == DataType.GDT_UInt16)
             {
-                action = (int index) =>
+                action = (index) =>
                 {
                     ushort* dataPtr = (ushort*)data.ToPointer();
                     ushort current = *(dataPtr + index);
@@ -421,7 +439,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             }
             else if (rasterBand.DataType == DataType.GDT_Float32)
             {
-                action = (int index) =>
+                action = (index) =>
                 {
                     float* dataPtr = (float*)data.ToPointer();
                     float current = *(dataPtr + index);
@@ -459,5 +477,4 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         public string ProjectionName { get; set; }
         public Matrix<double> ScreenToWorld { get; set; }
     }
-
 }

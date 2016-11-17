@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Annotations;
+using LandscapeClassifier.Model;
 using MathNet.Numerics.LinearAlgebra;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification
@@ -19,9 +20,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private Brush _currentPositionBrush;
 
-        public readonly Matrix<double> Transform;
+        /// <summary>
+        /// Transform from the image coordinate system to the layer coordinate system.
+        /// </summary>
+        public readonly Matrix<double> ImageToWorld;
 
-        public readonly Matrix<double> InverseTransform;
+        /// <summary>
+        /// Transform from layer coordinate system to the image coordinate system.
+        /// </summary>
+        public readonly Matrix<double> WorldToImage;
 
         /// <summary>
         /// Layer name.
@@ -55,12 +62,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// Band upper left in world coordinates.
         /// </summary>
-        public readonly Vector<double> UpperLeft;
+        public readonly Vector<double> UpperLeftWorld;
 
         /// <summary>
         /// Band bottom right in world coordinates.
         /// </summary>
-        public readonly Vector<double> BottomRight;
+        public readonly Vector<double> BottomRightWorld;
 
         /// <summary>
         /// Pixel width of the image.
@@ -73,14 +80,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public double ImagePixelHeight => _bitmapImagePixelHeight;
 
         /// <summary>
-        /// Max cut for scale.
+        /// Minimum histogram percentage for contrast enhancement lower bound.
         /// </summary>
-        public int MaxCutScale { get; }
+        public double MinCutPercentage;
 
         /// <summary>
-        /// Min cut for scale.
+        /// Maximum histogram percentage for contrast enhancement upper bound.
         /// </summary>
-        public int MinCutScale { get; }
+        public double MaxCutPercentage;
 
         /// <summary>
         /// The format of this band.
@@ -137,26 +144,59 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             get { return _canChangeIsFeature; }
         }
 
-        public LayerViewModel(string name, string path, double xScale, double yScale, 
-            WriteableBitmap bandImage, Matrix<double> transform, Vector<double> upperLeft, Vector<double> bottomRight, 
-            int minCutScale, int maxCutScale, bool isFeature = true, bool canChangeIsFeature = true)
-        {
-            MinCutScale = minCutScale;
-            MaxCutScale = maxCutScale;
+        /// <summary>
+        /// True if this layer represents the red channel.
+        /// </summary>
+        public bool IsRed { get; }
 
-            Transform = transform;
-            InverseTransform = transform.Inverse();
+        /// <summary>
+        /// True if this layer represents the green channel.
+        /// </summary>
+        public bool IsGreen { get; }
+
+        /// <summary>
+        /// True if this layer represents the blue channel. 
+        /// </summary>
+        public bool IsBlue { get; }
+
+        /// <summary>
+        /// The satellite type of the layer.
+        /// </summary>
+        public SatelliteType SatelliteType { get; }
+
+        /// <summary>
+        /// Contrast was enhanced or not.
+        /// </summary>
+        public bool ContrastEnhanced { get; }
+
+        public LayerViewModel(string name, SatelliteType satelliteType, string path, bool contrastEnhanced, double xScale, double yScale, 
+            WriteableBitmap bandImage, Matrix<double> imageToWorld, Vector<double> upperLeftWorld, Vector<double> bottomRightWorld, 
+            double minCutPercentage, double maxCutPercentage, bool isRed, bool isGreen, bool isBlue, bool isFeature = true, bool canChangeIsFeature = true)
+        {
             Name = name;
             Path = path;
+            SatelliteType = satelliteType;
+            ContrastEnhanced = contrastEnhanced;
+
+            MinCutPercentage = minCutPercentage;
+            MaxCutPercentage = maxCutPercentage;
+
+            ImageToWorld = imageToWorld;
+            WorldToImage = imageToWorld.Inverse();
+      
             BandImage = bandImage;
-            UpperLeft = upperLeft;
-            BottomRight = bottomRight;
+            UpperLeftWorld = upperLeftWorld;
+            BottomRightWorld = bottomRightWorld;
 
             ScaleX = xScale;
             ScaleY = yScale;
 
             IsFeature = isFeature;
             CanChangeIsFeature = canChangeIsFeature;
+
+            IsRed = isRed;
+            IsGreen = isGreen;
+            IsBlue = isBlue;
         }
 
 

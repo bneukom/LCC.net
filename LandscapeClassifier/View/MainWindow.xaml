@@ -29,14 +29,15 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_Export Training Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}"/>
                 <MenuItem Header="_Import Training Features" Command="{Binding ClassifierViewModel.ImportFeatureCommand}"/>
-                <MenuItem Header="_Export Predictions" Command="{Binding ClassifierViewModel.ExportPredictionsCommand}"/>
+                <MenuItem Header="_Export Predictions" Command="{Binding PredictionViewModel.ExportPredictionsCommand}"/>
                 <MenuItem Header="_Export Slope Image" Command="{Binding ExportSlopeImageCommand}"/>
                 <MenuItem Header="_Export Curvature Image" Command="{Binding ExportCurvatureImageCommand}"/>
                 <MenuItem Header="_Export Smoothed Heightmap Image" Command="{Binding ExportSmoothedHeightImageCommand}"/>
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Create Slope From Heightmap Image" Command="{Binding CreateSlopeFromDEM}"/>
+                <MenuItem Header="_Create Slope From Heightmap" Command="{Binding CreateSlopeFromHeightmapCommand}"/>
+                <MenuItem Header="_Create Tiled Heightmap" Command="{Binding CreateTiledHeightmapCommand}"/>
             </MenuItem>
         </Menu>
 
@@ -187,7 +188,7 @@
                                     </Separator.LayoutTransform>
                                 </Separator>
                                 <Label Content="Band Intensity:"/>
-                                <ItemsControl ItemsSource="{Binding Layers}">
+                                <ItemsControl ItemsSource="{Binding FeatureLayerView}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Orientation="Horizontal"/>
@@ -210,8 +211,8 @@
                 <TabItem Header="Prediction" IsEnabled="{Binding ClassifierViewModel.IsTrained}">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="30"/>
-                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
@@ -241,7 +242,23 @@
                             <Button Content="Export All Predictions" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
                             <Button Content="Export by Landcover Type" Command="{Binding PredictionViewModel.ExportByLandcoverTypeCommand}" Margin="5,5,5,5"></Button>
                         </StackPanel>
-                        <classifierControls:PredictionImageCanvas Grid.Row="2" x:Name="PredictionCanvas"></classifierControls:PredictionImageCanvas>
+                        <Grid  Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                <ColumnDefinition Width="*"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <DataGrid Grid.Column="0" SelectionMode="Single" AllowDrop="True" CanUserResizeColumns="False" MaxWidth="250" Grid.Row="1"  AutoGenerateColumns="False" ItemsSource="{Binding Layers}" Margin="5" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Width="*" Header="Layer" Binding="{Binding Name}" />
+                                    <DataGridCheckBoxColumn ElementStyle="{DynamicResource MetroDataGridCheckBox}"
+                                        EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
+                                        Header="Visible" Width="Auto"
+                                        Binding="{Binding Path=IsVisible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <classifierControls:PredictionImageCanvas Grid.Column="1"  x:Name="PredictionCanvas"></classifierControls:PredictionImageCanvas>
+                        </Grid>
                         <StackPanel Grid.Row="3" Orientation="Horizontal"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">
                             <Label Content="Pixel Prediction:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                             <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionType}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />

@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MathNet.Numerics.LinearAlgebra;
+using Brushes = System.Windows.Media.Brushes;
+using Point = System.Windows.Point;
 
 namespace LandscapeClassifier.Controls
 {
@@ -136,16 +132,28 @@ namespace LandscapeClassifier.Controls
             _scaleMat = scaleMat;
         }
 
-        protected void DrawBand(LayerViewModel layer, DrawingContext dc, Matrix<double> worldToScreen)
+        protected void DrawBand(DrawingContext dc, LayerViewModel layer, Matrix<double> worldToScreen)
         {
             var worldToScreenScaled = _scaleMat * worldToScreen;
 
             var worldToView = _screenToViewMat * worldToScreenScaled;
 
-            var upperLeft = worldToView * layer.UpperLeft;
-            var bottomRight = worldToView * layer.BottomRight;
+            var upperLeft = worldToView * layer.UpperLeftWorld;
+            var bottomRight = worldToView * layer.BottomRightWorld;
 
             dc.DrawImage(layer.BandImage, new Rect(new Point(upperLeft[0], upperLeft[1]), new Point(bottomRight[0], bottomRight[1])));
+        }
+
+        protected void DrawProjectedRect(DrawingContext dc, Vector<double> upperLeft, Vector<double> bottomRight, Pen pen, Matrix<double> worldToScreen)
+        {
+            var worldToScreenScaled = _scaleMat * worldToScreen;
+
+            var worldToView = _screenToViewMat * worldToScreenScaled;
+
+            var viewUpperLeft = worldToView * upperLeft;
+            var viewBottomRight = worldToView * bottomRight;
+
+            dc.DrawRectangle(null, pen, new Rect(new Point(viewUpperLeft[0], viewUpperLeft[1]), new Point(viewBottomRight[0], viewBottomRight[1])));
         }
     }
 }

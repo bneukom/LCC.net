@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using GalaSoft.MvvmLight;
@@ -15,19 +16,20 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private bool _addRgb = true;
         private bool _missingBandsImport;
         private bool _rgbContrastEnhancement = true;
+        private bool _allRgbChannelsAdded;
 
         public AddLayersDialogViewModel()
         {
-            Bands = new ObservableCollection<BandInfoViewModel>();
+            Layers = new ObservableCollection<CreateLayerViewModel>();
 
-            Bands.CollectionChanged += (sender, args) =>
+            Layers.CollectionChanged += (sender, args) =>
             {
                 // Remove change listener on old items
                 if (args.OldItems != null)
                 {
                     foreach (var oldItem in args.OldItems)
                     {
-                        var bandInfo = (BandInfoViewModel) oldItem;
+                        var bandInfo = (CreateLayerViewModel) oldItem;
                         bandInfo.PropertyChanged -= BandOnPropertyChanged;
                     }
                 }
@@ -37,18 +39,29 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 {
                     foreach (var newItem in args.NewItems)
                     {
-                        var bandInfo = (BandInfoViewModel) newItem;
+                        var bandInfo = (CreateLayerViewModel) newItem;
                         bandInfo.PropertyChanged += BandOnPropertyChanged;
                     }
                 }
+
+                AllRgbChannelsAdded = Layers.Any(b => b.R) && Layers.Any(b => b.G) && Layers.Any(b => b.B);
             };
         }
 
 
         /// <summary>
-        ///     Bands
+        ///     Layers
         /// </summary>
-        public ObservableCollection<BandInfoViewModel> Bands { get; set; }
+        public ObservableCollection<CreateLayerViewModel> Layers { get; set; }
+
+        /// <summary>
+        ///     Wheter all rgb channels are added or not
+        /// </summary>
+        public bool AllRgbChannelsAdded
+        {
+            get { return _allRgbChannelsAdded; }
+            set { _allRgbChannelsAdded = value; OnPropertyChanged(nameof(AllRgbChannelsAdded)); }
+        }
 
         /// <summary>
         ///     Whether to use contrast enhancement or not.
@@ -67,7 +80,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         /// </summary>
         public bool AddRgb
         {
-            get { return _addRgb; }
+            get { return _addRgb && AllRgbChannelsAdded; }
             set
             {
                 _addRgb = value;
@@ -92,33 +105,35 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private void BandOnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
         {
-            foreach (var band in Bands)
+            foreach (var band in Layers)
             {
                 band.PropertyChanged -= BandOnPropertyChanged;
 
                 if (band == sender)
                 {
-                    band.R = propertyChangedEventArgs.PropertyName == nameof(BandInfoViewModel.R);
-                    band.G = propertyChangedEventArgs.PropertyName == nameof(BandInfoViewModel.G);
-                    band.B = propertyChangedEventArgs.PropertyName == nameof(BandInfoViewModel.B);
+                    band.R = propertyChangedEventArgs.PropertyName == nameof(CreateLayerViewModel.R);
+                    band.G = propertyChangedEventArgs.PropertyName == nameof(CreateLayerViewModel.G);
+                    band.B = propertyChangedEventArgs.PropertyName == nameof(CreateLayerViewModel.B);
                 }
                 else
                 {
                     switch (propertyChangedEventArgs.PropertyName)
                     {
-                        case nameof(BandInfoViewModel.R):
+                        case nameof(CreateLayerViewModel.R):
                             band.R = false;
                             break;
-                        case nameof(BandInfoViewModel.G):
+                        case nameof(CreateLayerViewModel.G):
                             band.G = false;
                             break;
-                        case nameof(BandInfoViewModel.B):
+                        case nameof(CreateLayerViewModel.B):
                             band.B = false;
                             break;
                     }
                 }
                 band.PropertyChanged += BandOnPropertyChanged;
             }
+
+            AllRgbChannelsAdded = Layers.Any(b => b.R) && Layers.Any(b => b.G) && Layers.Any(b => b.B);
         }
 
         /// <summary>
@@ -126,7 +141,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         /// </summary>
         public void Reset()
         {
-            Bands.Clear();
+            Layers.Clear();
             AddRgb = true;
             RgbContrastEnhancement = true;
         }
@@ -138,7 +153,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         }
     }
 
-    public class BandInfoViewModel : ViewModelBase
+    public class CreateLayerViewModel : ViewModelBase
     {
         private bool _b;
         private bool _g;
@@ -146,8 +161,8 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private SatelliteType _satelliteType;
         private bool _contrastEnhancement;
-        private int _minCutOff;
-        private int _maxCutOff;
+        private double _minCutOff;
+        private double _maxCutOff;
 
         public string Path { get; }
 
@@ -182,13 +197,13 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             }
         }
 
-        public int MinCutOff
+        public double MinCutOff
         {
             get { return _minCutOff; }
             set { _minCutOff = value; RaisePropertyChanged(); }
         }
 
-        public int MaxCutOff
+        public double MaxCutOff
         {
             get { return _maxCutOff; }
             set { _maxCutOff = value; RaisePropertyChanged(); }
@@ -214,7 +229,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             }
         }
 
-        public BandInfoViewModel(string path)
+        public CreateLayerViewModel(string path)
         {
             Path = path;
             ContrastEnhancement = true;
@@ -226,14 +241,27 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 R = SatelliteType.IsRedBand(fileWithoutExtension);
                 B = SatelliteType.IsBlueBand(fileWithoutExtension);
                 G = SatelliteType.IsGreenBand(fileWithoutExtension);
-                MinCutOff = 2;
-                MaxCutOff = 98;
+                MinCutOff = 0.02;
+                MaxCutOff = 0.98;
             }
             else
             {
                 MinCutOff = 0;
-                MaxCutOff = 100;
+                MaxCutOff = 1;
             }
+        }
+
+        public CreateLayerViewModel(string path, bool contrastEnhancement, SatelliteType satelliteType, bool r, bool g,
+            bool b, double minCutOff, double maxCutOff)
+        {
+            Path = path;
+            ContrastEnhancement = contrastEnhancement;
+            SatelliteType = satelliteType;
+            R = r;
+            G = g;
+            B = b;
+            MinCutOff = minCutOff;
+            MaxCutOff = maxCutOff;
         }
 
         private static SatelliteType GetSatelliteType(string path)

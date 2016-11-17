@@ -303,7 +303,7 @@
     <Compile Include="Extensions\LandCoverTypeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
-    <Compile Include="Model\Band.cs" />
+    <Compile Include="Model\Layer.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
@@ -338,8 +338,11 @@
     <Compile Include="View\Dialogs\Export\ExportCurvatureFromDEMDialog.xaml.cs">
       <DependentUpon>ExportCurvatureFromDEMDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="View\Dialogs\Tools\CreateSlopeFromDEMDialog.xaml.cs">
-      <DependentUpon>CreateSlopeFromDEMDialog.xaml</DependentUpon>
+    <Compile Include="View\Dialogs\Tools\CreateTiledHeightmapDialog.xaml.cs">
+      <DependentUpon>CreateTiledHeightmapDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml.cs">
+      <DependentUpon>CreateSlopeFromHeightmapDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\ExportWindow.xaml.cs">
       <DependentUpon>ExportWindow.xaml</DependentUpon>
@@ -369,7 +372,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="View\Dialogs\Tools\CreateSlopeFromDEMDialog.xaml">
+    <Page Include="View\Dialogs\Tools\CreateTiledHeightmapDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
