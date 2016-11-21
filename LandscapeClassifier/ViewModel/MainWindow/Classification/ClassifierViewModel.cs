@@ -462,8 +462,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     {
                         var dialog = new AddLayersDialog();
 
-                        if (dialog.ShowImportMissingBandsDialog(missingLayers) ==
-                            true && dialog.DialogViewModel.Layers.Count > 0)
+                        if (dialog.ShowImportMissingBandsDialog(missingLayers) == true && dialog.DialogViewModel.Layers.Count > 0)
                         {
                             _mainWindowViewModel.AddBands(dialog.DialogViewModel);
                         }

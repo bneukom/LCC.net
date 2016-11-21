@@ -19,8 +19,10 @@
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Accents/Steel.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Accents/BaseDark.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <mainWindow:MainWindowViewModel x:Key="MainWindowViewModel"></mainWindow:MainWindowViewModel>
-            <dialogs:AddLayersDialogViewModel x:Key="AddLayersViewModel"></dialogs:AddLayersDialogViewModel>
+            <mainWindow:MainWindowViewModel x:Key="MainWindowViewModel"/>
+            <dialogs:AddLayersDialogViewModel x:Key="AddLayersViewModel"/>
+            <dialogs:CreateTiledHeightmapDialogViewModel x:Key="CreateTiledHeightmapDialogViewModel"/>
+            <dialogs:ExportPredictionDialogViewModel x:Key="ExportPredictionDialogViewModel"/>
             <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>
     </Application.Resources>

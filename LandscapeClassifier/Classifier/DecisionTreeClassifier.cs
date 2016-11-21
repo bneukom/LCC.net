@@ -51,7 +51,7 @@ namespace LandscapeClassifier.Classifier
 
         public int[] Predict(double[][] features)
         {
-            throw new NotImplementedException();
+            return _tree.Decide(features);
         }
     }
 }

@@ -239,8 +239,7 @@
                         </Grid>
                         <StackPanel Grid.Row="1" Orientation="Horizontal">
                             <Button Content="Apply Majority Filter" Margin="5,5,5,5"></Button>
-                            <Button Content="Export All Predictions" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
-                            <Button Content="Export by Landcover Type" Command="{Binding PredictionViewModel.ExportByLandcoverTypeCommand}" Margin="5,5,5,5"></Button>
+                            <Button Content="Export" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
                         </StackPanel>
                         <Grid  Grid.Row="2">
                             <Grid.ColumnDefinitions>

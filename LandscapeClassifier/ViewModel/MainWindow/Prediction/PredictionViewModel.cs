@@ -16,6 +16,7 @@ using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MathNet.Numerics.LinearAlgebra;
 using ZedGraph;
@@ -45,11 +46,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// Export predictions.
         /// </summary>
         public ICommand ExportPredictionsCommand { set; get; }
-
-        /// <summary>
-        /// Export grayscale by landcover type.
-        /// </summary>
-        public ICommand ExportByLandcoverTypeCommand { get; set; }
 
         /// <summary>
         /// Classification bitmap.
@@ -130,16 +126,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
             ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
-            ExportByLandcoverTypeCommand = new RelayCommand(ExportPredictionsByLandcoverType, CanExportPredictions);
-        }
-
-        private void ExportPredictionsByLandcoverType()
-        {
-            throw new NotImplementedException();
         }
 
         private void ExportPredictions()
         {
+            ExportPredicitonDialog dialog = new ExportPredicitonDialog();
+            dialog.ShowDialog();
+
             /*
             var chooseFolderDialog = new CommonOpenFileDialog
             {
@@ -249,7 +242,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private bool CanExportPredictions()
         {
-            return false;
+            return true;
         }
 
         private void PredictAll()
@@ -287,7 +280,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             int[][] result = new int[predictionHeight][];
 
 
-
             Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, predictionHeight), range =>
             {
                 double[][] features = new double[predictionWidth][];
@@ -304,27 +296,40 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         var band = featureBands[bandIndex];
 
                         var worldToImage = band.WorldToImage;
-                        var bandUpperLeftImage = worldToImage * upperLeftWorld;
-                        var bandBottomRightImage = worldToImage * bottomRightWorld;
+                        var bandUpperLeftImage = band.WorldToImage * upperLeftWorld;
+                        var bandBottomRightImage = band.WorldToImage * bottomRightWorld;
                         var left = (int)bandUpperLeftImage[0];
                         var right = (int)bandBottomRightImage[0];
 
                         var width = right - left;
+                        var transform = band.WorldToImage * scaleBand.ImageToWorld;
 
                         unsafe
                         {
-                            ushort* dataPtr = (ushort*)data[bandIndex].ToPointer();
-
-                            // TODO handle for other data types
-                            for (int x = 0; x < predictionWidth; ++x)
+                            if (featureBands[bandIndex].Format == PixelFormats.Gray16)
                             {
-                                var pixelPosition = band.WorldToImage * scaleBand.ImageToWorld *
-                                                    Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
-                                int pixelX = (int)pixelPosition[0];
-                                int pixelY = (int)pixelPosition[1];
+                                ushort* dataPtr = (ushort*)data[bandIndex].ToPointer();
+                                for (int x = 0; x < predictionWidth; ++x)
+                                {
+                                    var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
+                                    int pixelX = (int)pixelPosition[0];
+                                    int pixelY = (int)pixelPosition[1];
 
-                                var pixelValue = *(dataPtr + pixelY * width + pixelX);
-                                features[x][bandIndex] = (double)pixelValue / ushort.MaxValue;
+                                    var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
+                                    features[x][bandIndex] = (double)pixelValue / ushort.MaxValue;
+                                }
+                            } else if (featureBands[bandIndex].Format == PixelFormats.Gray32Float)
+                            {
+                                float* dataPtr = (float*)data[bandIndex].ToPointer();
+                                for (int x = 0; x < predictionWidth; ++x)
+                                {
+                                    var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
+                                    int pixelX = (int)pixelPosition[0];
+                                    int pixelY = (int)pixelPosition[1];
+
+                                    var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
+                                    features[x][bandIndex] = pixelValue;
+                                }
                             }
                         }
                     }

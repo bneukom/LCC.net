@@ -72,12 +72,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// Pixel width of the image.
         /// </summary>
-        public double ImagePixelWidth => _bitmapImagePixelWidth;
+        public int ImagePixelWidth => _bitmapImagePixelWidth;
 
         /// <summary>
         /// Pixel height of the image.
         /// </summary>
-        public double ImagePixelHeight => _bitmapImagePixelHeight;
+        public int ImagePixelHeight => _bitmapImagePixelHeight;
 
         /// <summary>
         /// Minimum histogram percentage for contrast enhancement lower bound.
@@ -89,10 +89,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public double MaxCutPercentage;
 
+        private PixelFormat _format;
+
         /// <summary>
-        /// The format of this band.
+        /// Thread save access to the format of this layer.
         /// </summary>
-        public PixelFormat Format => BandImage.Format;
+        public PixelFormat Format
+        {
+            get { return _format; }
+            set { _format = value; OnPropertyChanged(nameof(CurrentPositionBrush)); }
+        }
 
         /// <summary>
         /// The band image.
@@ -107,6 +113,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     _bandImage = value;
                     _bitmapImagePixelWidth = _bandImage.PixelWidth;
                     _bitmapImagePixelHeight = _bandImage.PixelHeight;
+
+                    Format = _bandImage.Format;
 
                     OnPropertyChanged(nameof(BandImage));
                 }

@@ -10,7 +10,7 @@
         xmlns:converter="clr-namespace:LandscapeClassifier.Converter"
         xmlns:dialogs="clr-namespace:LandscapeClassifier.ViewModel.Dialogs"
         mc:Ignorable="d"
-        Title="Open Bands" Height="423.056" Width="1024"
+        Title="Add Layers" Height="423.056" Width="1024"
         GlowBrush="{DynamicResource AccentColorBrush}"
         DataContext="{StaticResource AddLayersViewModel}">
     <Window.Resources>
@@ -23,17 +23,17 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
     </Window.Resources>
-    <Grid>
+    <Grid Margin="5">
         <Grid.Resources>
             <FrameworkElement x:Key="ProxyElement"
                          DataContext="{Binding}"/>
         </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
-            <RowDefinition Height="38"></RowDefinition>
-            <RowDefinition Height="35"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"></ColumnDefinition>

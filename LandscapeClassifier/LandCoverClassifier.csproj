@@ -306,12 +306,17 @@
     <Compile Include="Model\Layer.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\SatelliteType.cs" />
+    <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
+    <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\FeaturesViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\AddLayersDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
+    <Compile Include="View\Dialogs\Export\ExportPredictionDialog.xaml.cs">
+      <DependentUpon>ExportPredictionDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\Dialogs\Open\AddLayersDialog.xaml.cs">
       <DependentUpon>AddLayersDialog.xaml</DependentUpon>
     </Compile>
@@ -344,15 +349,16 @@
     <Compile Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml.cs">
       <DependentUpon>CreateSlopeFromHeightmapDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="View\ExportWindow.xaml.cs">
-      <DependentUpon>ExportWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="View\ValidationRules\DoubleValidationRule.cs" />
     <Page Include="Resources\Icons.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Resources\IconsNonShared.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\Dialogs\Export\ExportPredictionDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -377,10 +383,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="View\ExportWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

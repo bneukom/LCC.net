@@ -6,38 +6,110 @@
         xmlns:local="clr-namespace:LandscapeClassifier.View"
         xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
-        Title="Create Slope From Heightmap Image" Height="250.303" Width="500">
+        Title="Create Tiled Heightmap Export" Height="700" Width="600" DataContext="{StaticResource CreateTiledHeightmapDialogViewModel}">
+
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="38"></RowDefinition>
-            <RowDefinition Height="38"></RowDefinition>
-            <RowDefinition Height="38"></RowDefinition>
-            <RowDefinition Height="38"></RowDefinition>
-            <RowDefinition Height="*"></RowDefinition>
-            <RowDefinition Height="35"></RowDefinition>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"></ColumnDefinition>
-            <ColumnDefinition Width="*"></ColumnDefinition>
-            <ColumnDefinition Width="Auto"></ColumnDefinition>
-        </Grid.ColumnDefinitions>
-        <Label Grid.Row="0" Grid.Column="0" Margin="0,5,5,5" HorizontalContentAlignment="Left" Content="DEM Path:"></Label>
-        
-        <TextBox  Grid.Row="0" x:Name="PathTextBox" Grid.Column="1" Margin="5,5,5,5"></TextBox>
-        <Button Grid.Row="0" Grid.Column="2"  Margin="5,5,5,5" Width="70"  Content="Browse..." Click="BrowseClick"/>
+        <Grid Grid.Column="0" Grid.Row="0" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="Auto"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
 
-        <Label  Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Min Altitude [m]:"></Label>
-        <TextBox x:Name="MinAltitude" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" ></TextBox>
+            <GroupBox  Header="Dataset" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" Grid.Row="0" VerticalAlignment="Top">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
 
-        <Label  Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="Max Altitude [m]:"></Label>
-        <TextBox x:Name="MaxAltitude" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5"></TextBox>
+                    <Label Grid.Row="0" Grid.Column="0" Margin="0,5,5,5" HorizontalContentAlignment="Left" Content="Input:"></Label>
+                    <TextBox  Grid.Row="0" x:Name="InputPathTextBox" Grid.Column="1" Margin="5,5,5,5" Text="{Binding InputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ></TextBox>
+                    <Button Grid.Row="0" Grid.Column="2"  Margin="5,5,5,5" Width="70"  Content="Browse..." Command="{Binding BrowseInputPathCommand}"/>
 
-        <Label  Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Content="Pixel Dimension [m]:"></Label>
-        <TextBox x:Name="PixelDimension" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5"></TextBox>
+                    <Label Grid.Row="1" Grid.Column="0" Margin="0,5,5,5" HorizontalContentAlignment="Left" Content="Output:"></Label>
+                    <TextBox  Grid.Row="1" x:Name="OutputPathTextBox" Grid.Column="1" Margin="5,5,5,5" Text="{Binding OutputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+                    <Button Grid.Row="1" Grid.Column="2"  Margin="5,5,5,5" Width="70"  Content="Browse..." Command="{Binding BrowseOutputPathCommand}"/>
 
-        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
-            <Button Content="Ok" Click="OkClick" Width="60"/>
-            <Button Content="Cancel" Click="CancelClick" Width="60" Margin="5,0,0,0"/>
-        </StackPanel>
+                </Grid>
+            </GroupBox>
+
+            <GroupBox IsEnabled="{Binding InputPathSet}" Grid.Row="1" Header="Dataset Options" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Stretch"  VerticalAlignment="Top">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+
+                    <Label  Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Content="Min Altitude [m]:"></Label>
+                    <TextBox x:Name="MinAltitude" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding MinAltitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+
+                    <Label  Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Max Altitude [m]:"></Label>
+                    <TextBox x:Name="MaxAltitude" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding MaxAltitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+
+                    <Label  Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="No Data Value:"></Label>
+                    <TextBox x:Name="NoDataValueText" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding NoDataValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+
+                    <Label  Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Content="Meter Per Pixel X:"></Label>
+                    <TextBox x:Name="ScaleXTextBox" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding ScaleX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+
+                    <Label  Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Content="Meter Per Pixel Y:" ></Label>
+                    <TextBox x:Name="ScaleYTextBox" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding ScaleY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+                </Grid>
+            </GroupBox>
+            <CheckBox IsEnabled="{Binding InputPathSet}" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" MinWidth="100" Content="Apply Tiling" Margin="5" IsChecked="{Binding ApplyTiling}"></CheckBox>
+            <GroupBox IsEnabled="{Binding ApplyTiling}" Grid.Row="3" Header="Tiling" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Stretch"  VerticalAlignment="Top">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Label  Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Content="Tile Width"></Label>
+                    <TextBox  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding TileWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+
+                    <Label  Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Tile Height"></Label>
+                    <TextBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="5,5,5,5" Text="{Binding TileHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+
+                </Grid>
+            </GroupBox>
+            <Button IsEnabled="{Binding InputPathSet}" Grid.Row="4" Grid.Column="2" MinWidth="100" Content="Create" Margin="5" Command="{Binding CreateHeightmapCommand}"></Button>
+
+
+            <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+                <Button Content="Done"  Width="60" Margin="5,0,0,0" Click="DoneClick"/>
+            </StackPanel>
+        </Grid>
+        <Border Grid.Column="0" Grid.Row="0" BorderBrush="Black" BorderThickness="1" Background="#CC000000" Visibility="{Binding LoadingOverlayVisibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+            <Grid>
+                <TextBlock Margin="0" TextWrapping="Wrap" Text="Creating Heightmap..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" FontWeight="Bold" Foreground="#7EFFFFFF"/>
+            </Grid>
+        </Border>
     </Grid>
 </controls:MetroWindow>

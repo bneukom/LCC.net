@@ -119,7 +119,6 @@ namespace LandscapeClassifier.Controls
                 DrawProjectedRect(dc, predictionViewModel.PredictionUpperLeft, predictionViewModel.PredictionBottomRight, _predictionBorderAreaPen, viewModel.ClassifierViewModel.WorldToScreen);
                 dc.Pop();
             }
-            
 
             if (predictionViewModel.ClassificationOverlay != null)
             {
