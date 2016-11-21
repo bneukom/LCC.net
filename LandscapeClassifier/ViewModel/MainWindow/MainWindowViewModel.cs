@@ -96,7 +96,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// <summary>
         /// Open image bands.
         /// </summary>
-        public ICommand OpenSatelliteBandsCommand { set; get; }
+        public ICommand AddLayersCommand { set; get; }
 
         /// <summary>
         /// Move selected layer down.
@@ -124,7 +124,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
             CreateSlopeFromHeightmapCommand = new RelayCommand(() => new CreateSlopeFromHeightmapDialog().ShowDialog(), () => true);
             CreateTiledHeightmapCommand = new RelayCommand(() => new CreateTiledHeightmapDialog().ShowDialog(), () => true);
-            OpenSatelliteBandsCommand = new RelayCommand(AddBands, () => true);
+            AddLayersCommand = new RelayCommand(AddBands, () => true);
 
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);

@@ -142,8 +142,8 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public void Reset()
         {
             Layers.Clear();
-            AddRgb = true;
-            RgbContrastEnhancement = true;
+            AddRgb = false;
+            RgbContrastEnhancement = false;
         }
 
         [NotifyPropertyChangedInvocator]

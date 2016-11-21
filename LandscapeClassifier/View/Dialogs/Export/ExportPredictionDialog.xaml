@@ -1,4 +1,4 @@
-﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Open.ExportPredicitonDialog"
+﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Export.ExportPredicitonDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -71,8 +71,8 @@
         </StackPanel>
 
         <StackPanel Grid.Row="4" Grid.Column="0"  Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
-            <Button IsDefault="True" Content="Ok" Click="OkClick" Width="60"/>
-            <Button IsCancel="True" Content="Cancel" Click="CancelClick" Width="60" Margin="5,0,0,0"/>
+            <Button IsDefault="True" Content="Export" IsEnabled="{Binding IsExportPathSet}" Click="OkClick" Width="75"/>
+            <Button IsCancel="True" Content="Cancel" Click="CancelClick" Width="75" Margin="5,0,0,0"/>
         </StackPanel>
 
     </Grid>

@@ -35,6 +35,8 @@ namespace LandscapeClassifier.View.Open
             DialogViewModel.Reset();
             bandInfo.ForEach(b => DialogViewModel.Layers.Add(b));
             DialogViewModel.MissingBandsImport = true;
+            DialogViewModel.AddRgb = true;
+            DialogViewModel.RgbContrastEnhancement = true;
             return ShowDialog();
         }
 

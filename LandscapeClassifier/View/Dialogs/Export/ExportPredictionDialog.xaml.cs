@@ -1,18 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Windows;
-using LandscapeClassifier.Extensions;
-using LandscapeClassifier.Model;
-using LandscapeClassifier.ViewModel;
+﻿using System.Windows;
 using LandscapeClassifier.ViewModel.Dialogs;
 using MahApps.Metro.Controls;
-using Microsoft.Win32;
-using OSGeo.GDAL;
 
-namespace LandscapeClassifier.View.Open
+namespace LandscapeClassifier.View.Export
 {
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml

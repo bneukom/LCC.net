@@ -20,6 +20,7 @@ using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MathNet.Numerics.LinearAlgebra;
 using ZedGraph;
+using ExportPredicitonDialog = LandscapeClassifier.View.Export.ExportPredicitonDialog;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
@@ -31,11 +32,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         private LandcoverType _mousePredictionType;
         private double _mousePredictionProbability;
 
-        private bool _isAllPredicted;
+        private bool _isAllPredicted = false;
         private BitmapSource _classificationOverlay;
         private double _overlayOpacity = 0.5d;
         private double _acceptanceProbabilty;
 
+        private int[][] _classification;
+        private bool _predictAllEnabled = true;
 
         /// <summary>
         /// Predict all.
@@ -46,6 +49,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// Export predictions.
         /// </summary>
         public ICommand ExportPredictionsCommand { set; get; }
+
+        public ICommand ApplyMajorityFilterCommand { get; set; }
 
         /// <summary>
         /// Classification bitmap.
@@ -112,9 +117,20 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             set { _mousePredictionProbability = value; RaisePropertyChanged(); }
         }
 
+        /// <summary>
+        /// Is currently predicting
+        /// </summary>
+        public bool PredictAllEnabled
+        {
+            get { return _predictAllEnabled; }
+            set { _predictAllEnabled = value; RaisePropertyChanged(); }
+        }
+
         public Vector<double> PredictionUpperLeft { get; set; }
 
         public Vector<double> PredictionBottomRight { get; set; }
+
+
 
         public PredictionViewModel(MainWindowViewModel mainWindowViewModel)
         {
@@ -126,127 +142,91 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
             ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
+            ApplyMajorityFilterCommand = new RelayCommand(ApplyMajorityFilter, CanApplyMajorityFilter);
+        }
+
+        private bool CanExportPredictions() => PredictAllEnabled && IsAllPredicted;
+        private bool CanPredictAll() => PredictAllEnabled;
+        private bool CanApplyMajorityFilter() => PredictAllEnabled && IsAllPredicted;
+
+        private void ApplyMajorityFilter()
+        {
         }
 
         private void ExportPredictions()
         {
             ExportPredicitonDialog dialog = new ExportPredicitonDialog();
-            dialog.ShowDialog();
-
-            /*
-            var chooseFolderDialog = new CommonOpenFileDialog
+            if (dialog.ShowDialog() == true)
             {
-                Title = "Choose Export Folder",
-                IsFolderPicker = true,
-                AddToMostRecentlyUsedList = false,
-                AllowNonFileSystemItems = false,
-                EnsureFileExists = true,
-                EnsurePathExists = true,
-                EnsureReadOnly = false,
-                EnsureValidNames = true,
-                Multiselect = false,
-                ShowPlacesList = true
-            };
 
-            if (chooseFolderDialog.ShowDialog() == CommonFileDialogResult.Ok)
-            {
-                var folder = chooseFolderDialog.FileName;
+                var layers = dialog.DialogViewModel.ExportLayers;
 
-                // Write prediction image
-                using (var fileStream = new FileStream(Path.Combine(folder, "classification.png"), FileMode.Create))
-                {
-                    BitmapEncoder encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(BitmapFrame.Create(PredictedLandcoverImage));
-                    encoder.Save(fileStream);
-                }
+                var width = _classificationOverlay.PixelWidth;
+                var stride = width * 4;
+                var height = _classificationOverlay.PixelHeight;
+                var layerData = layers.Select(l => new byte[stride * height]).ToList();
 
-                // Write ortho image
-                var width = AscFile.Ncols;
-                var height = AscFile.Nrows;
-                var dpi = 96d;
+                PredictAllEnabled = false;
 
-                var stride = width*4; // 4 bytes per pixel
-
-                byte[] orthoImageData = new byte[stride*height];
-                Int32Rect sourceRect = new Int32Rect((int) ViewportRect.X, (int) ViewportRect.Y,
-                    (int) ViewportRect.Width, (int) ViewportRect.Height);
-                OrthoImage.CopyPixels(sourceRect, orthoImageData, stride, 0);
-
-                // Write prediction image
-                using (var fileStream = new FileStream(Path.Combine(folder, "orthophoto.png"), FileMode.Create))
-                {
-                    var encoder = new PngBitmapEncoder();
-                    var orthoImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null,
-                        orthoImageData, stride);
-                    encoder.Frames.Add(BitmapFrame.Create(orthoImage));
-                    encoder.Save(fileStream);
-                }
-
-                // Write Layers
-                var layerData = new List<byte[]>();
-                // var colorMapData = new List<byte[]>();
-
-                var LandCovers = new List<LandcoverType>() {LandcoverType.Tree};
-                var LandCoverColors = new Dictionary<Color, int>();
-
-                for (var layerIndex = 0; layerIndex < LandCovers.Count; ++layerIndex)
-                {
-                    LandCoverColors.Add(LandCovers[layerIndex].GetColor(), layerIndex);
-
-                    var layerDataArray = new byte[stride*height];
-                    var colorMapDataArray = new byte[stride * height];
-                    layerData.Add(layerDataArray);
-                    // colorMapData.Add(colorMapDataArray);
-                }
-
-                byte[] predictionImageData = new byte[stride*height];
-                _predictedLandcoverImage.CopyPixels(predictionImageData, stride, 0);
-
-                for (int dataIndex = 0; dataIndex < predictionImageData.Length; dataIndex += 4)
-                {
-                    var b = predictionImageData[dataIndex + 0];
-                    var g = predictionImageData[dataIndex + 1];
-                    var r = predictionImageData[dataIndex + 2];
-                    var a = predictionImageData[dataIndex + 3];
-                    var color = Color.FromArgb(a, r, g, b);
-
-                    int layerIndex = LandCoverColors[color];
-
-                    layerData[layerIndex][dataIndex + 0] = 255;
-                    layerData[layerIndex][dataIndex + 1] = 255;
-                    layerData[layerIndex][dataIndex + 2] = 255;
-                    layerData[layerIndex][dataIndex + 3] = 255;
-
-                }
-
+                List<Task> createLayerTasks = new List<Task>();
                 for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
                 {
-                    var data = layerData[layerIndex];
-                    var bitmapImage = BitmapSource.Create(width, height, dpi, dpi, PixelFormats.Bgra32, null, data,
-                        stride);
+                    var layer = layers[layerIndex];
+                    var types = layer.LandCoverTypes;
+                    var constLayer = layerIndex;
 
-                    // write layer
-                    using (
-                        var fileStream = new FileStream(Path.Combine(folder, "layer" + layerIndex + ".png"),
-                            FileMode.Create))
+                    createLayerTasks.Add(Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, height), (range) =>
                     {
-                        BitmapEncoder encoder = new PngBitmapEncoder();
-                        encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-                        encoder.Save(fileStream);
-                    }
+                        for (int y = range.Item1; y < range.Item2; ++y)
+                        {
+                            for (int x = 0; x < width; ++x)
+                            {
+                                LandcoverType prediction = (LandcoverType)_classification[y][x];
+
+                                var color = types[(int)prediction] ? (byte)0 : (byte)255;
+
+                                int dataIndex = y * stride + x * 4;
+                                layerData[constLayer][dataIndex + 0] = color;
+                                layerData[constLayer][dataIndex + 1] = color;
+                                layerData[constLayer][dataIndex + 2] = color;
+                                layerData[constLayer][dataIndex + 3] = color;
+                            }
+                        }
+                    })));
 
                 }
+
+                Task.WhenAll(createLayerTasks).ContinueWith(t =>
+                {
+                    for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
+                    {
+                        var layer = layers[layerIndex];
+                        var data = layerData[layerIndex];
+                        var bitmapImage = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, data, stride);
+
+                    // write layer
+                    using (var fileStream = new FileStream(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name),
+                                FileMode.Create))
+                        {
+                            BitmapEncoder encoder = new PngBitmapEncoder();
+                            encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
+                            encoder.Save(fileStream);
+                        }
+                    }
+
+                    PredictAllEnabled = true;
+                });
+
             }
-            */
         }
 
-        private bool CanExportPredictions()
-        {
-            return true;
-        }
+
 
         private void PredictAll()
         {
+            IsAllPredicted = false;
+            PredictAllEnabled = false;
+
             var featureBands = _mainWindowViewModel.Layers.Where(f => f.IsFeature).ToList();
             var numFeatures = featureBands.Count;
 
@@ -277,8 +257,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             int predictionHeight = (int)(scaleBand.WorldToImage * bottomRightWorld)[1];
 
             IntPtr[] data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
-            int[][] result = new int[predictionHeight][];
-
+            _classification = new int[predictionHeight][];
 
             Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, predictionHeight), range =>
             {
@@ -295,13 +274,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                     {
                         var band = featureBands[bandIndex];
 
-                        var worldToImage = band.WorldToImage;
-                        var bandUpperLeftImage = band.WorldToImage * upperLeftWorld;
-                        var bandBottomRightImage = band.WorldToImage * bottomRightWorld;
-                        var left = (int)bandUpperLeftImage[0];
-                        var right = (int)bandBottomRightImage[0];
-
-                        var width = right - left;
                         var transform = band.WorldToImage * scaleBand.ImageToWorld;
 
                         unsafe
@@ -318,7 +290,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                                     var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
                                     features[x][bandIndex] = (double)pixelValue / ushort.MaxValue;
                                 }
-                            } else if (featureBands[bandIndex].Format == PixelFormats.Gray32Float)
+                            }
+                            else if (featureBands[bandIndex].Format == PixelFormats.Gray32Float)
                             {
                                 float* dataPtr = (float*)data[bandIndex].ToPointer();
                                 for (int x = 0; x < predictionWidth; ++x)
@@ -333,7 +306,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             }
                         }
                     }
-                    result[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
+                    _classification[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
                 }
 
             }));
@@ -349,7 +322,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                     for (int y = 0; y < predictionHeight; ++y)
                     {
                         int index = 4 * y * predictionWidth + 4 * x;
-                        LandcoverType type = (LandcoverType)result[y][x];
+                        LandcoverType type = (LandcoverType)_classification[y][x];
                         var color = type.GetColor();
                         imageData[index + 0] = color.B;
                         imageData[index + 1] = color.G;
@@ -362,6 +335,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 {
                     ClassificationOverlay = BitmapSource.Create(predictionWidth, predictionHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
                     IsAllPredicted = true;
+                    PredictAllEnabled = true;
                 });
             });
 
@@ -457,6 +431,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             */
         }
 
-        private bool CanPredictAll() => true;
+
     }
 }

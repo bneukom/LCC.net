@@ -20,6 +20,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private bool _exportHeightmap;
         private ExportLandCoverTypeViewModel _selectedLayer;
         private string _exportPath;
+        private bool _isExportPathSet;
 
         public ExportLandCoverTypeViewModel SelectedLayer
         {
@@ -31,7 +32,24 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public string ExportPath
         {
             get { return _exportPath; }
-            set { _exportPath = value; RaisePropertyChanged(); }
+            set
+            {
+                _exportPath = value;
+                IsExportPathSet = !string.IsNullOrWhiteSpace(value);
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool ExportHeightmap
+        {
+            get { return _exportHeightmap; }
+            set { _exportHeightmap = value; RaisePropertyChanged(); }
+        }
+
+        public bool IsExportPathSet
+        {
+            get { return _isExportPathSet; }
+            set { _isExportPathSet = value; RaisePropertyChanged(); }
         }
 
         public ObservableCollection<ExportLandCoverTypeViewModel> ExportLayers { get; set; }
@@ -39,8 +57,6 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public ICommand AddLayerCommand { get; set; }
         public ICommand RemoveLayerCommand { get; set; }
         public ICommand BrowseExportPathCommand { get; set; }
-
-
 
         public ExportPredictionDialogViewModel()
         {
@@ -80,7 +96,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         {
             var layerNumbers = ExportLayers.Where(l =>
                 Regex.IsMatch(l.Name, "layer[0-9]+.png")).
-                Select(l => int.Parse(Regex.Match(l.Name, "layer[0-9]+.png").Groups[0].Value)).ToList();
+                Select(l => int.Parse(Regex.Match(l.Name, "layer([0-9]+).png").Groups[1].Value)).ToList();
 
             if (layerNumbers.Count == 0)
             {
@@ -88,17 +104,12 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             }
             else
             {
-                var missing = Enumerable.Range(layerNumbers.Min(), layerNumbers.Count).Except(layerNumbers).FirstOrDefault();
+                var missing = Enumerable.Range(layerNumbers.Min(), layerNumbers.Count + 1).Except(layerNumbers).FirstOrDefault();
 
                 ExportLayers.Add(new ExportLandCoverTypeViewModel("layer" + missing + ".png"));
             }
         }
 
-        public bool ExportHeightmap
-        {
-            get { return _exportHeightmap; }
-            set { _exportHeightmap = value; RaisePropertyChanged(); }
-        }
 
     }
 
@@ -167,6 +178,27 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         {
             get { return _settlement; }
             set { _settlement = value; RaisePropertyChanged(); }
+        }
+
+        public bool[] LandCoverTypes
+        {
+            get
+            {
+                var types = Enum.GetValues(typeof(LandcoverType));
+                bool[] typesResult = new bool[types.Length - 1];
+                foreach (LandcoverType type in types)
+                {
+                    if (type == LandcoverType.Grass) typesResult[(int)type] = Grass;
+                    if (type == LandcoverType.Gravel) typesResult[(int)type] = Gravel;
+                    if (type == LandcoverType.Rock) typesResult[(int)type] = Rock;
+                    if (type == LandcoverType.Snow) typesResult[(int)type] = Snow;
+                    if (type == LandcoverType.Tree) typesResult[(int)type] = Tree;
+                    if (type == LandcoverType.Water) typesResult[(int)type] = Water;
+                    if (type == LandcoverType.Agriculture) typesResult[(int)type] = Agriculture;
+                    if (type == LandcoverType.Settlement) typesResult[(int)type] = Settlement;
+                }
+                return typesResult;
+            }
         }
 
         public ExportLandCoverTypeViewModel(string name)
