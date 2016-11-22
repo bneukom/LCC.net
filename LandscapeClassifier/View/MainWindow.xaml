@@ -59,7 +59,7 @@
                 <ComboBox SelectedIndex="0" SelectedValue="{Binding ClassifierViewModel.SelectedLandCoverType}" ItemsSource="{Binding ClassifierViewModel.LandCoverTypesEnumerable}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5" VerticalAlignment="Center"/>
             </StackPanel>
             <TabControl Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
-                <TabItem  Header="Training">
+                <TabItem  Header="Training" IsEnabled="{Binding PredictionViewModel.NotBlocking}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
@@ -232,9 +232,6 @@
 
                             <Button Grid.Column="0" Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictionViewModel.PredictAllCommand}"></Button>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Acceptance Probability"></TextBlock>
-                                <Slider Style="{DynamicResource FlatSlider}" Orientation="Horizontal" Value="{Binding PredictionViewModel.AcceptanceProbabilty}" Minimum="0" Maximum="1" Width="100" TickPlacement="BottomRight" TickFrequency="0.1" VerticalAlignment="Center"></Slider>
-                                <TextBlock Margin="2,5,5,5" Text="{Binding PredictionViewModel.AcceptanceProbabilty, Converter={StaticResource DoubleRoundingConverter}}" VerticalAlignment="Center" Width="50"/>
                             </StackPanel>
                             <StackPanel Grid.Column="3" Orientation="Horizontal">
                                 <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Overlay Transparency:"></TextBlock>
@@ -278,8 +275,9 @@
                                 <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionProbability}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                                 
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <controls:MetroProgressBar Value="50" Minimum="0" Maximum="100" HorizontalAlignment="Right" Width="100" Margin="5"></controls:MetroProgressBar>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding PredictionViewModel.ProgressVisibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                <Label VerticalAlignment="Center">Prediction Progress:</Label>
+                                <controls:MetroProgressBar Value="{Binding PredictionViewModel.PredictionProgress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="0" Maximum="100" HorizontalAlignment="Right" Width="100" Margin="5"></controls:MetroProgressBar>
                             </StackPanel>
                         </Grid>
 

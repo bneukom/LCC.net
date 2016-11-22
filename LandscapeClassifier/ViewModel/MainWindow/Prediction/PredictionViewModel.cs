@@ -38,7 +38,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         private double _acceptanceProbabilty;
 
         private int[][] _classification;
-        private bool _predictAllEnabled = true;
+        private bool _notBlocking = true;
+
+
+        private Visibility _progressVisibility = Visibility.Hidden;
+        private double _predictionProgress;
 
         /// <summary>
         /// Predict all.
@@ -120,15 +124,28 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// <summary>
         /// Is currently predicting
         /// </summary>
-        public bool PredictAllEnabled
+        public bool NotBlocking
         {
-            get { return _predictAllEnabled; }
-            set { _predictAllEnabled = value; RaisePropertyChanged(); }
+            get { return _notBlocking; }
+            set { _notBlocking = value; RaisePropertyChanged(); }
+        }
+
+        public Visibility ProgressVisibility
+        {
+            get { return _progressVisibility; }
+            set { _progressVisibility = value; RaisePropertyChanged(); }
+        }
+
+        public double PredictionProgress
+        {
+            get { return _predictionProgress; }
+            set { _predictionProgress = value; RaisePropertyChanged(); }
         }
 
         public Vector<double> PredictionUpperLeft { get; set; }
 
         public Vector<double> PredictionBottomRight { get; set; }
+
 
 
 
@@ -145,9 +162,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             ApplyMajorityFilterCommand = new RelayCommand(ApplyMajorityFilter, CanApplyMajorityFilter);
         }
 
-        private bool CanExportPredictions() => PredictAllEnabled && IsAllPredicted;
-        private bool CanPredictAll() => PredictAllEnabled;
-        private bool CanApplyMajorityFilter() => PredictAllEnabled && IsAllPredicted;
+        private bool CanExportPredictions() => NotBlocking && IsAllPredicted;
+        private bool CanPredictAll() => NotBlocking;
+        private bool CanApplyMajorityFilter() => NotBlocking && IsAllPredicted;
 
         private void ApplyMajorityFilter()
         {
@@ -166,7 +183,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 var height = _classificationOverlay.PixelHeight;
                 var layerData = layers.Select(l => new byte[stride * height]).ToList();
 
-                PredictAllEnabled = false;
+                NotBlocking = false;
 
                 List<Task> createLayerTasks = new List<Task>();
                 for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
@@ -214,7 +231,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         }
                     }
 
-                    PredictAllEnabled = true;
+                    NotBlocking = true;
                 });
 
             }
@@ -225,7 +242,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         private void PredictAll()
         {
             IsAllPredicted = false;
-            PredictAllEnabled = false;
+            NotBlocking = false;
+            ProgressVisibility = Visibility.Visible;
+            PredictionProgress = 0.0;
 
             var featureBands = _mainWindowViewModel.Layers.Where(f => f.IsFeature).ToList();
             var numFeatures = featureBands.Count;
@@ -307,6 +326,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         }
                     }
                     _classification[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
+
+                    lock (this)
+                    {
+                        PredictionProgress += 100.0/predictionHeight;
+                    }
                 }
 
             }));
@@ -335,100 +359,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 {
                     ClassificationOverlay = BitmapSource.Create(predictionWidth, predictionHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
                     IsAllPredicted = true;
-                    PredictAllEnabled = true;
+                    NotBlocking = true;
+                    ProgressVisibility = Visibility.Hidden;
                 });
             });
-
-
-            /*
-            var firstBand = VisibleLayer;
-            var numFeatures = _mainWindowViewModel.Layers.Count(f => f.IsFeature);
-
-            var firstBandUpperLeftScreen = WorldToScreen * firstBand.UpperLeft;
-            var firstBandBottomRightScreen = WorldToScreen * firstBand.BottomRight;
-
-            int pixelWidth = (int)((firstBandBottomRightScreen[0] - firstBandUpperLeftScreen[0]) / firstBand.ScaleX);
-            int pixelHeight = (int)((firstBandBottomRightScreen[1] - firstBandUpperLeftScreen[1]) / firstBand.ScaleY);
-
-            double firstBandScaleY = firstBand.ScaleY;
-            double firstBandScaleX = firstBand.ScaleX;
-
-            var featureBands = _mainWindowViewModel.Layers.Where(f => f.IsFeature).ToList();
-
-            IntPtr[] data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
-
-            int[][] result = new int[pixelHeight][];
-
-            // TODO iterate over world coordinates (scale with global world to screen)?
-            Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, pixelHeight), range =>
-            {
-                double[][] features = new double[pixelWidth][];
-
-                for (int i = 0; i < pixelWidth; ++i)
-                {
-                    features[i] = new double[numFeatures];
-                }
-
-                for (int line = range.Item1; line < range.Item2; ++line)
-                {
-                    for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
-                    {
-                        var band = featureBands[bandIndex];
-
-                        var inverseTransform = band.Transform.Inverse();
-                        var bandUpperLeftScreen = inverseTransform * band.UpperLeft;
-                        var bandBottomRightScreen = inverseTransform * band.BottomRight;
-                        var left = (int)bandUpperLeftScreen[0];
-                        var right = (int)bandBottomRightScreen[0];
-
-                        var width = right - left;
-                        int bandLine = (int)(line / band.ScaleY * firstBandScaleY);
-
-                        unsafe
-                        {
-                            ushort* dataPtr = (ushort*)data[bandIndex].ToPointer();
-
-                            for (int i = 0; i < pixelWidth; ++i)
-                            {
-                                var indexX = (int)(i / band.ScaleX * firstBandScaleX);
-                                var pixelValue = *(dataPtr + bandLine * width + indexX);
-                                features[i][bandIndex] = (double)pixelValue / ushort.MaxValue;
-                            }
-                        }
-                    }
-
-
-                    result[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
-                }
-            }));
-
-            predict.ContinueWith(t =>
-            {
-                int stride = pixelWidth * 4;
-                int size = pixelHeight * stride;
-                byte[] imageData = new byte[size];
-
-                Parallel.For(0, pixelWidth, x =>
-                {
-                    for (int y = 0; y < pixelHeight; ++y)
-                    {
-                        int index = 4 * y * pixelWidth + 4 * x;
-                        LandcoverType type = (LandcoverType)result[y][x];
-                        var color = type.GetColor();
-                        imageData[index + 0] = color.B;
-                        imageData[index + 1] = color.G;
-                        imageData[index + 2] = color.R;
-                        imageData[index + 3] = color.A;
-                    }
-                });
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ClassificationOverlay = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
-                    IsAllPredicted = true;
-                });
-            });
-            */
         }
 
 

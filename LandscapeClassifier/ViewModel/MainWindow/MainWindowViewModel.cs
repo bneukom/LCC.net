@@ -124,7 +124,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
             CreateSlopeFromHeightmapCommand = new RelayCommand(() => new CreateSlopeFromHeightmapDialog().ShowDialog(), () => true);
             CreateTiledHeightmapCommand = new RelayCommand(() => new CreateTiledHeightmapDialog().ShowDialog(), () => true);
-            AddLayersCommand = new RelayCommand(AddBands, () => true);
+            AddLayersCommand = new RelayCommand(AddBands, () => PredictionViewModel.NotBlocking);
 
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);
