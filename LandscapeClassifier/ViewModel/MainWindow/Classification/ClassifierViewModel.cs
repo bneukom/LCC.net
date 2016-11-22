@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -17,6 +18,7 @@ using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.Dialogs;
 using MathNet.Numerics.LinearAlgebra;
+using Application = System.Windows.Application;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 {
@@ -507,10 +509,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
             var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
-            CurrentClassifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
-            IsTrained = true;
+            Task trained = CurrentClassifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
 
-            MarkClassifierTrained();
+            trained.ContinueWith(t => Application.Current.Dispatcher.Invoke(() =>
+            {
+                IsTrained = true;
+                MarkClassifierTrained();
+            }));
+
         }
 
 

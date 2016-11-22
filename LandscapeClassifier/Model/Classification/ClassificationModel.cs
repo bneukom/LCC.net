@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace LandscapeClassifier.Model.Classification
 {
-    public class ClassificationModel
+    public class ClassificationModel<T>
     {
         public readonly string Projection;
         public readonly List<string> Bands;
         public readonly List<ClassifiedFeatureVector> ClassifiedFeatureVectors;
+
 
         public ClassificationModel(string projection, List<string> bands, List<ClassifiedFeatureVector> classifiedFeatureVectors)
         {

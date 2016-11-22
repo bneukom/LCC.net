@@ -9,12 +9,12 @@ using LandscapeClassifier.Model.Classification;
 
 namespace LandscapeClassifier.Classifier
 {
-    public interface ILandCoverClassifier
+    public interface ILandCoverClassifier<T>
     {
         /// <summary>
         /// Trains the classifier with the given already classified features.
         /// </summary>
-        void Train(ClassificationModel classificationModel);
+        Task Train(ClassificationModel<T> classificationModel);
 
         /// <summary>
         /// Predicts the land cover type for the given feature vector. <see cref="Train"/> must be called first.
@@ -36,6 +36,11 @@ namespace LandscapeClassifier.Classifier
         /// <param name="features"></param>
         /// <returns></returns>
         int[] Predict(double[][] features);
+
+        /// <summary>
+        /// Cancels the classification process.
+        /// </summary>
+        void Cancel();
 
     }
 }

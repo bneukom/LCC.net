@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using Accord;
 using Accord.MachineLearning.Bayes;
@@ -8,15 +9,16 @@ using Accord.MachineLearning.DecisionTrees.Learning;
 using Accord.Statistics.Distributions.Univariate;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
+using LandscapeClassifier.Model.Classification.Options;
 
 namespace LandscapeClassifier.Classifier
 {
-    public class BayesClassifier : ILandCoverClassifier
+    public class BayesClassifier : AbstractLandCoverClassifier<BayesOptions>
     {
         private NaiveBayesLearning _learning;
         private NaiveBayes _bayes;
 
-        public void Train(ClassificationModel classificationModel)
+        public override Task Train(ClassificationModel<BayesOptions> classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
             int numClasses = Enum.GetValues(typeof(LandcoverType)).Length;
@@ -43,24 +45,27 @@ namespace LandscapeClassifier.Classifier
                 Model = _bayes,
             };
 
-            _learning.Options.InnerOption.UseLaplaceRule = true;
 
+            return Task.Factory.StartNew(() =>
+            {
+                _learning.Options.InnerOption.UseLaplaceRule = true;
 
-            _learning.Learn(input, responses);
+                _learning.Learn(input, responses);
+            });
 
         }
 
-        public LandcoverType Predict(FeatureVector feature)
+        public override LandcoverType Predict(FeatureVector feature)
         {
             return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (int)s));
         }
 
-        public double PredictionProbabilty(FeatureVector feature)
+        public override double PredictionProbabilty(FeatureVector feature)
         {
             throw new NotImplementedException();
         }
 
-        public int[] Predict(double[][] features)
+        public override int[] Predict(double[][] features)
         {
             throw new NotImplementedException();
         }

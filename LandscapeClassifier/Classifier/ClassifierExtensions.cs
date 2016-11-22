@@ -3,21 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LandscapeClassifier.Model.Classification.Options;
 
 namespace LandscapeClassifier.Classifier
 {
     public static class ClassifierExtensions
     {
-        public static ILandCoverClassifier CreateClassifier(this Classifier classifier)
+        public static ILandCoverClassifier<T> CreateClassifier<T>(this Classifier classifier)
         {
             switch (classifier)
             {
                 case Classifier.DecisionTrees:
-                    return new DecisionTreeClassifier();
+                    return (dynamic)new DecisionTreeClassifier();
                 case Classifier.Bayes:
-                    return new BayesClassifier();
+                    return (dynamic)new BayesClassifier();
                 case Classifier.SVM:
-                    return new SVMClassifier();
+                    return (dynamic)new SvmClassifier();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(classifier), classifier, null);
             }

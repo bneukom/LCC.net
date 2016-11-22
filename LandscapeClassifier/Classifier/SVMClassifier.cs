@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using Accord;
@@ -10,17 +11,16 @@ using Accord.MachineLearning.VectorMachines.Learning;
 using Accord.Statistics.Kernels;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
+using LandscapeClassifier.Model.Classification.Options;
 
 namespace LandscapeClassifier.Classifier
 {
-    public class SVMClassifier : ILandCoverClassifier
+    public class SvmClassifier : AbstractLandCoverClassifier<SvmOptions>
     {
         private MulticlassSupportVectorMachine<Linear> _svm;
         private MulticlassSupportVectorLearning<Gaussian> _calibration;
 
-        private bool _debug = false;
-
-        public void Train(ClassificationModel classificationModel)
+        public override Task Train(ClassificationModel<SvmOptions> classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
 
@@ -31,35 +31,8 @@ namespace LandscapeClassifier.Classifier
             {
                 var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
 
-                if (_debug)
-                {
-                    Console.Write($"{featureIndex}: ");
-                    for (int i = 0; i < featureVector.FeatureVector.BandIntensities.Length; ++i)
-                    {
-                        Console.Write(featureVector.FeatureVector.BandIntensities[i] + " ");
-                    }
-                    Console.Write(Environment.NewLine);
-                }
-
                 input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
                 responses[featureIndex] = (int)featureVector.Type;
-            }
-            Console.WriteLine();
-
-            int rowLength = input.GetLength(0);
-
-            if (_debug)
-            {
-                for (int i = 0; i < rowLength; i++)
-                {
-                    Console.Write($"{i}: ");
-                    for (int j = 0; j < input[i].Length; j++)
-                    {
-                        Console.Write($"{Math.Round(input[i][j], 3)} ");
-                    }
-                    Console.Write($" = {responses[i]}" + Environment.NewLine);
-                }
-                Console.WriteLine();
             }
             // Create a one-vs-one multi-class SVM learning algorithm 
             var teacher = new MulticlassSupportVectorLearning<Linear>
@@ -69,24 +42,14 @@ namespace LandscapeClassifier.Classifier
                 {
                     Complexity = 100
                 },
-                ParallelOptions = { MaxDegreeOfParallelism = 1 }
+                ParallelOptions = {MaxDegreeOfParallelism = 1},
+                Token = CancellationTokenSource.Token
             };
 
-            _svm = teacher.Learn(input, responses);
-
-            if (_debug)
+            return Task.Factory.StartNew(() =>
             {
-                for (int i = 0; i < rowLength; i++)
-                {
-                    Console.Write($"{i}: ");
-                    for (int j = 0; j < input[i].Length; j++)
-                    {
-                        Console.Write($"{Math.Round(input[i][j], 3)} ");
-                    }
-                    Console.Write($" = {responses[i]}" + Environment.NewLine);
-                }
-                Console.WriteLine();
-            }
+                _svm = teacher.Learn(input, responses);
+            });
 
             /*
             // Create the multi-class learning algorithm for the machine
@@ -107,20 +70,20 @@ namespace LandscapeClassifier.Classifier
 
         }
 
-        public LandcoverType Predict(FeatureVector feature)
+        public override LandcoverType Predict(FeatureVector feature)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
 
             return (LandcoverType)_svm.Decide(features);
         }
 
-        public double PredictionProbabilty(FeatureVector feature)
+        public override double PredictionProbabilty(FeatureVector feature)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
             return _svm.Probability(features);
         }
 
-        public int[] Predict(double[][] features)
+        public override int[] Predict(double[][] features)
         {
             return _svm.Decide(features);
         }
