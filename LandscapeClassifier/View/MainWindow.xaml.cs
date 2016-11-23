@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using LandscapeClassifier.Model;
@@ -12,6 +15,8 @@ using LandscapeClassifier.Util;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel;
 using LandscapeClassifier.ViewModel.MainWindow;
+using LandscapeClassifier.ViewModel.MainWindow.Classification;
+using LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms;
 using MahApps.Metro.Controls;
 using Microsoft.Win32;
 using OSGeo.GDAL;
@@ -35,6 +40,65 @@ namespace LandscapeClassifier.View
             //LayersGrid.Drop += productsDataGrid_Drop;
 
             _viewModel = (MainWindowViewModel)DataContext;
+            _viewModel.ClassifierViewModel.PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == nameof(ClassifierViewModel.SelectededClassifier))
+                {
+                    UpdateClassifierOptionsProperties(_viewModel.ClassifierViewModel.CurrentClassifierViewModel);
+                }
+            };
+        }
+
+        public void UpdateClassifierOptionsProperties(ClassifierViewModelBase classifierViewModel)
+        {
+            DataGrid.Children.Clear();
+            DataGrid.DataContext = classifierViewModel;
+
+            if (classifierViewModel == null) return;
+
+            var properties = classifierViewModel.GetType().GetProperties().Where(p => p.CustomAttributes.Any(a => a.AttributeType == typeof(OptionAttribute)));
+
+            var propertyInfos = properties as IList<PropertyInfo> ?? properties.ToList();
+
+            foreach (var propertyInfo in propertyInfos)
+                DataGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });
+
+            for (int propertyIndex = 0; propertyIndex < propertyInfos.Count; propertyIndex++)
+            {
+                var propertyInfo = propertyInfos[propertyIndex];
+
+                Label label = new Label { Content = propertyInfo.Name + ":" };
+                Control valueControl = CreateValueControl(propertyInfo);
+
+                label.Margin = new Thickness(5);
+                valueControl.Margin = new Thickness(5);
+
+                Grid.SetRow(label, propertyIndex);
+                Grid.SetRow(valueControl, propertyIndex);
+                Grid.SetColumn(label, 0);
+                Grid.SetColumn(valueControl, 1);
+
+                DataGrid.Children.Add(label);
+                DataGrid.Children.Add(valueControl);
+            }
+        }
+
+        private Control CreateValueControl(PropertyInfo propertyInfo)
+        {
+            var binding = new Binding { Path = new PropertyPath(propertyInfo.Name) };
+            if (propertyInfo.PropertyType.IsEnum)
+            {
+                var combo = new ComboBox { ItemsSource = Enum.GetValues(propertyInfo.PropertyType) };
+
+                BindingOperations.SetBinding(combo, Selector.SelectedItemProperty, binding);
+                return combo;
+            }
+            else
+            {
+                TextBox text = new TextBox();
+                BindingOperations.SetBinding(text, TextBox.TextProperty, binding);
+                return text;
+            }
         }
 
         void productsDataGrid_Drop(object sender, DragEventArgs e)

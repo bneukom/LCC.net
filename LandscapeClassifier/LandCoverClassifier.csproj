@@ -168,6 +168,7 @@
       <HintPath>..\packages\MathNet.Numerics.3.13.1\lib\net40\MathNet.Numerics.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\CommonServiceLocator.1.3\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
       <Private>True</Private>
@@ -286,13 +287,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Classifier\AbstractLandCoverClassifier.cs" />
-    <Compile Include="Classifier\Classifier.cs" />
-    <Compile Include="Classifier\ClassifierExtensions.cs" />
-    <Compile Include="Classifier\BayesClassifier.cs" />
-    <Compile Include="Classifier\SVMClassifier.cs" />
-    <Compile Include="Classifier\DecisionTreeClassifier.cs" />
-    <Compile Include="Classifier\ILandCoverClassifier.cs" />
+    <Compile Include="Model\Classification\Algorithms\AbstractLandCoverClassifier.cs" />
+    <Compile Include="Model\Classification\Algorithms\Classifier.cs" />
+    <Compile Include="Model\Classification\Algorithms\ClassifierExtensions.cs" />
+    <Compile Include="Model\Classification\Algorithms\BayesClassifier.cs" />
+    <Compile Include="Model\Classification\Algorithms\Kernel.cs" />
+    <Compile Include="Model\Classification\Algorithms\SvmClassifier.cs" />
+    <Compile Include="Model\Classification\Algorithms\DecisionTreeClassifier.cs" />
+    <Compile Include="Model\Classification\Algorithms\ILandCoverClassifier.cs" />
     <Compile Include="Controls\ImageCanvasBase.cs" />
     <Compile Include="Controls\ClassificationImageCanvas.cs" />
     <Compile Include="Controls\PredictionImageCanvas.cs" />
@@ -304,22 +306,23 @@
     <Compile Include="Extensions\LandCoverTypeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
-    <Compile Include="Model\Classification\Options\BayesOptions.cs" />
-    <Compile Include="Model\Classification\Options\DecisionTreeOptions.cs" />
-    <Compile Include="Model\Classification\Options\SvmOptions.cs" />
     <Compile Include="Model\Layer.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\SatelliteType.cs" />
+    <Compile Include="Util\Either.cs" />
     <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\OptionAttribute.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\FeaturesViewModel.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\ClassifierViewModelBase.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\SvmClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\AddLayersDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
-    <Compile Include="View\ClassifierOptions\SvmOptions.xaml.cs">
-      <DependentUpon>SvmOptions.xaml</DependentUpon>
+    <Compile Include="View\ClassifierOptions\ClassifierOptionsDialog.xaml.cs">
+      <DependentUpon>ClassifierOptionsDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Dialogs\Export\ExportPredictionDialog.xaml.cs">
       <DependentUpon>ExportPredictionDialog.xaml</DependentUpon>
@@ -365,7 +368,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="View\ClassifierOptions\SvmOptions.xaml">
+    <Page Include="View\ClassifierOptions\ClassifierOptionsDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

@@ -131,24 +131,39 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Grid Grid.Row="0" >
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" ></ColumnDefinition>
-                                    <ColumnDefinition Width="Auto" ></ColumnDefinition>
-                                    <ColumnDefinition Width="Auto" ></ColumnDefinition>
-                                </Grid.ColumnDefinitions>
-                                <Label Grid.Column="0" Content="Classifier"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
-                                <ComboBox SelectedIndex="0" Grid.Column="1" SelectedValue="{Binding ClassifierViewModel.SelectededClassifier}" ItemsSource="{Binding ClassifierViewModel.ClassifiersEnumerable}"   HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
-                                <Button Grid.Column="2" Margin="5" Content="Options"></Button>
-                            </Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="300"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <GroupBox Grid.Row="0" Header="Classifier">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" ></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto" ></ColumnDefinition>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"></RowDefinition>
+                                        <RowDefinition Height="Auto"></RowDefinition>
+                                    </Grid.RowDefinitions>
+                                    <Label Grid.Row = "0" Grid.Column="0" Content="Classifier"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                    <ComboBox SelectedIndex="0" Grid.Row = "0" Grid.Column="1" SelectedValue="{Binding ClassifierViewModel.SelectededClassifier}" ItemsSource="{Binding ClassifierViewModel.ClassifierNamesEnumerable}"   HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
+
+                                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="DataGrid">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            <ColumnDefinition Width="*"></ColumnDefinition>
+                                        </Grid.ColumnDefinitions>
+                                    </Grid>
+                                </Grid>
+                            </GroupBox>
+
                             <Grid Grid.Row="1" >
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" ></ColumnDefinition>
                                     <ColumnDefinition Width="Auto" ></ColumnDefinition>
                                 </Grid.ColumnDefinitions>
-                                <Label x:Name="ComboInfo" Grid.Column="0" Content="Landcover Type"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+
                             </Grid>
-                            <TreeView  Width="325" Grid.Row="2" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
+                            <TreeView  Grid.Row="2" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
                                 <TreeView.Resources>
                                     <HierarchicalDataTemplate DataType = "{x:Type classification:FeatureByTypeViewModel}" ItemsSource = "{Binding Path=Features}">
                                         <StackPanel Orientation="Horizontal">
@@ -273,7 +288,7 @@
                                 <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionType}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                                 <Label Content="Prediction Probability:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                                 <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionProbability}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                
+
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding PredictionViewModel.ProgressVisibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                 <Label VerticalAlignment="Center">Prediction Progress:</Label>

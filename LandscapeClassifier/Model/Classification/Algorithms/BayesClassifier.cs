@@ -1,24 +1,15 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
-using Accord;
 using Accord.MachineLearning.Bayes;
-using Accord.MachineLearning.DecisionTrees;
-using Accord.MachineLearning.DecisionTrees.Learning;
-using Accord.Statistics.Distributions.Univariate;
-using LandscapeClassifier.Model;
-using LandscapeClassifier.Model.Classification;
-using LandscapeClassifier.Model.Classification.Options;
 
-namespace LandscapeClassifier.Classifier
+namespace LandscapeClassifier.Model.Classification.Algorithms
 {
-    public class BayesClassifier : AbstractLandCoverClassifier<BayesOptions>
+    public class BayesClassifier : AbstractLandCoverClassifier
     {
         private NaiveBayesLearning _learning;
         private NaiveBayes _bayes;
 
-        public override Task Train(ClassificationModel<BayesOptions> classificationModel)
+        public override Task Train(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
             int numClasses = Enum.GetValues(typeof(LandcoverType)).Length;

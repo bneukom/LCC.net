@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using LandscapeClassifier.Model;
-using LandscapeClassifier.Model.Classification;
 
-namespace LandscapeClassifier.Classifier
+namespace LandscapeClassifier.Model.Classification.Algorithms
 {
-    public abstract class AbstractLandCoverClassifier<T> : ILandCoverClassifier<T>
+    public abstract class AbstractLandCoverClassifier : ILandCoverClassifier
     {
         protected CancellationTokenSource CancellationTokenSource;
 
-        public abstract Task Train(ClassificationModel<T> classificationModel);
+        public abstract Task Train(ClassificationModel classificationModel);
         public abstract LandcoverType Predict(FeatureVector feature);
         public abstract double PredictionProbabilty(FeatureVector feature);
         public abstract int[] Predict(double[][] features);

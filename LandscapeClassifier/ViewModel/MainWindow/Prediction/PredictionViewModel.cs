@@ -221,9 +221,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         var data = layerData[layerIndex];
                         var bitmapImage = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, data, stride);
 
-                    // write layer
-                    using (var fileStream = new FileStream(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name),
-                                FileMode.Create))
+                        // write layer
+                        using (var fileStream = new FileStream(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name),
+                                    FileMode.Create))
                         {
                             BitmapEncoder encoder = new PngBitmapEncoder();
                             encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
@@ -325,11 +325,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             }
                         }
                     }
-                    _classification[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifier.Predict(features);
+                    _classification[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(features);
 
                     lock (this)
                     {
-                        PredictionProgress += 100.0/predictionHeight;
+                        PredictionProgress += 100.0 / predictionHeight;
                     }
                 }
 

@@ -1,26 +1,20 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
-using Accord;
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
-using LandscapeClassifier.Model;
-using LandscapeClassifier.Model.Classification;
-using LandscapeClassifier.Model.Classification.Options;
 
-namespace LandscapeClassifier.Classifier
+namespace LandscapeClassifier.Model.Classification.Algorithms
 {
-    public class DecisionTreeClassifier : AbstractLandCoverClassifier<DecisionTreeOptions>
+    public class DecisionTreeClassifier : AbstractLandCoverClassifier
     {
         private C45Learning _id3Learning;
         private DecisionTree _tree;
 
-        public override Task Train(ClassificationModel<DecisionTreeOptions> classificationModel)
+        public override Task Train(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
-            DecisionVariable[]  decisionVariables = classificationModel.Bands.Select(
-                b => DecisionVariable.Continuous(b.ToString())).ToArray();
+            DecisionVariable[]  decisionVariables = classificationModel.Bands.Select(b => DecisionVariable.Continuous(b.ToString())).ToArray();
 
             double[][] input = new double[numFeatures][];
             int[] responses = new int[numFeatures];

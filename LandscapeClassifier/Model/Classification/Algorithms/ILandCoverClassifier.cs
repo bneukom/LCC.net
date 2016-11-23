@@ -1,20 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
-using LandscapeClassifier.Model;
-using LandscapeClassifier.Model.Classification;
+﻿using System.Threading.Tasks;
 
-namespace LandscapeClassifier.Classifier
+namespace LandscapeClassifier.Model.Classification.Algorithms
 {
-    public interface ILandCoverClassifier<T>
+    public interface ILandCoverClassifier
     {
         /// <summary>
         /// Trains the classifier with the given already classified features.
         /// </summary>
-        Task Train(ClassificationModel<T> classificationModel);
+        Task Train(ClassificationModel classificationModel);
 
         /// <summary>
         /// Predicts the land cover type for the given feature vector. <see cref="Train"/> must be called first.

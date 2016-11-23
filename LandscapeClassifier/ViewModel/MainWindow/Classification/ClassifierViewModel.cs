@@ -12,11 +12,13 @@ using System.Windows.Media;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using GalaSoft.MvvmLight.Messaging;
-using LandscapeClassifier.Classifier;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
+using LandscapeClassifier.Model.Classification.Algorithms;
+using LandscapeClassifier.View.ClassifierOptions;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.Dialogs;
+using LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms;
 using MathNet.Numerics.LinearAlgebra;
 using Application = System.Windows.Application;
 
@@ -31,10 +33,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private bool _isTrained;
         private Point _mouseScreenPoisition;
         private Point _mouseWorldPoisition;
-
+        
         private bool _previewBandIntensityScale = true;
 
-        private Classifier.Classifier _selectededClassifier = Classifier.Classifier.DecisionTrees;
+        private Model.Classification.Algorithms.Classifier _selectededClassifier = Model.Classification.Algorithms.Classifier.DecisionTrees;
 
         private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
 
@@ -42,6 +44,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private SolidColorBrush _trainingStatusBrush;
 
         private string _trainingStatusText;
+
+        private ClassifierViewModelBase _currentOptionsViewModel;
 
         /// <summary>
         ///     Conversion from screen to world coordinates.
@@ -52,58 +56,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         ///     Conversion from world to screen coordinates.
         /// </summary>
         public Matrix<double> WorldToScreen;
-
-        public ClassifierViewModel(MainWindowViewModel mainWindowViewModel)
-        {
-            _mainWindowViewModel = mainWindowViewModel;
-
-            // TODO nono
-            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] { { 1, 0, 300000.0 }, { 0, -1, 5090220 }, { 0, 0, 1 } });
-            WorldToScreen = ScreenToWorld.Inverse();
-
-            mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
-
-            LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
-            ClassifiersEnumerable = Enum.GetNames(typeof(Classifier.Classifier));
-
-            FeaturesViewModel = new FeaturesViewModel();
-
-            RemoveAllFeaturesCommand = new RelayCommand(() => FeaturesViewModel.RemoveAllFeatures(),
-                () => FeaturesViewModel.HasFeatures());
-
-            RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
-
-            PropertyChanged += (sender, args) =>
-            {
-                if (args.PropertyName == nameof(SelectededClassifier))
-                {
-                    CurrentClassifier = SelectededClassifier.CreateClassifier();
-                    MarkClassifierNotTrained();
-                }
-            };
-            SelectededClassifier = Classifier.Classifier.DecisionTrees;
-            CurrentClassifier = SelectededClassifier.CreateClassifier();
-
-
-            FeaturesViewModel.PropertyChanged += (sender, args) =>
-            {
-                if (args.PropertyName == FeaturesViewModel.FeatureProperty)
-                {
-                    MarkClassifierNotTrained();
-                    foreach (var bandViewModel in _mainWindowViewModel.Layers)
-                    {
-                        bandViewModel.CanChangeIsFeature = !FeaturesViewModel.HasFeatures();
-                    }
-                }
-            };
-
-            MarkClassifierNotTrained();
-
-            ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
-            ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
-
-            TrainCommand = new RelayCommand(Train, CanTrain);
-        }
 
         /// <summary>
         ///     Export command.
@@ -129,6 +81,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         ///     Remove all features command.
         /// </summary>
         public ICommand RemoveAllFeaturesCommand { set; get; }
+
+        /// <summary>
+        ///     Command to open classifier options
+        /// </summary>
+        public ICommand OpenClassifierOptionsCommand { set; get; }
 
         /// <summary>
         ///     Classified Features.
@@ -199,7 +156,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         ///     The current classifier.
         /// </summary>
-        public Classifier.Classifier SelectededClassifier
+        public Classifier SelectededClassifier
         {
             get { return _selectededClassifier; }
             set
@@ -310,12 +267,95 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         ///     Possible classifiers.
         /// </summary>
-        public IEnumerable<string> ClassifiersEnumerable { get; set; }
+        public IEnumerable<string> ClassifierNamesEnumerable { get; set; }
 
         /// <summary>
         ///     The current used classifier.
         /// </summary>
-        public ILandCoverClassifier CurrentClassifier { get; private set; }
+        public ClassifierViewModelBase CurrentClassifierViewModel { get; private set; }
+
+        /// <summary>
+        ///     All option viewmodels.
+        /// </summary>
+        public Dictionary<Classifier, ClassifierViewModelBase> ClassifierViewModels;
+
+        
+
+        public ClassifierViewModel(MainWindowViewModel mainWindowViewModel)
+        {
+            _mainWindowViewModel = mainWindowViewModel;
+
+            // TODO nono
+            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] { { 1, 0, 300000.0 }, { 0, -1, 5090220 }, { 0, 0, 1 } });
+            WorldToScreen = ScreenToWorld.Inverse();
+
+            mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
+
+            LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
+            ClassifierNamesEnumerable = Enum.GetNames(typeof(Model.Classification.Algorithms.Classifier));
+
+            ClassifierViewModels = Enum.GetValues(typeof(Model.Classification.Algorithms.Classifier))
+                .Cast<Model.Classification.Algorithms.Classifier>()
+                .ToDictionary(c => c, c => c.CreateClassifierViewModel());
+
+            FeaturesViewModel = new FeaturesViewModel();
+
+            RemoveAllFeaturesCommand = new RelayCommand(() => FeaturesViewModel.RemoveAllFeatures(),
+                () => FeaturesViewModel.HasFeatures());
+
+            RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
+
+            OpenClassifierOptionsCommand = new RelayCommand(OpenClassifierOptionsDialog, CanOpenClassifierOptionsDialog);
+
+            PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == nameof(SelectededClassifier))
+                {
+                    CurrentClassifierViewModel = ClassifierViewModels[SelectededClassifier];
+                    MarkClassifierNotTrained();
+                }
+            };
+
+            SelectededClassifier = Classifier.DecisionTrees;
+            CurrentClassifierViewModel = ClassifierViewModels[SelectededClassifier];
+            MarkClassifierNotTrained();
+
+
+            FeaturesViewModel.PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == FeaturesViewModel.FeatureProperty)
+                {
+                    MarkClassifierNotTrained();
+                    foreach (var bandViewModel in _mainWindowViewModel.Layers)
+                    {
+                        bandViewModel.CanChangeIsFeature = !FeaturesViewModel.HasFeatures();
+                    }
+                }
+            };
+
+            MarkClassifierNotTrained();
+
+            ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
+            ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
+
+            TrainCommand = new RelayCommand(Train, CanTrain);
+        }
+
+        private bool CanOpenClassifierOptionsDialog()
+        {
+            return CurrentClassifierViewModel != null;
+        }
+
+        private void OpenClassifierOptionsDialog()
+        {
+            ClassifierOptionsDialog optionsDialog = new ClassifierOptionsDialog
+            {
+                DataContext = CurrentClassifierViewModel
+            };
+
+            optionsDialog.Show();
+        }
+
 
         private void RemoveSelectedFeature()
         {
@@ -509,7 +549,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
             var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
-            Task trained = CurrentClassifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+            Task trained = CurrentClassifierViewModel.Classifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
 
             trained.ContinueWith(t => Application.Current.Dispatcher.Invoke(() =>
             {

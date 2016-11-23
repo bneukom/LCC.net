@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LandscapeClassifier.Model.Classification.Options
+namespace LandscapeClassifier.Model.Classification.Algorithms
 {
-    public class DecisionTreeOptions
+    public enum Kernel
     {
+        Linear, Gaussian
     }
 }
