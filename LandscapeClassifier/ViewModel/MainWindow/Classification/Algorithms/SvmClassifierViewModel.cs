@@ -1,5 +1,4 @@
 ﻿using LandscapeClassifier.Model.Classification.Algorithms;
-using LandscapeClassifier.View.ClassifierOptions;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
 {

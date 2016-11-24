@@ -15,7 +15,6 @@ using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Model.Classification.Algorithms;
-using LandscapeClassifier.View.ClassifierOptions;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.Dialogs;
 using LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms;
@@ -33,10 +32,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private bool _isTrained;
         private Point _mouseScreenPoisition;
         private Point _mouseWorldPoisition;
-        
+
         private bool _previewBandIntensityScale = true;
 
-        private Model.Classification.Algorithms.Classifier _selectededClassifier = Model.Classification.Algorithms.Classifier.DecisionTrees;
+        private Classifier _selectededClassifier;
 
         private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
 
@@ -81,11 +80,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         ///     Remove all features command.
         /// </summary>
         public ICommand RemoveAllFeaturesCommand { set; get; }
-
-        /// <summary>
-        ///     Command to open classifier options
-        /// </summary>
-        public ICommand OpenClassifierOptionsCommand { set; get; }
 
         /// <summary>
         ///     Classified Features.
@@ -279,7 +273,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public Dictionary<Classifier, ClassifierViewModelBase> ClassifierViewModels;
 
-        
+
 
         public ClassifierViewModel(MainWindowViewModel mainWindowViewModel)
         {
@@ -292,10 +286,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
 
             LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
-            ClassifierNamesEnumerable = Enum.GetNames(typeof(Model.Classification.Algorithms.Classifier));
+            ClassifierNamesEnumerable = Enum.GetNames(typeof(Classifier));
 
-            ClassifierViewModels = Enum.GetValues(typeof(Model.Classification.Algorithms.Classifier))
-                .Cast<Model.Classification.Algorithms.Classifier>()
+            ClassifierViewModels = Enum.GetValues(typeof(Classifier))
+                .Cast<Classifier>()
                 .ToDictionary(c => c, c => c.CreateClassifierViewModel());
 
             FeaturesViewModel = new FeaturesViewModel();
@@ -305,21 +299,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
 
-            OpenClassifierOptionsCommand = new RelayCommand(OpenClassifierOptionsDialog, CanOpenClassifierOptionsDialog);
-
             PropertyChanged += (sender, args) =>
             {
                 if (args.PropertyName == nameof(SelectededClassifier))
                 {
+                    if (CurrentClassifierViewModel != null) CurrentClassifierViewModel.PropertyChanged -= CurrentClassifierViewModelOnPropertyChanged;
                     CurrentClassifierViewModel = ClassifierViewModels[SelectededClassifier];
+                    if (CurrentClassifierViewModel != null) CurrentClassifierViewModel.PropertyChanged += CurrentClassifierViewModelOnPropertyChanged;
                     MarkClassifierNotTrained();
                 }
             };
-
-            SelectededClassifier = Classifier.DecisionTrees;
-            CurrentClassifierViewModel = ClassifierViewModels[SelectededClassifier];
-            MarkClassifierNotTrained();
-
 
             FeaturesViewModel.PropertyChanged += (sender, args) =>
             {
@@ -333,27 +322,22 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 }
             };
 
-            MarkClassifierNotTrained();
-
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
 
             TrainCommand = new RelayCommand(Train, CanTrain);
+
+            SelectededClassifier = Classifier.SVM;
+        }
+
+        private void CurrentClassifierViewModelOnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
+        {
+            MarkClassifierNotTrained();
         }
 
         private bool CanOpenClassifierOptionsDialog()
         {
             return CurrentClassifierViewModel != null;
-        }
-
-        private void OpenClassifierOptionsDialog()
-        {
-            ClassifierOptionsDialog optionsDialog = new ClassifierOptionsDialog
-            {
-                DataContext = CurrentClassifierViewModel
-            };
-
-            optionsDialog.Show();
         }
 
 

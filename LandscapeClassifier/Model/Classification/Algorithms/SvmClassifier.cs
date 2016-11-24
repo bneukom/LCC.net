@@ -33,13 +33,13 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
             switch (Kernel)
             {
-                case Kernel.Gaussian:
+                case Kernel.Linear:
                     var linearLearning = new MulticlassSupportVectorLearning<Linear>
                     {
                         Learner = (p) => new LinearDualCoordinateDescent<Linear>()
                         {
                             Complexity = Complexity,
-                            Token = CancellationTokenSource.Token
+                            Token = CancellationTokenSource.Token,
                         }
                     };
 
@@ -48,7 +48,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                         _svm = Either.Left<MulticlassSupportVectorMachine<Linear>, MulticlassSupportVectorMachine<Gaussian>>(linearLearning.Learn(input, responses));
                     });
 
-                case Kernel.Linear:
+                case Kernel.Gaussian:
                     var gaussianLearning = new MulticlassSupportVectorLearning<Gaussian>
                     {
                         Learner = (p) => new SequentialMinimalOptimization<Gaussian>()

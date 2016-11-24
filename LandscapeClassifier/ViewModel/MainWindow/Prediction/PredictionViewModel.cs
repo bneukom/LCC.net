@@ -147,8 +147,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         public Vector<double> PredictionBottomRight { get; set; }
 
 
-
-
         public PredictionViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
@@ -173,9 +171,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         private void ExportPredictions()
         {
             ExportPredicitonDialog dialog = new ExportPredicitonDialog();
-            if (dialog.ShowDialog() == true)
-            {
 
+            if (dialog.ShowDialog(_mainWindowViewModel.Layers.Where(l => l.Path != null).Select(l => l.Path).ToList()) == true)
+            {
                 var layers = dialog.DialogViewModel.ExportLayers;
 
                 var width = _classificationOverlay.PixelWidth;
@@ -210,7 +208,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             }
                         }
                     })));
+                }
 
+                if (dialog.DialogViewModel.ExportHeightmap)
+                {
+                    
                 }
 
                 Task.WhenAll(createLayerTasks).ContinueWith(t =>

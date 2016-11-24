@@ -123,7 +123,6 @@
                         <Grid Grid.Row="0 " Grid.Column="2">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -134,13 +133,15 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="300"></ColumnDefinition>
                             </Grid.ColumnDefinitions>
-                            <GroupBox Grid.Row="0" Header="Classifier">
+
+                            <GroupBox Grid.Row="0" Header="Classifier" Margin="5,0,5,5">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" ></ColumnDefinition>
                                         <ColumnDefinition Width="Auto" ></ColumnDefinition>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="Auto"></RowDefinition>
                                     </Grid.RowDefinitions>
@@ -153,17 +154,10 @@
                                             <ColumnDefinition Width="*"></ColumnDefinition>
                                         </Grid.ColumnDefinitions>
                                     </Grid>
+                                   
                                 </Grid>
                             </GroupBox>
-
-                            <Grid Grid.Row="1" >
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" ></ColumnDefinition>
-                                    <ColumnDefinition Width="Auto" ></ColumnDefinition>
-                                </Grid.ColumnDefinitions>
-
-                            </Grid>
-                            <TreeView  Grid.Row="2" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
+                            <TreeView  Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
                                 <TreeView.Resources>
                                     <HierarchicalDataTemplate DataType = "{x:Type classification:FeatureByTypeViewModel}" ItemsSource = "{Binding Path=Features}">
                                         <StackPanel Orientation="Horizontal">
@@ -176,11 +170,11 @@
                                     </HierarchicalDataTemplate>
                                 </TreeView.Resources>
                             </TreeView>
-                            <Button Grid.Column="0" Grid.Row="3" x:Name="RemoveButton" Command="{Binding ClassifierViewModel.RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="4" Command="{Binding ClassifierViewModel.RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="5" Content="Export Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="6" Content="Import Features" Command="{Binding ClassifierViewModel.ImportFeatureCommand}" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="7" Content="Train Features" Command="{Binding ClassifierViewModel.TrainCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="2" x:Name="RemoveButton" Command="{Binding ClassifierViewModel.RemoveSelectedFeatureVectorCommand}"  Content="Remove Feature" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="3" Command="{Binding ClassifierViewModel.RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="4" Content="Export Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="5" Content="Import Features" Command="{Binding ClassifierViewModel.ImportFeatureCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="6"  Content="Train Features" Command="{Binding ClassifierViewModel.TrainCommand}" Margin="5,5,5,0"></Button>
                         </Grid>
 
                         <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="3">

@@ -10,24 +10,30 @@ using System.Windows.Input;
 using Accord.Collections;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.View.Export;
+using OSGeo.GDAL;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
 {
     public class ExportPredictionDialogViewModel : ViewModelBase
     {
-  
         private bool _exportHeightmap;
         private ExportLandCoverTypeViewModel _selectedLayer;
         private string _exportPath;
         private bool _isExportPathSet;
+        private double _minAltitude;
+        private double _maxAltitude;
+        private string _heightmapLayerPath;
+
+        public List<string> ExistingLayerPaths { get; set; }
 
         public ExportLandCoverTypeViewModel SelectedLayer
         {
             get { return _selectedLayer; }
             set { _selectedLayer = value; RaisePropertyChanged(); }
         }
-
 
         public string ExportPath
         {
@@ -52,11 +58,31 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _isExportPathSet = value; RaisePropertyChanged(); }
         }
 
+        public double MinAltitude
+        {
+            get { return _minAltitude; }
+            set { _minAltitude = value; RaisePropertyChanged(); }
+        }
+
+        public double MaxAltitude
+        {
+            get { return _maxAltitude; }
+            set { _maxAltitude = value; RaisePropertyChanged(); }
+        }
+
+        public string HeightmapLayerPath
+        {
+            get { return _heightmapLayerPath; }
+            set { _heightmapLayerPath = value; RaisePropertyChanged(); }
+        }
+
         public ObservableCollection<ExportLandCoverTypeViewModel> ExportLayers { get; set; }
 
         public ICommand AddLayerCommand { get; set; }
         public ICommand RemoveLayerCommand { get; set; }
         public ICommand BrowseExportPathCommand { get; set; }
+
+        public ICommand BrowseHeightmapLayerCommand { get; set; }
 
         public ExportPredictionDialogViewModel()
         {
@@ -65,6 +91,34 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             AddLayerCommand = new RelayCommand(AddLayer);
             RemoveLayerCommand = new RelayCommand(RemoveLayer, CanRemoveLayer);
             BrowseExportPathCommand = new RelayCommand(BrowseExportPath);
+            BrowseHeightmapLayerCommand = new RelayCommand(BrowseHeightmapLayer, CanBrowseHeightmapLayer);
+        }
+
+        private void BrowseHeightmapLayer()
+        {
+            var browseLayerDialog = new BrowseLayerDialog();
+
+            browseLayerDialog.DialogViewModel.Layers.AddRange(ExistingLayerPaths.Select(p => new LayerViewModel(p)));
+
+            if (browseLayerDialog.ShowDialog() == true)
+            {
+                string selectedLayer = browseLayerDialog.DialogViewModel.SelectedLayer.Path;
+                HeightmapLayerPath = selectedLayer;
+
+                var dataSet = Gdal.Open(selectedLayer, Access.GA_ReadOnly);
+                var rasterBand = dataSet.GetRasterBand(1);
+
+                double[] minMax = new double[2];
+                rasterBand.ComputeRasterMinMax(minMax,0 );
+
+                MinAltitude = minMax[0];
+                MaxAltitude = minMax[1];
+            }
+        }
+
+        private bool CanBrowseHeightmapLayer()
+        {
+            return ExportHeightmap;
         }
 
         private void BrowseExportPath()
@@ -111,11 +165,18 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         }
 
 
+        public void Reset()
+        {
+            ExportHeightmap = false;
+            ExistingLayerPaths.Clear();
+            MinAltitude = 0.0;
+            MaxAltitude = 0.0;
+            HeightmapLayerPath = null;
+        }
     }
 
     public class ExportLandCoverTypeViewModel : ViewModelBase
     {
-
         private bool _grass;
         private bool _gravel;
         private bool _rock;

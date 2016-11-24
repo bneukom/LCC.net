@@ -1,0 +1,37 @@
+﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Export.BrowseLayerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LandscapeClassifier.View"
+        xmlns:model="clr-namespace:LandscapeClassifier.Model"
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:system="clr-namespace:System;assembly=mscorlib"
+        xmlns:converter="clr-namespace:LandscapeClassifier.Converter"
+        xmlns:dialogs="clr-namespace:LandscapeClassifier.ViewModel.Dialogs"
+        mc:Ignorable="d"
+        Title="Select Layer" Height="475.938" Width="378.599"
+        GlowBrush="{DynamicResource AccentColorBrush}"
+        DataContext="{StaticResource BrowseLayerDialogViewModel}">
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Label Content="{Binding Name}"></Label>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
+            <Button IsDefault="True" Content="Ok" IsEnabled="{Binding IsLayerSelected}" Click="OkClick" Width="75"/>
+        </StackPanel>
+
+    </Grid>
+</controls:MetroWindow>

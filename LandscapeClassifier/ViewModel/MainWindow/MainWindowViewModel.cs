@@ -28,6 +28,7 @@ using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using LandscapeClassifier.ViewModel.MainWindow.Prediction;
 using MathNet.Numerics.LinearAlgebra;
 using OSGeo.GDAL;
+using LayerViewModel = LandscapeClassifier.ViewModel.MainWindow.Classification.LayerViewModel;
 
 namespace LandscapeClassifier.ViewModel.MainWindow
 {

@@ -23,6 +23,7 @@
             <dialogs:AddLayersDialogViewModel x:Key="AddLayersViewModel"/>
             <dialogs:CreateTiledHeightmapDialogViewModel x:Key="CreateTiledHeightmapDialogViewModel"/>
             <dialogs:ExportPredictionDialogViewModel x:Key="ExportPredictionDialogViewModel"/>
+            <dialogs:BrowseLayerDialogViewModel x:Key="BrowseLayerDialogViewModel"/>
             <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>
     </Application.Resources>

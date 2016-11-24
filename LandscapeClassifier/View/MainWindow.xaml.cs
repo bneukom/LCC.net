@@ -85,7 +85,11 @@ namespace LandscapeClassifier.View
 
         private Control CreateValueControl(PropertyInfo propertyInfo)
         {
-            var binding = new Binding { Path = new PropertyPath(propertyInfo.Name) };
+            var binding = new Binding
+            {
+                Path = new PropertyPath(propertyInfo.Name),
+                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            };
             if (propertyInfo.PropertyType.IsEnum)
             {
                 var combo = new ComboBox { ItemsSource = Enum.GetValues(propertyInfo.PropertyType) };
