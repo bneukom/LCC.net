@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using GalaSoft.MvvmLight;
+using LandscapeClassifier.ViewModel.MainWindow.Classification;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
 {
@@ -39,15 +40,5 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         }
     }
 
-    public class LayerViewModel
-    {
-        public string Path { get; set; }
-        public string Name { get; set; }
 
-        public LayerViewModel(string path)
-        {
-            Path = path;
-            Name = System.IO.Path.GetFileName(Path);
-        }
-    }
 }

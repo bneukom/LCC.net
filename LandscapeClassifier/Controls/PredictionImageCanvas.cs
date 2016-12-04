@@ -112,19 +112,19 @@ namespace LandscapeClassifier.Controls
                 DrawBand(dc, band, predictionViewModel.WorldToScreen);
             }
 
-            if (predictionViewModel.PredictionUpperLeft != null &&
-                predictionViewModel.PredictionBottomRight != null)
+            if (predictionViewModel.PredictionUpperLeftWorld != null &&
+                predictionViewModel.PredictionBottomRightWorld != null)
             {
                 dc.PushOpacity(0.5);
-                DrawProjectedRect(dc, predictionViewModel.PredictionUpperLeft, predictionViewModel.PredictionBottomRight, _predictionBorderAreaPen, viewModel.ClassifierViewModel.WorldToScreen);
+                DrawProjectedRect(dc, predictionViewModel.PredictionUpperLeftWorld, predictionViewModel.PredictionBottomRightWorld, _predictionBorderAreaPen, viewModel.ClassifierViewModel.WorldToScreen);
                 dc.Pop();
             }
 
             if (predictionViewModel.ClassificationOverlay != null)
             {
                 dc.PushOpacity(viewModel.PredictionViewModel.OverlayOpacity);
-                var bandUpperLeft = viewModel.PredictionViewModel.PredictionUpperLeft;
-                var bandBottomRight = viewModel.PredictionViewModel.PredictionBottomRight;
+                var bandUpperLeft = viewModel.PredictionViewModel.PredictionUpperLeftWorld;
+                var bandBottomRight = viewModel.PredictionViewModel.PredictionBottomRightWorld;
                 DrawClassification(dc, bandUpperLeft, bandBottomRight);
                 dc.Pop();
             }

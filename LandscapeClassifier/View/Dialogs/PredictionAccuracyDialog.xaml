@@ -1,4 +1,4 @@
-﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Export.BrowseLayerDialog"
+﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Export.PredictionAccuracyDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -10,26 +10,26 @@
         xmlns:converter="clr-namespace:LandscapeClassifier.Converter"
         xmlns:dialogs="clr-namespace:LandscapeClassifier.ViewModel.Dialogs"
         mc:Ignorable="d"
-        Title="Select Layer" Height="475.938" Width="378.599"
+        Title="Accuracy" Height="475.938" Width="378.599"
         GlowBrush="{DynamicResource AccentColorBrush}"
-        DataContext="{StaticResource BrowseLayerDialogViewModel}">
+        DataContext="{StaticResource PredictionAccuracyDialogViewModel}">
     <Grid Margin="5">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"></ColumnDefinition>
         </Grid.ColumnDefinitions>
-        <Label VerticalAlignment="Center">Select Layer:</Label>
-        <DataGrid Grid.Row="1" MouseLeftButtonDown="DataGridOnMouseLeftButtonDown" AutoGenerateColumns="False" SelectedItem="{Binding SelectedLayer}" ItemsSource="{Binding Layers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
-            <DataGrid.Columns>
-                <DataGridTextColumn Width="*" Header="Name" Binding="{Binding Name}" IsReadOnly="True" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <DataGrid Grid.Row="0" ItemsSource="{Binding PredictionDataTable.DefaultView}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal">
+            <Label>Kappa</Label>
+            <Label Content="{Binding Kappa}"></Label>
+        </StackPanel>
+        
         <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
-            <Button IsDefault="True" Content="Ok" IsEnabled="{Binding IsLayerSelected}" Click="OkClick" Width="75"/>
+            <Button IsDefault="True" Content="Ok" Click="OkClick" Width="75"/>
         </StackPanel>
 
     </Grid>

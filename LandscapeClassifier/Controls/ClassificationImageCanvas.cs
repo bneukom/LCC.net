@@ -60,10 +60,12 @@ namespace LandscapeClassifier.Controls
 
                 ushort[] bandPixels = new ushort[featureBands.Count];
 
+                var viewToToWorld = viewModel.ClassifierViewModel.ScreenToWorld* _scaleMat.Inverse() * _screenToViewMat.Inverse();
+
                 for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                 {
                     var band = featureBands[bandIndex];
-                    var viewToPixelMat = band.WorldToImage * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();
+                    var viewToPixelMat = band.WorldToImage * viewToToWorld;
                     var bandPixelPosition = viewToPixelMat * mouseVec;
 
                     ushort bandPixelValue = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
@@ -71,7 +73,9 @@ namespace LandscapeClassifier.Controls
                     bandPixels[bandIndex] = bandPixelValue;
                 }
 
-                var classifiedFeatureVector = new ClassifiedFeatureVector(viewModel.ClassifierViewModel.SelectedLandCoverType, new FeatureVector(bandPixels));
+                var worldMousePosition = viewToToWorld*mouseVec;
+
+                var classifiedFeatureVector = new ClassifiedFeatureVector(viewModel.ClassifierViewModel.SelectedLandCoverType, new FeatureVector(bandPixels), new Point(worldMousePosition[0], worldMousePosition[1]));
                 viewModel.ClassifierViewModel.FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(classifiedFeatureVector));
             }
         }

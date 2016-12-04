@@ -15,6 +15,7 @@ using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Model.Classification.Algorithms;
+using LandscapeClassifier.View.Export;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.Dialogs;
 using LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms;
@@ -434,9 +435,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                     foreach (var feature in FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector))
                     {
-                        var featureString = feature.FeatureVector.BandIntensities.Aggregate(feature.Type.ToString(),
-                            (accu, intensity) => accu + ";" + intensity);
-                        outputStreamWriter.WriteLine(featureString);
+                        outputStreamWriter.Write(feature.Position + " ");
+                        outputStreamWriter.Write(feature.Type + " ");
+                        var featureString = feature.FeatureVector.BandIntensities.Select(i => i.ToString()).Aggregate((accu, intensity) => accu + ";" + intensity);
+                        outputStreamWriter.Write(featureString);
+                        outputStreamWriter.Write(Environment.NewLine);
                     }
                 }
             }
@@ -449,6 +452,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private void ImportTrainingSet()
         {
+            PredictionAccuracyDialog predictionAccuracyDialog = new PredictionAccuracyDialog();
+
+            int[,] data = new int[9,9];
+            for (int row = 0; row < 9; ++row)
+            {
+                for (int column = 0; column < 9; ++column)
+                {
+                    data[row, column] = 0;
+                }
+            }
+            predictionAccuracyDialog.DialogViewModel.SetPredictionData(data);
+            predictionAccuracyDialog.ShowDialog();
+
             // Create an instance of the open file dialog box.
             var openFileDialog = new OpenFileDialog
             {
@@ -503,17 +519,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                     while ((featureLine = file.ReadLine()) != null)
                     {
-                        string[] feature = featureLine.Split(';');
-                        LandcoverType type;
-                        Enum.TryParse(feature[0], true, out type);
-                        var intensities = feature.Skip(1).Select(ushort.Parse).ToArray();
+                        string[] positionTypeIntensities = featureLine.Split(' ');
+                        string position = positionTypeIntensities[0];
+                        string[] coordinates = position.Split(',');
+                        var type = (LandcoverType)Enum.Parse(typeof(LandcoverType), positionTypeIntensities[1]);
+                        var intensities = positionTypeIntensities[2].Split(';').Select(ushort.Parse).ToArray();
 
-                        FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type,
-                            new FeatureVector(intensities))));
+                        FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type, new FeatureVector(intensities), new Point(double.Parse(coordinates[0]), double.Parse(coordinates[1])))));
                     }
                 }
 
-
+                
 
 
             }

@@ -308,11 +308,14 @@
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
     <Compile Include="Model\Layer.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
+    <Compile Include="Model\Neighborhood.cs" />
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="Util\Either.cs" />
+    <Compile Include="Util\GdalUtil.cs" />
     <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\BrowseLayerDialogViewModel.cs" />
+    <Compile Include="ViewModel\Dialogs\PredictionAccuracyDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\Algorithms\OptionAttribute.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
@@ -322,6 +325,9 @@
     <Compile Include="ViewModel\MainWindow\MainWindowViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\AddLayersDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
+    <Compile Include="View\Dialogs\PredictionAccuracyDialog.xaml.cs">
+      <DependentUpon>PredictionAccuracyDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\Dialogs\Export\BrowseLayerDialog.xaml.cs">
       <DependentUpon>BrowseLayerDialog.xaml</DependentUpon>
     </Compile>
@@ -366,6 +372,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Resources\IconsNonShared.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\Dialogs\PredictionAccuracyDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

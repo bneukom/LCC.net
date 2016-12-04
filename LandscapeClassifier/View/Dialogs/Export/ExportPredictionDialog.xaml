@@ -37,14 +37,14 @@
             <ColumnDefinition Width="Auto"></ColumnDefinition>
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
-            <Label>Export Path:</Label>
-            <TextBox Margin="5" Width="300" Text="{Binding ExportPath}"></TextBox>
+            <Label VerticalAlignment="Center">Export Path:</Label>
+            <TextBox VerticalAlignment="Center" Margin="5" Width="300" Text="{Binding ExportPath}"></TextBox>
             <Button Margin="0,5,5,5" Command="{Binding BrowseExportPathCommand}">Browse...</Button>
         </StackPanel>
         <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical">
             <StackPanel Orientation="Horizontal">
                 <CheckBox  Margin="5" IsChecked="{Binding ExportHeightmap, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center">Export 16bit Grayscale Heightmap</CheckBox>
-                <TextBox MinWidth="200" Margin="0,5,5,5" IsEnabled="{Binding ExportHeightmap}" Text="{Binding HeightmapLayerPath}"></TextBox>
+                <TextBox VerticalAlignment="Center" MinWidth="200" Margin="0,5,5,5" IsEnabled="{Binding ExportHeightmap}" Text="{Binding HeightmapLayer}"></TextBox>
                 <Button Content="Browse..." Margin="0,5,5,5" Command="{Binding BrowseHeightmapLayerCommand}"></Button>
             </StackPanel>
             <StackPanel IsEnabled="{Binding ExportHeightmap}" Orientation="Horizontal">

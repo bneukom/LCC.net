@@ -13,6 +13,7 @@ using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.View.Export;
+using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using OSGeo.GDAL;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
@@ -25,9 +26,9 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private bool _isExportPathSet;
         private double _minAltitude;
         private double _maxAltitude;
-        private string _heightmapLayerPath;
+        private LayerViewModel _heightmapLayer;
 
-        public List<string> ExistingLayerPaths { get; set; }
+        public List<LayerViewModel> ExistingLayers { get; set; } = new List<LayerViewModel>();
 
         public ExportLandCoverTypeViewModel SelectedLayer
         {
@@ -70,10 +71,10 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _maxAltitude = value; RaisePropertyChanged(); }
         }
 
-        public string HeightmapLayerPath
+        public LayerViewModel HeightmapLayer
         {
-            get { return _heightmapLayerPath; }
-            set { _heightmapLayerPath = value; RaisePropertyChanged(); }
+            get { return _heightmapLayer; }
+            set { _heightmapLayer = value; RaisePropertyChanged(); }
         }
 
         public ObservableCollection<ExportLandCoverTypeViewModel> ExportLayers { get; set; }
@@ -81,7 +82,6 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public ICommand AddLayerCommand { get; set; }
         public ICommand RemoveLayerCommand { get; set; }
         public ICommand BrowseExportPathCommand { get; set; }
-
         public ICommand BrowseHeightmapLayerCommand { get; set; }
 
         public ExportPredictionDialogViewModel()
@@ -98,14 +98,14 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         {
             var browseLayerDialog = new BrowseLayerDialog();
 
-            browseLayerDialog.DialogViewModel.Layers.AddRange(ExistingLayerPaths.Select(p => new LayerViewModel(p)));
+            browseLayerDialog.DialogViewModel.Layers.AddRange(ExistingLayers);
 
             if (browseLayerDialog.ShowDialog() == true)
             {
-                string selectedLayer = browseLayerDialog.DialogViewModel.SelectedLayer.Path;
-                HeightmapLayerPath = selectedLayer;
+                var selectedLayer = browseLayerDialog.DialogViewModel.SelectedLayer;
+                HeightmapLayer = selectedLayer;
 
-                var dataSet = Gdal.Open(selectedLayer, Access.GA_ReadOnly);
+                var dataSet = Gdal.Open(selectedLayer.Path, Access.GA_ReadOnly);
                 var rasterBand = dataSet.GetRasterBand(1);
 
                 double[] minMax = new double[2];
@@ -168,10 +168,10 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public void Reset()
         {
             ExportHeightmap = false;
-            ExistingLayerPaths.Clear();
+            ExistingLayers.Clear();
             MinAltitude = 0.0;
             MaxAltitude = 0.0;
-            HeightmapLayerPath = null;
+            HeightmapLayer = null;
         }
     }
 

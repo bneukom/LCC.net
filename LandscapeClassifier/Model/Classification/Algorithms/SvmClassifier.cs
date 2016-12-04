@@ -84,7 +84,6 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
         public override int[] Predict(double[][] features)
         {
-            // TODO slow as fuck??
             return _svm.Case(l => l.Decide(features), r => r.Decide(features));
         }
     }

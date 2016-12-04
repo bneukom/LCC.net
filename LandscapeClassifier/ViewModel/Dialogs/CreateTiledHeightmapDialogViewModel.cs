@@ -12,6 +12,7 @@ using System.Windows.Media;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Extensions;
+using LandscapeClassifier.Util;
 using Microsoft.Win32;
 using OSGeo.GDAL;
 
@@ -241,7 +242,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                                 }
                             }
 
-                            WritePng(tilePtr, TileWidth, TileHeight, $"heightmap_x{tileX}_y{tileY}.png");
+                            GdalUtil.WritePng(tilePtr, TileWidth, TileHeight, Path.Combine(OutputPath, $"heightmap_x{tileX}_y{tileY}.png"));
 
                             Marshal.FreeHGlobal(tilePtr);
                         }
@@ -255,7 +256,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             {
                 transformTask.ContinueWith(t =>
                 {
-                    WritePng(_transformedPtr, rasterXSize, rasterYSize, "heightmap.png");
+                    GdalUtil.WritePng(_transformedPtr, rasterXSize, rasterYSize, Path.Combine(OutputPath, "heightmap.png"));
 
                     Application.Current.Dispatcher.Invoke(() => LoadingOverlayVisibility = Visibility.Collapsed);
                 });
@@ -263,25 +264,11 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         }
 
-        private unsafe void WritePng(IntPtr data, int width, int height, string fileName)
-        {
-            Driver png = Gdal.GetDriverByName("PNG");
-            Driver mem = Gdal.GetDriverByName("MEM");
-            using (Dataset memDataSet = mem.Create("", width, height, 1, DataType.GDT_UInt16, new string[0]))
-            {
-                memDataSet.WriteRaster(0, 0, width, height, data,
-                    width, height, DataType.GDT_UInt16, 1, new[] { 1 }, 0, 0, 0);
-
-                Dataset pngDataSet = png.CreateCopy(Path.Combine(OutputPath, fileName), memDataSet, 1, new string[0], null, null);
-                pngDataSet.Dispose();
-            }
-        }
-
         private void BrowseInputPath()
         {
             var openFileDialog = new OpenFileDialog()
             {
-                Filter = "TIF Files (.tif)|*.tif",
+                Filter = "TIF Files (.tif)|*.tif|PNG Files (.png)|*.png",
                 FilterIndex = 1,
             };
 

@@ -15,12 +15,19 @@ using System.Windows.Media.Imaging;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using GalaSoft.MvvmLight.Messaging;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
+using LandscapeClassifier.Util;
 using LandscapeClassifier.View.Open;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
+using MahApps.Metro.Controls;
 using MathNet.Numerics.LinearAlgebra;
+using Microsoft.Win32;
+using OSGeo.GDAL;
 using ZedGraph;
 using ExportPredicitonDialog = LandscapeClassifier.View.Export.ExportPredicitonDialog;
+using Point = System.Windows.Point;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
@@ -37,12 +44,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         private double _overlayOpacity = 0.5d;
         private double _acceptanceProbabilty;
 
+        private int _predictionWidth;
+        private int _predictionHeight;
         private int[][] _classification;
+
         private bool _notBlocking = true;
 
 
         private Visibility _progressVisibility = Visibility.Hidden;
         private double _predictionProgress;
+
+
 
         /// <summary>
         /// Predict all.
@@ -54,7 +66,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// </summary>
         public ICommand ExportPredictionsCommand { set; get; }
 
+        /// <summary>
+        /// Executes the majority filter on the classification.
+        /// </summary>
         public ICommand ApplyMajorityFilterCommand { get; set; }
+
+        /// <summary>
+        /// Assess the accuracy of the algorithm.
+        /// </summary>
+        public ICommand AssessAccuracyCommand { get; set; }
 
         /// <summary>
         /// Classification bitmap.
@@ -83,6 +103,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// Conversion from world to screen coordinates.
         /// </summary>
         public Matrix<double> WorldToScreen;
+
+        private Neighborhood _majorityFilterNeighborhood;
 
         /// <summary>
         /// Opacity overlay.
@@ -142,9 +164,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             set { _predictionProgress = value; RaisePropertyChanged(); }
         }
 
-        public Vector<double> PredictionUpperLeft { get; set; }
+        public Neighborhood MajorityFilterNeighborhood
+        {
+            get { return _majorityFilterNeighborhood; }
+            set { _majorityFilterNeighborhood = value; RaisePropertyChanged(); }
+        }
 
-        public Vector<double> PredictionBottomRight { get; set; }
+        public Vector<double> PredictionUpperLeftWorld { get; set; }
+
+        public Vector<double> PredictionBottomRightWorld { get; set; }
+
+
 
 
         public PredictionViewModel(MainWindowViewModel mainWindowViewModel)
@@ -158,21 +188,180 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
             ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
             ApplyMajorityFilterCommand = new RelayCommand(ApplyMajorityFilter, CanApplyMajorityFilter);
+            AssessAccuracyCommand = new RelayCommand(AssessAccuracy);
         }
+
+
 
         private bool CanExportPredictions() => NotBlocking && IsAllPredicted;
         private bool CanPredictAll() => NotBlocking;
         private bool CanApplyMajorityFilter() => NotBlocking && IsAllPredicted;
 
+        private void AssessAccuracy()
+        {
+            var openFileDialog = new OpenFileDialog()
+            {
+                FilterIndex = 1,
+                Title = "Choose Feature File"
+            };
+
+            var userClickedOk = openFileDialog.ShowDialog();
+
+            if (userClickedOk == true)
+            {
+                using (var file = new StreamReader(openFileDialog.FileName))
+                {
+
+                    int numLayers = int.Parse(file.ReadLine());
+
+
+                    for (int i = 0; i < numLayers*8; ++i)
+                    {
+                        file.ReadLine();
+                    }
+
+                    string featureLine;
+
+                    int wrongPredictions = 0;
+                    int totalPredictions = 0;
+
+                    int numFeatures = Enum.GetValues(typeof(LandcoverType)).Length - 1;
+                    int[,] predictionMatrix = new int[numFeatures, numFeatures];
+
+                    while ((featureLine = file.ReadLine()) != null)
+                    {
+                        string[] positionTypeIntensities = featureLine.Split(' ');
+                        string position = positionTypeIntensities[0];
+                        string[] coordinates = position.Split(',');
+
+                        var type = (LandcoverType) Enum.Parse(typeof(LandcoverType), positionTypeIntensities[1]);
+                        var featurePosition = Vector<double>.Build.DenseOfArray(new[] {double.Parse(coordinates[0]), double.Parse(coordinates[1]), 1.0});
+                        var featureBands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
+
+                        ushort[] bandPixels = new ushort[featureBands.Count];
+
+                        for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
+                        {
+                            var band = featureBands[bandIndex];
+                            var bandPixelPosition = band.WorldToImage * featurePosition;
+
+                            ushort bandPixelValue = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+
+                            bandPixels[bandIndex] = bandPixelValue;
+                        }
+
+                        
+
+                        var predictedType = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(new FeatureVector(bandPixels));
+                        if (predictedType != type) wrongPredictions++;
+
+                        predictionMatrix[(int)type, (int)predictedType]++;
+
+
+                        totalPredictions++;
+                    }
+
+                    Console.WriteLine("Total predictions: " + totalPredictions);
+                    Console.WriteLine("Wrong predictions: " + wrongPredictions);
+                    for (int i = 0; i < numFeatures; ++i)
+                    {
+                        for (int j = 0; j < numFeatures; ++j)
+                        {
+                            Console.Write(predictionMatrix[i,j] + ", ");
+                        }
+                        Console.Write(Environment.NewLine);
+                    }
+                }
+            }
+        }
+
         private void ApplyMajorityFilter()
         {
+            NotBlocking = false;
+
+
+            int[][] filtered = new int[_predictionHeight][];
+
+
+            var majorityFilter = Task.Factory.StartNew(() => Parallel.For(0, _predictionHeight, y =>
+            {
+                int[] line = new int[_predictionWidth];
+                int[] neighbors = new int[Enum.GetValues(typeof(LandcoverType)).Length - 1];
+
+                for (int x = 0; x < _predictionWidth; ++x)
+                {
+                    if (y > 0 && x > 0 && y < _predictionHeight - 1 && x < _predictionWidth - 1)
+                    {
+                        for (int i = 0; i < neighbors.Length; ++i) neighbors[i] = 0;
+
+                        neighbors[_classification[y - 1][x - 1]]++;
+                        neighbors[_classification[y - 1][x + 0]]++;
+                        neighbors[_classification[y - 1][x + 1]]++;
+                        neighbors[_classification[y + 0][x - 1]]++;
+                        neighbors[_classification[y + 0][x + 0]]++;
+                        neighbors[_classification[y + 0][x + 1]]++;
+                        neighbors[_classification[y + 1][x - 1]]++;
+                        neighbors[_classification[y + 1][x + 0]]++;
+                        neighbors[_classification[y + 1][x + 1]]++;
+
+                        int biggest = neighbors[0];
+                        int biggestIndex = 0;
+                        for (int index = 0; index < neighbors.Length; index++)
+                        {
+                            if (neighbors[index] > biggest)
+                            {
+                                biggest = neighbors[index];
+                                biggestIndex = index;
+                            }
+                        }
+
+                        line[x] = biggestIndex;
+                    }
+                    else
+                    {
+                        line[x] = _classification[y][x];
+                    }
+                }
+
+                filtered[y] = line;
+            }));
+
+            majorityFilter.ContinueWith(t =>
+            {
+                _classification = filtered;
+
+                int stride = _predictionWidth * 4;
+                int size = _predictionHeight * stride;
+                byte[] imageData = new byte[size];
+
+                Parallel.For(0, _predictionWidth, x =>
+                {
+                    for (int y = 0; y < _predictionHeight; ++y)
+                    {
+                        int index = 4 * y * _predictionWidth + 4 * x;
+                        LandcoverType type = (LandcoverType)_classification[y][x];
+                        var color = type.GetColor();
+                        imageData[index + 0] = color.B;
+                        imageData[index + 1] = color.G;
+                        imageData[index + 2] = color.R;
+                        imageData[index + 3] = color.A;
+                    }
+                });
+
+                Application.Current.Invoke(() =>
+                {
+                    ClassificationOverlay = BitmapSource.Create(_predictionWidth, _predictionHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
+                    NotBlocking = true;
+                    ProgressVisibility = Visibility.Hidden;
+                });
+            });
         }
 
         private void ExportPredictions()
         {
             ExportPredicitonDialog dialog = new ExportPredicitonDialog();
 
-            if (dialog.ShowDialog(_mainWindowViewModel.Layers.Where(l => l.Path != null).Select(l => l.Path).ToList()) == true)
+            if (dialog.ShowDialog(_mainWindowViewModel.Layers.Where(l => l.Path != null).ToList()) == true)
             {
                 var layers = dialog.DialogViewModel.ExportLayers;
 
@@ -183,8 +372,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                 NotBlocking = false;
 
+                // Create layers
                 List<Task> createLayerTasks = new List<Task>();
-                for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
+                for (int layerIndex = 0; layerIndex < layers.Count; ++layerIndex)
                 {
                     var layer = layers[layerIndex];
                     var types = layer.LandCoverTypes;
@@ -207,15 +397,88 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                                 layerData[constLayer][dataIndex + 3] = color;
                             }
                         }
+
                     })));
                 }
 
+                // Write results
+                List<Task> writeResultTasks = new List<Task>();
                 if (dialog.DialogViewModel.ExportHeightmap)
                 {
-                    
+                    var layer = dialog.DialogViewModel.HeightmapLayer;
+
+                    var upperLeftImage = layer.WorldToImage * PredictionUpperLeftWorld;
+                    var bottomRightImage = layer.WorldToImage * PredictionBottomRightWorld;
+                    int upperLeftX = (int)upperLeftImage[0];
+                    int upperLeftY = (int)upperLeftImage[1];
+                    int bottomLeftX = (int)bottomRightImage[0];
+                    int bottomLeftY = (int)bottomRightImage[1];
+                    int heightmapExportWidth = bottomLeftX - upperLeftX;
+                    int heightmapExportHeight = bottomLeftY - upperLeftY;
+
+                    var dataSet = Gdal.Open(layer.Path, Access.GA_ReadOnly);
+                    var rasterBand = dataSet.GetRasterBand(1);
+
+                    var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
+                    int originalStride = (rasterBand.XSize * bitsPerPixel + 7) / 8;
+                    IntPtr originalPtr = Marshal.AllocHGlobal(originalStride * rasterBand.YSize);
+
+                    rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, originalPtr, rasterBand.XSize,
+                        rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, originalStride);
+
+                    double[] minMax = new double[2];
+                    rasterBand.ComputeRasterMinMax(minMax, 0);
+                    double minAltitude = minMax[0];
+                    double maxAltitude = minMax[1];
+
+                    double noDataValue;
+                    int hasValue;
+                    rasterBand.GetNoDataValue(out noDataValue, out hasValue);
+
+                    var targetFormat = PixelFormats.Gray16;
+                    int transformedStride = (heightmapExportWidth * targetFormat.BitsPerPixel + 7) / 8;
+                    var transformedPtr = Marshal.AllocHGlobal(transformedStride * heightmapExportHeight);
+
+                    var transform = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, heightmapExportHeight), (range) =>
+                    {
+                        unsafe
+                        {
+                            // TODO check if is in bounds
+                            float* original = (float*)originalPtr.ToPointer();
+                            ushort* transformed = (ushort*)transformedPtr.ToPointer();
+                            for (int y = upperLeftY + range.Item1; y < upperLeftY + range.Item2; ++y)
+                            {
+                                for (int x = upperLeftX; x < bottomLeftX; ++x)
+                                {
+                                    int originalOffset = y * layer.ImagePixelWidth + x;
+                                    int transformedOffset = (y - upperLeftY) * heightmapExportWidth + (x - upperLeftX);
+                                    float value = *(original + originalOffset);
+
+                                    if (Math.Abs(value - noDataValue) < 0.0001)
+                                    {
+                                        *(transformed + transformedOffset) = 0;
+                                    }
+                                    else
+                                    {
+                                        ushort scaled = (ushort)Math.Min((value - minAltitude) / (maxAltitude - minAltitude) * ushort.MaxValue, ushort.MaxValue);
+                                        *(transformed + transformedOffset) = scaled;
+                                    }
+                                }
+                            }
+                        }
+                    }));
+
+                    var writeToDisk = transform.ContinueWith(t =>
+                    {
+                        GdalUtil.WritePng(transformedPtr, heightmapExportWidth, heightmapExportHeight,
+                            Path.Combine(dialog.DialogViewModel.ExportPath, "heightmap.png"));
+                        dataSet.Dispose();
+                    });
+                    writeResultTasks.Add(writeToDisk);
                 }
 
-                Task.WhenAll(createLayerTasks).ContinueWith(t =>
+
+                writeResultTasks.Add(Task.WhenAll(createLayerTasks).ContinueWith(t =>
                 {
                     for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
                     {
@@ -232,14 +495,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             encoder.Save(fileStream);
                         }
                     }
+                }));
 
-                    NotBlocking = true;
+                // Finish
+                Task.WhenAll(writeResultTasks).ContinueWith(t =>
+                {
+                    Application.Current.Dispatcher.Invoke(() => NotBlocking = true);
                 });
 
             }
         }
-
-
 
         private void PredictAll()
         {
@@ -269,22 +534,22 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             var upperLeftWorld = ScreenToWorld * Vector<double>.Build.DenseOfArray(new[] { intersection.X, intersection.Y, 1.0 });
             var bottomRightWorld = ScreenToWorld * Vector<double>.Build.DenseOfArray(new[] { intersection.X + intersection.Width, intersection.Y + intersection.Height, 1.0 });
 
-            PredictionUpperLeft = upperLeftWorld;
-            PredictionBottomRight = bottomRightWorld;
+            PredictionUpperLeftWorld = upperLeftWorld;
+            PredictionBottomRightWorld = bottomRightWorld;
 
             var scaleBand = featureBands.OrderBy(b => b.ScaleX).First();
 
-            int predictionWidth = (int)(scaleBand.WorldToImage * bottomRightWorld)[0];
-            int predictionHeight = (int)(scaleBand.WorldToImage * bottomRightWorld)[1];
+            _predictionWidth = (int)(scaleBand.WorldToImage * bottomRightWorld)[0];
+            _predictionHeight = (int)(scaleBand.WorldToImage * bottomRightWorld)[1];
 
             IntPtr[] data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
-            _classification = new int[predictionHeight][];
+            _classification = new int[_predictionHeight][];
 
-            Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, predictionHeight), range =>
+            Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, _predictionHeight), range =>
             {
-                double[][] features = new double[predictionWidth][];
+                double[][] features = new double[_predictionWidth][];
 
-                for (int i = 0; i < predictionWidth; ++i)
+                for (int i = 0; i < _predictionWidth; ++i)
                 {
                     features[i] = new double[numFeatures];
                 }
@@ -302,7 +567,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             if (featureBands[bandIndex].Format == PixelFormats.Gray16)
                             {
                                 ushort* dataPtr = (ushort*)data[bandIndex].ToPointer();
-                                for (int x = 0; x < predictionWidth; ++x)
+                                for (int x = 0; x < _predictionWidth; ++x)
                                 {
                                     var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
                                     int pixelX = (int)pixelPosition[0];
@@ -315,7 +580,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             else if (featureBands[bandIndex].Format == PixelFormats.Gray32Float)
                             {
                                 float* dataPtr = (float*)data[bandIndex].ToPointer();
-                                for (int x = 0; x < predictionWidth; ++x)
+                                for (int x = 0; x < _predictionWidth; ++x)
                                 {
                                     var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
                                     int pixelX = (int)pixelPosition[0];
@@ -331,7 +596,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                     lock (this)
                     {
-                        PredictionProgress += 100.0 / predictionHeight;
+                        PredictionProgress += 100.0 / _predictionHeight;
                     }
                 }
 
@@ -339,15 +604,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
             predict.ContinueWith(t =>
             {
-                int stride = predictionWidth * 4;
-                int size = predictionHeight * stride;
+                int stride = _predictionWidth * 4;
+                int size = _predictionHeight * stride;
                 byte[] imageData = new byte[size];
 
-                Parallel.For(0, predictionWidth, x =>
+                Parallel.For(0, _predictionWidth, x =>
                 {
-                    for (int y = 0; y < predictionHeight; ++y)
+                    for (int y = 0; y < _predictionHeight; ++y)
                     {
-                        int index = 4 * y * predictionWidth + 4 * x;
+                        int index = 4 * y * _predictionWidth + 4 * x;
                         LandcoverType type = (LandcoverType)_classification[y][x];
                         var color = type.GetColor();
                         imageData[index + 0] = color.B;
@@ -359,7 +624,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    ClassificationOverlay = BitmapSource.Create(predictionWidth, predictionHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
+                    ClassificationOverlay = BitmapSource.Create(_predictionWidth, _predictionHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
                     IsAllPredicted = true;
                     NotBlocking = true;
                     ProgressVisibility = Visibility.Hidden;

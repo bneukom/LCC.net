@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Windows;
 using LandscapeClassifier.ViewModel.Dialogs;
+using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MahApps.Metro.Controls;
 
 namespace LandscapeClassifier.View.Export
@@ -20,9 +21,9 @@ namespace LandscapeClassifier.View.Export
             DialogViewModel.Reset();
         }
 
-        public bool? ShowDialog(List<string> layerPaths)
+        public bool? ShowDialog(List<LayerViewModel> layerPaths)
         {
-            DialogViewModel.ExistingLayerPaths = layerPaths;
+            DialogViewModel.ExistingLayers = layerPaths;
             return ShowDialog();
         }
 

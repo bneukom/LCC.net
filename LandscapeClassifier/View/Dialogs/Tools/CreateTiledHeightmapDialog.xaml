@@ -41,7 +41,7 @@
                     <TextBox  Grid.Row="0" x:Name="InputPathTextBox" Grid.Column="1" Margin="5,5,5,5" Text="{Binding InputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ></TextBox>
                     <Button Grid.Row="0" Grid.Column="2"  Margin="5,5,5,5" Width="70"  Content="Browse..." Command="{Binding BrowseInputPathCommand}"/>
 
-                    <Label Grid.Row="1" Grid.Column="0" Margin="0,5,5,5" HorizontalContentAlignment="Left" Content="Output:"></Label>
+                    <Label Grid.Row="1" Grid.Column="0" Margin="0,5,5,5" HorizontalContentAlignment="Left" Content="Output Folder:"></Label>
                     <TextBox  Grid.Row="1" x:Name="OutputPathTextBox" Grid.Column="1" Margin="5,5,5,5" Text="{Binding OutputPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
                     <Button Grid.Row="1" Grid.Column="2"  Margin="5,5,5,5" Width="70"  Content="Browse..." Command="{Binding BrowseOutputPathCommand}"/>
 
@@ -99,7 +99,7 @@
 
                 </Grid>
             </GroupBox>
-            <Button IsEnabled="{Binding InputPathSet}" Grid.Row="4" Grid.Column="2" MinWidth="100" Content="Create" Margin="5" Command="{Binding CreateHeightmapCommand}"></Button>
+            <Button IsEnabled="{Binding InputPathSet}" Grid.Row="4" Grid.Column="2" MinWidth="100" Content="Create Heightmaps" Margin="5" Command="{Binding CreateHeightmapCommand}"></Button>
 
 
             <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">

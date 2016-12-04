@@ -9,16 +9,16 @@ namespace LandscapeClassifier.View.Export
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml
     /// </summary>
-    public partial class BrowseLayerDialog : MetroWindow
+    public partial class PredictionAccuracyDialog : MetroWindow
     {
-        public BrowseLayerDialogViewModel DialogViewModel { get; private set; }
+        public PredictionAccuracyDialogViewModel DialogViewModel { get; private set; }
 
-        public BrowseLayerDialog()
+        public PredictionAccuracyDialog()
         {
             InitializeComponent();
 
-            DialogViewModel = (BrowseLayerDialogViewModel)DataContext;
-            DialogViewModel.Reset();
+            DialogViewModel = (PredictionAccuracyDialogViewModel)DataContext;
+
         }
 
         private void OkClick(object sender, RoutedEventArgs e)
@@ -26,12 +26,5 @@ namespace LandscapeClassifier.View.Export
             DialogResult = true;
         }
 
-        private void DataGridOnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ClickCount == 2)
-            {
-                DialogResult = true;
-            }
-        }
     }
 }

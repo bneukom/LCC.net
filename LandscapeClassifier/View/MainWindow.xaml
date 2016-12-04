@@ -11,6 +11,8 @@
         xmlns:classifierControls="clr-namespace:LandscapeClassifier.Controls"
         xmlns:classification="clr-namespace:LandscapeClassifier.ViewModel.MainWindow.Classification"
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        xmlns:system="clr-namespace:System;assembly=mscorlib"
+        xmlns:model="clr-namespace:LandscapeClassifier.Model"
         mc:Ignorable="d"
         GlowBrush="{DynamicResource AccentColorBrush}"
         Title="Land Cover Classifier" DataContext="{StaticResource MainWindowViewModel}"  Icon="/Resources/Icons/Icon128_3.png" WindowTitleBrush="#DDDDDD" Height="900" Width="1440" UseLayoutRounding="True">
@@ -154,7 +156,7 @@
                                             <ColumnDefinition Width="*"></ColumnDefinition>
                                         </Grid.ColumnDefinitions>
                                     </Grid>
-                                   
+
                                 </Grid>
                             </GroupBox>
                             <TreeView  Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
@@ -174,7 +176,7 @@
                             <Button Grid.Column="0" Grid.Row="3" Command="{Binding ClassifierViewModel.RemoveAllFeaturesCommand}" Content="Remove All Features" Margin="5,5,5,0"></Button>
                             <Button Grid.Column="0" Grid.Row="4" Content="Export Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}" Margin="5,5,5,0"></Button>
                             <Button Grid.Column="0" Grid.Row="5" Content="Import Features" Command="{Binding ClassifierViewModel.ImportFeatureCommand}" Margin="5,5,5,0"></Button>
-                            <Button Grid.Column="0" Grid.Row="6"  Content="Train Features" Command="{Binding ClassifierViewModel.TrainCommand}" Margin="5,5,5,0"></Button>
+                            <Button Grid.Column="0" Grid.Row="6"  Content="Train" Command="{Binding ClassifierViewModel.TrainCommand}" Margin="5,5,5,0"></Button>
                         </Grid>
 
                         <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="3">
@@ -188,7 +190,7 @@
                                     <converter:PointToStringConverter x:Key="PointToStringConverter" />
                                 </StackPanel.Resources>
                                 <Label Content="Pixel Position:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label Content="{Binding ClassifierViewModel.MouseScreenPoisition, Mode=TwoWay, Converter={StaticResource PointToStringConverter}}" HorizontalAlignment="Left" MinWidth="75" Margin="0,0,0,0"  VerticalAlignment="Center" />
+                                <Label Content="{Binding ClassifierViewModel.MouseScreenPoisition, Mode=TwoWay, Converter={StaticResource PointToStringConverter}}" HorizontalAlignment="Left" MinWidth="100" Margin="0,0,0,0"  VerticalAlignment="Center" />
                                 <Separator>
                                     <Separator.LayoutTransform>
                                         <RotateTransform Angle="90" />
@@ -238,19 +240,28 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="auto"/>
                             </Grid.ColumnDefinitions>
-
-                            <Button Grid.Column="0" Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictionViewModel.PredictAllCommand}"></Button>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Overlay Transparency:"></TextBlock>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <Button Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictionViewModel.PredictAllCommand}"></Button>
+                                <Button Content="Export" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
+                                <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Prediction Transparency:"></TextBlock>
                                 <Slider Style="{DynamicResource FlatSlider}" Orientation="Horizontal" Value="{Binding PredictionViewModel.OverlayOpacity}" Minimum="0" Maximum="1" Width="100" TickPlacement="BottomRight" TickFrequency="0.1" VerticalAlignment="Center"></Slider>
                                 <TextBlock Margin="2,5,5,5" Text="{Binding PredictionViewModel.OverlayOpacity, Converter={StaticResource DoubleRoundingConverter}}" VerticalAlignment="Center" Width="50"/>
                             </StackPanel>
+                            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                <Button Content="Assess Accuracy" Command="{Binding PredictionViewModel.AssessAccuracyCommand}" Margin="5,5,5,5"></Button>
+                            </StackPanel>
                         </Grid>
-                        <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" IsEnabled="{Binding PredictionViewModel.IsAllPredicted}">
+                            <StackPanel.Resources>
+                                <ObjectDataProvider x:Key="NeighborhoodDataProvider" MethodName="GetValues" ObjectType="{x:Type system:Enum}">
+                                    <ObjectDataProvider.MethodParameters>
+                                        <x:Type TypeName="model:Neighborhood"/>
+                                    </ObjectDataProvider.MethodParameters>
+                                </ObjectDataProvider>
+                            </StackPanel.Resources>
                             <Button Content="Apply Majority Filter" Command="{Binding PredictionViewModel.ApplyMajorityFilterCommand}" Margin="5,5,5,5"></Button>
-                            <Button Content="Export" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
+                            <Label Margin="5">Neighborhood:</Label>
+                            <ComboBox Margin="5" ItemsSource="{Binding Source={StaticResource NeighborhoodDataProvider}}" SelectedValue="{Binding PredictionViewModel.MajorityFilterNeighborhood}" SelectedIndex="0"></ComboBox>
                         </StackPanel>
                         <Grid  Grid.Row="2">
                             <Grid.ColumnDefinitions>
