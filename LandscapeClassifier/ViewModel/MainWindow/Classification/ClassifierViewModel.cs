@@ -274,8 +274,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public Dictionary<Classifier, ClassifierViewModelBase> ClassifierViewModels;
 
-
-
         public ClassifierViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
@@ -295,8 +293,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             FeaturesViewModel = new FeaturesViewModel();
 
-            RemoveAllFeaturesCommand = new RelayCommand(() => FeaturesViewModel.RemoveAllFeatures(),
-                () => FeaturesViewModel.HasFeatures());
+            RemoveAllFeaturesCommand = new RelayCommand(() => FeaturesViewModel.RemoveAllFeatures(), () => FeaturesViewModel.HasFeatures());
 
             RemoveSelectedFeatureVectorCommand = new RelayCommand(RemoveSelectedFeature, CanRemoveSelectedFeature);
 
@@ -528,10 +525,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                         FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type, new FeatureVector(intensities), new Point(double.Parse(coordinates[0]), double.Parse(coordinates[1])))));
                     }
                 }
-
-                
-
-
             }
         }
 

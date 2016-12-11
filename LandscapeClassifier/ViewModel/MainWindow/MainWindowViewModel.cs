@@ -269,9 +269,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                         {
                             var rgbStride = rgbDataSet.RasterXSize * 4;
 
-                            var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96,
-                                PixelFormats.Bgra32, null, bgra,
-                                rgbStride);
+                            var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96, PixelFormats.Bgra32, null, bgra, rgbStride);
 
                             // Transformation
                             double[] rgbTransform = new double[6];

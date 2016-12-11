@@ -51,12 +51,27 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (int)s));
         }
 
-        public override double PredictionProbabilty(FeatureVector feature)
+        public override double Probabilty(FeatureVector feature)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double Probabilty(FeatureVector feature, int classIndex)
         {
             throw new NotImplementedException();
         }
 
         public override int[] Predict(double[][] features)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double[] Probability(double[][] features)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double[][] Probabilities(double[][] features)
         {
             throw new NotImplementedException();
         }

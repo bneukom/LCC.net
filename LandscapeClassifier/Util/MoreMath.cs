@@ -4,7 +4,7 @@ namespace LandscapeClassifier.Util
 {
     public static class MoreMath
     {
-        private const double Epsilon = 0.0001;
+        private const double Epsilon = 0.00001;
 
         public static bool AlmostEquals(double a, double b, double epsilon = Epsilon)
         {

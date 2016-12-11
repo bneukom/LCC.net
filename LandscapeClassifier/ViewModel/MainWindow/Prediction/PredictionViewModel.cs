@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -14,167 +11,56 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
-using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Util;
-using LandscapeClassifier.View.Open;
-using LandscapeClassifier.ViewModel.MainWindow.Classification;
+using LandscapeClassifier.View.Export;
 using MahApps.Metro.Controls;
 using MathNet.Numerics.LinearAlgebra;
 using Microsoft.Win32;
 using OSGeo.GDAL;
-using ZedGraph;
-using ExportPredicitonDialog = LandscapeClassifier.View.Export.ExportPredicitonDialog;
-using Point = System.Windows.Point;
-using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 {
     public class PredictionViewModel : ViewModelBase
     {
-        private readonly MainWindowViewModel _mainWindowViewModel;
+        private readonly int[] _sectionSizes = { 7, 15, 31, 63, 127, 255 };
+        private readonly int[] _numSections = { 1, 2 };
 
-        private LandcoverType _mousePredictionType;
+        private readonly MainWindowViewModel _mainWindowViewModel;
+        private double _acceptanceProbabilty;
+        private int[][] _classification;
+        private BitmapSource _classificationOverlay;
+
+        private bool _isAllPredicted;
+
+        private Neighborhood _majorityFilterNeighborhood;
         private double _mousePredictionProbability;
 
-        private bool _isAllPredicted = false;
-        private BitmapSource _classificationOverlay;
-        private double _overlayOpacity = 0.5d;
-        private double _acceptanceProbabilty;
-
-        private int _predictionWidth;
-        private int _predictionHeight;
-        private int[][] _classification;
+        private LandcoverType _mousePredictionType;
 
         private bool _notBlocking = true;
-
-
-        private Visibility _progressVisibility = Visibility.Hidden;
+        private double _overlayOpacity = 0.5d;
+        private int _predictionHeight;
         private double _predictionProgress;
 
+        private int _predictionWidth;
+        private double[][][] _probabilities;
 
-
-        /// <summary>
-        /// Predict all.
-        /// </summary>
-        public ICommand PredictAllCommand { set; get; }
+        private Visibility _progressVisibility = Visibility.Hidden;
 
         /// <summary>
-        /// Export predictions.
-        /// </summary>
-        public ICommand ExportPredictionsCommand { set; get; }
-
-        /// <summary>
-        /// Executes the majority filter on the classification.
-        /// </summary>
-        public ICommand ApplyMajorityFilterCommand { get; set; }
-
-        /// <summary>
-        /// Assess the accuracy of the algorithm.
-        /// </summary>
-        public ICommand AssessAccuracyCommand { get; set; }
-
-        /// <summary>
-        /// Classification bitmap.
-        /// </summary>
-        public BitmapSource ClassificationOverlay
-        {
-            set { _classificationOverlay = value; RaisePropertyChanged(); }
-            get { return _classificationOverlay; }
-        }
-
-        /// <summary>
-        /// Landcover type at mouse position.
-        /// </summary>
-        public LandcoverType MousePredictionType
-        {
-            set { _mousePredictionType = value; RaisePropertyChanged(); }
-            get { return _mousePredictionType; }
-        }
-
-        /// <summary>
-        /// Conversion from screen to world coordinates.
+        ///     Conversion from screen to world coordinates.
         /// </summary>
         public Matrix<double> ScreenToWorld;
 
         /// <summary>
-        /// Conversion from world to screen coordinates.
+        ///     Conversion from world to screen coordinates.
         /// </summary>
         public Matrix<double> WorldToScreen;
 
-        private Neighborhood _majorityFilterNeighborhood;
-
-        /// <summary>
-        /// Opacity overlay.
-        /// </summary>
-        public double OverlayOpacity
-        {
-            get { return _overlayOpacity; }
-            set { _overlayOpacity = value; RaisePropertyChanged(); }
-
-        }
-
-        /// <summary>
-        /// Acceptance probabilty of the underlying machine learning algorithm for a certain land cover type.
-        /// </summary>
-        public double AcceptanceProbabilty
-        {
-            get { return _acceptanceProbabilty; }
-            set { _acceptanceProbabilty = value; RaisePropertyChanged(); }
-        }
-
-        /// <summary>
-        /// True if all pixels have been predicted.
-        /// </summary>
-        public bool IsAllPredicted
-        {
-            get { return _isAllPredicted; }
-            set { _isAllPredicted = value; RaisePropertyChanged(); }
-        }
-
-        /// <summary>
-        /// Probabilty of landcover type at mouse position.
-        /// </summary>
-        public double MousePredictionProbability
-        {
-            get { return _mousePredictionProbability; }
-            set { _mousePredictionProbability = value; RaisePropertyChanged(); }
-        }
-
-        /// <summary>
-        /// Is currently predicting
-        /// </summary>
-        public bool NotBlocking
-        {
-            get { return _notBlocking; }
-            set { _notBlocking = value; RaisePropertyChanged(); }
-        }
-
-        public Visibility ProgressVisibility
-        {
-            get { return _progressVisibility; }
-            set { _progressVisibility = value; RaisePropertyChanged(); }
-        }
-
-        public double PredictionProgress
-        {
-            get { return _predictionProgress; }
-            set { _predictionProgress = value; RaisePropertyChanged(); }
-        }
-
-        public Neighborhood MajorityFilterNeighborhood
-        {
-            get { return _majorityFilterNeighborhood; }
-            set { _majorityFilterNeighborhood = value; RaisePropertyChanged(); }
-        }
-
-        public Vector<double> PredictionUpperLeftWorld { get; set; }
-
-        public Vector<double> PredictionBottomRightWorld { get; set; }
-
-
+        private bool _predictProbabilities;
 
 
         public PredictionViewModel(MainWindowViewModel mainWindowViewModel)
@@ -186,12 +72,168 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             WorldToScreen = ScreenToWorld.Inverse();
 
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
-            ExportPredictionsCommand = new RelayCommand(ExportPredictions, CanExportPredictions);
+            ExportPredictionsCommand = new RelayCommand(ExportPredictionsAsync, CanExportPredictions);
             ApplyMajorityFilterCommand = new RelayCommand(ApplyMajorityFilter, CanApplyMajorityFilter);
             AssessAccuracyCommand = new RelayCommand(AssessAccuracy);
         }
 
 
+        /// <summary>
+        ///     Predict all.
+        /// </summary>
+        public ICommand PredictAllCommand { set; get; }
+
+        /// <summary>
+        ///     Export predictions.
+        /// </summary>
+        public ICommand ExportPredictionsCommand { set; get; }
+
+        /// <summary>
+        ///     Executes the majority filter on the classification.
+        /// </summary>
+        public ICommand ApplyMajorityFilterCommand { get; set; }
+
+        /// <summary>
+        ///     Assess the accuracy of the algorithm.
+        /// </summary>
+        public ICommand AssessAccuracyCommand { get; set; }
+
+        /// <summary>
+        ///     Classification bitmap.
+        /// </summary>
+        public BitmapSource ClassificationOverlay
+        {
+            set
+            {
+                _classificationOverlay = value;
+                RaisePropertyChanged();
+            }
+            get { return _classificationOverlay; }
+        }
+
+        /// <summary>
+        ///     Landcover type at mouse position.
+        /// </summary>
+        public LandcoverType MousePredictionType
+        {
+            set
+            {
+                _mousePredictionType = value;
+                RaisePropertyChanged();
+            }
+            get { return _mousePredictionType; }
+        }
+
+        /// <summary>
+        ///     Opacity overlay.
+        /// </summary>
+        public double OverlayOpacity
+        {
+            get { return _overlayOpacity; }
+            set
+            {
+                _overlayOpacity = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        /// <summary>
+        ///     Acceptance probabilty of the underlying machine learning algorithm for a certain land cover type.
+        /// </summary>
+        public double AcceptanceProbabilty
+        {
+            get { return _acceptanceProbabilty; }
+            set
+            {
+                _acceptanceProbabilty = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        /// <summary>
+        ///     True if all pixels have been predicted.
+        /// </summary>
+        public bool IsAllPredicted
+        {
+            get { return _isAllPredicted; }
+            set
+            {
+                _isAllPredicted = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        /// <summary>
+        ///     Probabilty of landcover type at mouse position.
+        /// </summary>
+        public double MousePredictionProbability
+        {
+            get { return _mousePredictionProbability; }
+            set
+            {
+                _mousePredictionProbability = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        /// <summary>
+        ///     Is currently predicting
+        /// </summary>
+        public bool NotBlocking
+        {
+            get { return _notBlocking; }
+            set
+            {
+                _notBlocking = value;
+                RaisePropertyChanged();
+            }
+        }
+
+
+        public bool PredictProbabilities
+        {
+            get { return _predictProbabilities; }
+            set
+            {
+                _predictProbabilities = value;
+                RaisePropertyChanged();
+            }
+        }
+
+
+        public Visibility ProgressVisibility
+        {
+            get { return _progressVisibility; }
+            set
+            {
+                _progressVisibility = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public double PredictionProgress
+        {
+            get { return _predictionProgress; }
+            set
+            {
+                _predictionProgress = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public Neighborhood MajorityFilterNeighborhood
+        {
+            get { return _majorityFilterNeighborhood; }
+            set
+            {
+                _majorityFilterNeighborhood = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public Vector<double> PredictionUpperLeftWorld { get; set; }
+
+        public Vector<double> PredictionBottomRightWorld { get; set; }
 
         private bool CanExportPredictions() => NotBlocking && IsAllPredicted;
         private bool CanPredictAll() => NotBlocking;
@@ -199,7 +241,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private void AssessAccuracy()
         {
-            var openFileDialog = new OpenFileDialog()
+            var openFileDialog = new OpenFileDialog
             {
                 FilterIndex = 1,
                 Title = "Choose Feature File"
@@ -211,48 +253,51 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             {
                 using (var file = new StreamReader(openFileDialog.FileName))
                 {
+                    var numLayers = int.Parse(file.ReadLine());
 
-                    int numLayers = int.Parse(file.ReadLine());
-
-
-                    for (int i = 0; i < numLayers*8; ++i)
+                    for (var i = 0; i < numLayers * 8; ++i)
                     {
                         file.ReadLine();
                     }
 
                     string featureLine;
 
-                    int wrongPredictions = 0;
-                    int totalPredictions = 0;
+                    var wrongPredictions = 0;
+                    var totalPredictions = 0;
 
-                    int numFeatures = Enum.GetValues(typeof(LandcoverType)).Length - 1;
-                    int[,] predictionMatrix = new int[numFeatures, numFeatures];
+                    var numFeatures = Enum.GetValues(typeof(LandcoverType)).Length - 1;
+                    var predictionMatrix = new int[numFeatures, numFeatures];
 
                     while ((featureLine = file.ReadLine()) != null)
                     {
-                        string[] positionTypeIntensities = featureLine.Split(' ');
-                        string position = positionTypeIntensities[0];
-                        string[] coordinates = position.Split(',');
+                        var positionTypeIntensities = featureLine.Split(' ');
+                        var position = positionTypeIntensities[0];
+                        var coordinates = position.Split(',');
 
-                        var type = (LandcoverType) Enum.Parse(typeof(LandcoverType), positionTypeIntensities[1]);
-                        var featurePosition = Vector<double>.Build.DenseOfArray(new[] {double.Parse(coordinates[0]), double.Parse(coordinates[1]), 1.0});
-                        var featureBands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
+                        var type = (LandcoverType)Enum.Parse(typeof(LandcoverType), positionTypeIntensities[1]);
+                        var featurePosition =
+                            Vector<double>.Build.DenseOfArray(new[]
+                            {double.Parse(coordinates[0]), double.Parse(coordinates[1]), 1.0});
+                        var featureBands =
+                            _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
 
-                        ushort[] bandPixels = new ushort[featureBands.Count];
+                        var bandPixels = new ushort[featureBands.Count];
 
-                        for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
+                        for (var bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                         {
                             var band = featureBands[bandIndex];
                             var bandPixelPosition = band.WorldToImage * featurePosition;
 
-                            ushort bandPixelValue = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0], (int)bandPixelPosition[1]);
+                            var bandPixelValue = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0],
+                                (int)bandPixelPosition[1]);
 
                             bandPixels[bandIndex] = bandPixelValue;
                         }
 
-                        
 
-                        var predictedType = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(new FeatureVector(bandPixels));
+                        var predictedType =
+                            _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(
+                                new FeatureVector(bandPixels));
                         if (predictedType != type) wrongPredictions++;
 
                         predictionMatrix[(int)type, (int)predictedType]++;
@@ -263,11 +308,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                     Console.WriteLine("Total predictions: " + totalPredictions);
                     Console.WriteLine("Wrong predictions: " + wrongPredictions);
-                    for (int i = 0; i < numFeatures; ++i)
+                    for (var i = 0; i < numFeatures; ++i)
                     {
-                        for (int j = 0; j < numFeatures; ++j)
+                        for (var j = 0; j < numFeatures; ++j)
                         {
-                            Console.Write(predictionMatrix[i,j] + ", ");
+                            Console.Write(predictionMatrix[i, j] + ", ");
                         }
                         Console.Write(Environment.NewLine);
                     }
@@ -280,19 +325,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             NotBlocking = false;
 
 
-            int[][] filtered = new int[_predictionHeight][];
+            var filtered = new int[_predictionHeight][];
 
 
             var majorityFilter = Task.Factory.StartNew(() => Parallel.For(0, _predictionHeight, y =>
             {
-                int[] line = new int[_predictionWidth];
-                int[] neighbors = new int[Enum.GetValues(typeof(LandcoverType)).Length - 1];
+                var line = new int[_predictionWidth];
+                var neighbors = new int[Enum.GetValues(typeof(LandcoverType)).Length - 1];
 
-                for (int x = 0; x < _predictionWidth; ++x)
+                for (var x = 0; x < _predictionWidth; ++x)
                 {
                     if (y > 0 && x > 0 && y < _predictionHeight - 1 && x < _predictionWidth - 1)
                     {
-                        for (int i = 0; i < neighbors.Length; ++i) neighbors[i] = 0;
+                        for (var i = 0; i < neighbors.Length; ++i) neighbors[i] = 0;
 
                         neighbors[_classification[y - 1][x - 1]]++;
                         neighbors[_classification[y - 1][x + 0]]++;
@@ -304,9 +349,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         neighbors[_classification[y + 1][x + 0]]++;
                         neighbors[_classification[y + 1][x + 1]]++;
 
-                        int biggest = neighbors[0];
-                        int biggestIndex = 0;
-                        for (int index = 0; index < neighbors.Length; index++)
+                        var biggest = neighbors[0];
+                        var biggestIndex = 0;
+                        for (var index = 0; index < neighbors.Length; index++)
                         {
                             if (neighbors[index] > biggest)
                             {
@@ -330,16 +375,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             {
                 _classification = filtered;
 
-                int stride = _predictionWidth * 4;
-                int size = _predictionHeight * stride;
-                byte[] imageData = new byte[size];
+                var stride = _predictionWidth * 4;
+                var size = _predictionHeight * stride;
+                var imageData = new byte[size];
 
                 Parallel.For(0, _predictionWidth, x =>
                 {
-                    for (int y = 0; y < _predictionHeight; ++y)
+                    for (var y = 0; y < _predictionHeight; ++y)
                     {
-                        int index = 4 * y * _predictionWidth + 4 * x;
-                        LandcoverType type = (LandcoverType)_classification[y][x];
+                        var index = 4 * y * _predictionWidth + 4 * x;
+                        var type = (LandcoverType)_classification[y][x];
                         var color = type.GetColor();
                         imageData[index + 0] = color.B;
                         imageData[index + 1] = color.G;
@@ -350,161 +395,320 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                 Application.Current.Invoke(() =>
                 {
-                    ClassificationOverlay = BitmapSource.Create(_predictionWidth, _predictionHeight, 96, 96, PixelFormats.Bgra32, null, imageData, stride);
+                    ClassificationOverlay = BitmapSource.Create(_predictionWidth, _predictionHeight, 96, 96,
+                        PixelFormats.Bgra32, null, imageData, stride);
                     NotBlocking = true;
                     ProgressVisibility = Visibility.Hidden;
                 });
             });
         }
 
-        private void ExportPredictions()
+        private async void ExportPredictionsAsync()
         {
-            ExportPredicitonDialog dialog = new ExportPredicitonDialog();
+            var dialog = new ExportPredicitonDialog(PredictProbabilities, _mainWindowViewModel.Layers.Where(l => l.Path != null).ToList());
 
-            if (dialog.ShowDialog(_mainWindowViewModel.Layers.Where(l => l.Path != null).ToList()) == true)
+            if (dialog.ShowDialog() == true)
             {
                 var layers = dialog.DialogViewModel.ExportLayers;
 
                 var width = _classificationOverlay.PixelWidth;
-                var stride = width * 4;
+                var stride = width;
                 var height = _classificationOverlay.PixelHeight;
-                var layerData = layers.Select(l => new byte[stride * height]).ToList();
 
                 NotBlocking = false;
 
-                // Create layers
-                List<Task> createLayerTasks = new List<Task>();
-                for (int layerIndex = 0; layerIndex < layers.Count; ++layerIndex)
+                var layerTasks = new List<Task<Tuple<int, ushort[]>>>();
+                for (var layerIndex = 0; layerIndex < layers.Count; ++layerIndex)
                 {
                     var layer = layers[layerIndex];
                     var types = layer.LandCoverTypes;
-                    var constLayer = layerIndex;
+                    var selectedIndices = layer.SelectedTypeIndices;
+                    var constLayerIndex = layerIndex;
 
-                    createLayerTasks.Add(Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, height), (range) =>
+                    if (dialog.DialogViewModel.ExportAsProbabilities)
                     {
-                        for (int y = range.Item1; y < range.Item2; ++y)
+                        layerTasks.Add(Task.Run(() =>
                         {
-                            for (int x = 0; x < width; ++x)
+                            var layerData = new ushort[stride * height];
+                            Parallel.ForEach(Partitioner.Create(0, height), range =>
                             {
-                                LandcoverType prediction = (LandcoverType)_classification[y][x];
+                                for (var y = range.Item1; y < range.Item2; ++y)
+                                {
+                                    for (var x = 0; x < width; ++x)
+                                    {
+                                        double totalProbability = 0;
+                                        foreach (int selectedIndex in selectedIndices)
+                                        {
+                                            var probability = _probabilities[y][x][selectedIndex];
+                                            if (probability >= dialog.DialogViewModel.MinAcceptanceProbability)
+                                                totalProbability += probability;
+                                        }
 
-                                var color = types[(int)prediction] ? (byte)0 : (byte)255;
+                                        totalProbability = Math.Min(totalProbability, 1);
 
-                                int dataIndex = y * stride + x * 4;
-                                layerData[constLayer][dataIndex + 0] = color;
-                                layerData[constLayer][dataIndex + 1] = color;
-                                layerData[constLayer][dataIndex + 2] = color;
-                                layerData[constLayer][dataIndex + 3] = color;
-                            }
+                                        var dataIndex = y * stride + x;
+                                        layerData[dataIndex] = (ushort)(totalProbability * ushort.MaxValue);
+                                    }
+                                }
+                            });
+
+                            return new Tuple<int, ushort[]>(constLayerIndex, layerData);
                         }
+                        ));
+                    }
+                    else
+                    {
+                        layerTasks.Add(Task.Run(() =>
+                        {
+                            var layerData = new ushort[stride * height];
+                            Parallel.ForEach(Partitioner.Create(0, height), range =>
+                            {
+                                for (var y = range.Item1; y < range.Item2; ++y)
+                                {
+                                    for (var x = 0; x < width; ++x)
+                                    {
+                                        var prediction = (LandcoverType)_classification[y][x];
 
-                    })));
+                                        var color = types[(int)prediction] ? ushort.MaxValue : (ushort)0;
+
+                                        var dataIndex = y * stride + x;
+                                        layerData[dataIndex] = color;
+                                    }
+                                }
+                            });
+
+                            return new Tuple<int, ushort[]>(constLayerIndex, layerData);
+                        }));
+                    }
                 }
 
-                // Write results
-                List<Task> writeResultTasks = new List<Task>();
+                var saveTasks = new List<Task>();
+
+                // Export Heightmap
                 if (dialog.DialogViewModel.ExportHeightmap)
                 {
-                    var layer = dialog.DialogViewModel.HeightmapLayer;
+                    var heightmapLayer = dialog.DialogViewModel.HeightmapLayer;
 
-                    var upperLeftImage = layer.WorldToImage * PredictionUpperLeftWorld;
-                    var bottomRightImage = layer.WorldToImage * PredictionBottomRightWorld;
-                    int upperLeftX = (int)upperLeftImage[0];
-                    int upperLeftY = (int)upperLeftImage[1];
-                    int bottomLeftX = (int)bottomRightImage[0];
-                    int bottomLeftY = (int)bottomRightImage[1];
-                    int heightmapExportWidth = bottomLeftX - upperLeftX;
-                    int heightmapExportHeight = bottomLeftY - upperLeftY;
+                    var upperLeftImage = heightmapLayer.WorldToImage * PredictionUpperLeftWorld;
+                    var bottomRightImage = heightmapLayer.WorldToImage * PredictionBottomRightWorld;
+                    var upperLeftX = (int)upperLeftImage[0];
+                    var upperLeftY = (int)upperLeftImage[1];
+                    var bottomLeftX = (int)bottomRightImage[0];
+                    var bottomLeftY = (int)bottomRightImage[1];
 
-                    var dataSet = Gdal.Open(layer.Path, Access.GA_ReadOnly);
+                    var scaleToUnrealLandscape = dialog.DialogViewModel.ScaleToUnrealLandscape;
+
+                    int heightmapPredictionWidth = bottomLeftX - upperLeftX;
+                    int heightmapPredictionHeight = bottomLeftY - upperLeftY;
+                    int heightmapImageWidth;
+                    int heightmapImageHeight;
+                    if (scaleToUnrealLandscape)
+                    {
+                        var outputSize = ComputeUnrealLandscapeSize(new Point2D(heightmapPredictionWidth, heightmapPredictionHeight));
+                        heightmapImageWidth = outputSize.X;
+                        heightmapImageHeight = outputSize.Y;
+                    }
+                    else
+                    {
+                        heightmapImageWidth = heightmapPredictionWidth;
+                        heightmapImageHeight = heightmapPredictionHeight;
+                    }
+
+                    var dataSet = Gdal.Open(heightmapLayer.Path, Access.GA_ReadOnly);
                     var rasterBand = dataSet.GetRasterBand(1);
 
                     var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
-                    int originalStride = (rasterBand.XSize * bitsPerPixel + 7) / 8;
-                    IntPtr originalPtr = Marshal.AllocHGlobal(originalStride * rasterBand.YSize);
+                    var originalStride = (rasterBand.XSize * bitsPerPixel + 7) / 8;
+                    var originalPtr = Marshal.AllocHGlobal(originalStride * rasterBand.YSize);
 
                     rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, originalPtr, rasterBand.XSize,
                         rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, originalStride);
 
-                    double[] minMax = new double[2];
+                    var minMax = new double[2];
                     rasterBand.ComputeRasterMinMax(minMax, 0);
-                    double minAltitude = minMax[0];
-                    double maxAltitude = minMax[1];
+                    var minAltitude = minMax[0];
+                    var maxAltitude = minMax[1];
 
                     double noDataValue;
                     int hasValue;
                     rasterBand.GetNoDataValue(out noDataValue, out hasValue);
 
                     var targetFormat = PixelFormats.Gray16;
-                    int transformedStride = (heightmapExportWidth * targetFormat.BitsPerPixel + 7) / 8;
-                    var transformedPtr = Marshal.AllocHGlobal(transformedStride * heightmapExportHeight);
+                    var transformedStride = (heightmapImageWidth * targetFormat.BitsPerPixel + 7) / 8;
+                    var transformedPtr = Marshal.AllocHGlobal(transformedStride * heightmapImageHeight);
 
-                    var transform = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, heightmapExportHeight), (range) =>
+                    var heightmapExportWidth = Math.Min(heightmapPredictionWidth, heightmapImageWidth);
+                    var heightmapExportHeight = Math.Min(heightmapPredictionHeight, heightmapImageHeight);
+
+                    var transform = Task.Run(() => Parallel.ForEach(Partitioner.Create(0, heightmapImageHeight), range =>
                     {
                         unsafe
                         {
-                            // TODO check if is in bounds
-                            float* original = (float*)originalPtr.ToPointer();
-                            ushort* transformed = (ushort*)transformedPtr.ToPointer();
-                            for (int y = upperLeftY + range.Item1; y < upperLeftY + range.Item2; ++y)
+                            var original = (float*)originalPtr.ToPointer();
+                            var transformed = (ushort*)transformedPtr.ToPointer();
+                            for (var y = upperLeftY + range.Item1; y < upperLeftY + range.Item2; ++y)
                             {
-                                for (int x = upperLeftX; x < bottomLeftX; ++x)
+                                for (var x = upperLeftX; x < bottomLeftX; ++x)
                                 {
-                                    int originalOffset = y * layer.ImagePixelWidth + x;
-                                    int transformedOffset = (y - upperLeftY) * heightmapExportWidth + (x - upperLeftX);
-                                    float value = *(original + originalOffset);
+                                    var transformedOffset = (y - upperLeftY) * heightmapImageWidth + (x - upperLeftX);
 
-                                    if (Math.Abs(value - noDataValue) < 0.0001)
+                                    // TODO use min of pixelWidth and heightmap exportwidth
+                                    // TODO scale to mentioned above and then fill rest of image black for layers?
+                                    // Check if inside of bounds
+                                    if (x - upperLeftX < heightmapExportWidth && y - upperLeftY < heightmapExportHeight)
                                     {
-                                        *(transformed + transformedOffset) = 0;
+                                        var originalOffset = y * heightmapLayer.ImagePixelWidth + x;
+
+                                        var value = *(original + originalOffset);
+
+                                        // Check for no data value
+                                        if (MoreMath.AlmostEquals(value, noDataValue))
+                                        {
+                                            *(transformed + transformedOffset) = 0;
+                                        }
+                                        else
+                                        {
+                                            var scaled = (ushort)Math.Min((value - minAltitude) / (maxAltitude - minAltitude) * ushort.MaxValue, ushort.MaxValue);
+                                            *(transformed + transformedOffset) = scaled;
+                                        }
                                     }
                                     else
                                     {
-                                        ushort scaled = (ushort)Math.Min((value - minAltitude) / (maxAltitude - minAltitude) * ushort.MaxValue, ushort.MaxValue);
-                                        *(transformed + transformedOffset) = scaled;
+                                        *(transformed + transformedOffset) = 0;
                                     }
+
                                 }
                             }
                         }
                     }));
 
-                    var writeToDisk = transform.ContinueWith(t =>
+                    // Wait for height map transformation
+                    await transform;
+
+                    saveTasks.Add(Task.Run(() =>
+                      {
+                         // Write heightmap
+                         var heightmapBitmap = BitmapSource.Create(heightmapImageWidth, heightmapImageHeight, 96, 96, PixelFormats.Gray16, null, transformedPtr, transformedStride * heightmapImageHeight, transformedStride);
+                          BitmapFrame.Create(heightmapBitmap).SaveAsPng(Path.Combine(dialog.DialogViewModel.ExportPath, "heightmap.png"));
+                      }));
+
+
+                    var layersData = await Task.WhenAll(layerTasks);
+                    var outputLayers = layersData.OrderBy(t => t.Item1).Select(t => t.Item2).ToList();
+
+                    saveTasks.Add(Task.Run(() =>
                     {
-                        GdalUtil.WritePng(transformedPtr, heightmapExportWidth, heightmapExportHeight,
-                            Path.Combine(dialog.DialogViewModel.ExportPath, "heightmap.png"));
-                        dataSet.Dispose();
-                    });
-                    writeResultTasks.Add(writeToDisk);
-                }
-
-
-                writeResultTasks.Add(Task.WhenAll(createLayerTasks).ContinueWith(t =>
-                {
-                    for (int layerIndex = 0; layerIndex < layerData.Count; ++layerIndex)
-                    {
-                        var layer = layers[layerIndex];
-                        var data = layerData[layerIndex];
-                        var bitmapImage = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, data, stride);
-
-                        // write layer
-                        using (var fileStream = new FileStream(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name),
-                                    FileMode.Create))
+                        for (var layerIndex = 0; layerIndex < layers.Count; ++layerIndex)
                         {
-                            BitmapEncoder encoder = new PngBitmapEncoder();
-                            encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-                            encoder.Save(fileStream);
+                            var layer = layers[layerIndex];
+                            var data = outputLayers[layerIndex];
+
+                            var bitmap = BitmapSource.Create(width, height, 96, 96, PixelFormats.Gray16, null, data, width * 2);
+
+                            // Save layer as RGB8
+                            if (scaleToUnrealLandscape)
+                            {
+                                var scaled = bitmap.Resize(heightmapExportWidth, heightmapExportHeight);
+                                var cropped = scaled.Crop(heightmapImageWidth, heightmapImageHeight);
+                                var formatChanged = cropped.ConvertFormat(PixelFormats.Gray16);
+                                BitmapFrame.Create(formatChanged).SaveAsPng(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name));
+                            }
+                            else
+                            {
+                                BitmapFrame.Create(bitmap).SaveAsPng(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name));
+                            }
                         }
                     }
-                }));
+                    ));
+                }
+                else
+                {
+                    // Wait for layer creation
+                    var layersData = await Task.WhenAll(layerTasks);
+
+                    var outputLayers = layersData.OrderBy(t => t.Item1).Select(t => t.Item2).ToList();
+                    saveTasks.Add(Task.Run(() =>
+                    {
+                        for (var layerIndex = 0; layerIndex < layers.Count; ++layerIndex)
+                        {
+                            var layer = layers[layerIndex];
+                            var data = outputLayers[layerIndex];
+
+                            var bitmap = BitmapSource.Create(width, height, 96, 96, PixelFormats.Gray16, null, data, width * 2);
+                            BitmapFrame.Create(bitmap).SaveAsPng(Path.Combine(dialog.DialogViewModel.ExportPath, layer.Name));
+                        }
+                    }));
+                }
 
                 // Finish
-                Task.WhenAll(writeResultTasks).ContinueWith(t =>
-                {
-                    Application.Current.Dispatcher.Invoke(() => NotBlocking = true);
-                });
+                Task.WaitAll(saveTasks.ToArray());
 
+                NotBlocking = true;
             }
         }
+
+        /// <summary>
+        /// Based on https://github.com/EpicGames/UnrealEngine/blob/55c9f3ba0010e2e483d49a4cd378f36a46601fad/Engine/Source/Editor/LandscapeEditor/Private/LandscapeEditorDetailCustomization_NewLandscape.cpp#L1193
+        /// </summary>
+        private Point2D ComputeUnrealLandscapeSize(Point2D input)
+        {
+            int width = input.X;
+            int height = input.Y;
+
+            if (width > 0 && height > 0)
+            {
+                int componentsX;
+                int componentsY;
+
+                // Try to find a section size and number of sections that exactly matches the dimensions of the heightfield
+                for (int sectionSizesIndex = _sectionSizes.Length - 1; sectionSizesIndex >= 0; sectionSizesIndex--)
+                {
+                    for (int numSectionsIndex = _numSections.Length - 1; numSectionsIndex >= 0; numSectionsIndex--)
+                    {
+                        int ss = _sectionSizes[sectionSizesIndex];
+                        int ns = _numSections[numSectionsIndex];
+
+                        if (((width - 1) % (ss * ns)) == 0 && ((width - 1) / (ss * ns)) <= 32 &&
+                            ((height - 1) % (ss * ns)) == 0 && ((height - 1) / (ss * ns)) <= 32)
+                        {
+                            componentsX = (width - 1) / (ss * ns);
+                            componentsY = (height - 1) / (ss * ns);
+                            return new Point2D(componentsX * 255 + 1, componentsY * 255 + 1);
+                        }
+                    }
+                }
+
+                const int currentSectionSize = 63;
+                const int currentNumSections = 1;
+
+                for (int sectionSizesIdx = 0; sectionSizesIdx < _sectionSizes.Length; sectionSizesIdx++)
+                {
+                    if (_sectionSizes[sectionSizesIdx] < currentSectionSize)
+                    {
+                        continue;
+                    }
+
+                    componentsX = (int)Math.Ceiling((double)(width - 1) / _sectionSizes[sectionSizesIdx] * currentNumSections);
+                    componentsY = (int)Math.Ceiling((double)(height - 1) / _sectionSizes[sectionSizesIdx] * currentNumSections);
+
+                    if (componentsX <= 32 && componentsY <= 32)
+                    {
+                        return new Point2D(componentsX * 255 + 1, componentsY * 255 + 1);
+                    }
+                }
+
+                // if the heightmap is very large, fall back to using the largest values we support
+                int maxSectionSize = _sectionSizes[_sectionSizes.Length - 1];
+                int maxNumSubSections = _numSections[_numSections.Length - 1];
+                componentsX = (int)Math.Ceiling((double)(width - 1) / maxSectionSize * maxNumSubSections);
+                componentsY = (int)Math.Ceiling((double)(height - 1) / maxSectionSize * maxNumSubSections);
+
+                return new Point2D(componentsX * 255 + 1, componentsY * 255 + 1);
+            }
+
+            return new Point2D(0, 0);
+        }
+
 
         private void PredictAll()
         {
@@ -521,18 +725,21 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             {
                 var screenUpperLeft = WorldToScreen * layerViewModel.UpperLeftWorld;
                 var screenBottomRight = WorldToScreen * layerViewModel.BottomRightWorld;
-                float x = (float)screenUpperLeft[0];
-                float y = (float)screenUpperLeft[1];
-                float width = (float)(screenBottomRight[0] - screenUpperLeft[0]);
-                float height = (float)(screenBottomRight[1] - screenUpperLeft[1]);
+                var x = (float)screenUpperLeft[0];
+                var y = (float)screenUpperLeft[1];
+                var width = (float)(screenBottomRight[0] - screenUpperLeft[0]);
+                var height = (float)(screenBottomRight[1] - screenUpperLeft[1]);
 
                 bounds.Add(new Rect(x, y, width, height));
             }
 
             var intersection = bounds.Aggregate(Rect.Intersect);
 
-            var upperLeftWorld = ScreenToWorld * Vector<double>.Build.DenseOfArray(new[] { intersection.X, intersection.Y, 1.0 });
-            var bottomRightWorld = ScreenToWorld * Vector<double>.Build.DenseOfArray(new[] { intersection.X + intersection.Width, intersection.Y + intersection.Height, 1.0 });
+            var upperLeftWorld = ScreenToWorld *
+                                 Vector<double>.Build.DenseOfArray(new[] { intersection.X, intersection.Y, 1.0 });
+            var bottomRightWorld = ScreenToWorld *
+                                   Vector<double>.Build.DenseOfArray(new[]
+                                   {intersection.X + intersection.Width, intersection.Y + intersection.Height, 1.0});
 
             PredictionUpperLeftWorld = upperLeftWorld;
             PredictionBottomRightWorld = bottomRightWorld;
@@ -542,78 +749,85 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             _predictionWidth = (int)(scaleBand.WorldToImage * bottomRightWorld)[0];
             _predictionHeight = (int)(scaleBand.WorldToImage * bottomRightWorld)[1];
 
-            IntPtr[] data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
+            var data = featureBands.Select(b => b.BandImage.BackBuffer).ToArray();
             _classification = new int[_predictionHeight][];
 
-            Task predict = Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, _predictionHeight), range =>
-            {
-                double[][] features = new double[_predictionWidth][];
+            if (PredictProbabilities) _probabilities = new double[_predictionHeight][][];
 
-                for (int i = 0; i < _predictionWidth; ++i)
+            Task predict =
+                Task.Factory.StartNew(() => Parallel.ForEach(Partitioner.Create(0, _predictionHeight), range =>
                 {
-                    features[i] = new double[numFeatures];
-                }
+                    var features = new double[_predictionWidth][];
 
-                for (int line = range.Item1; line < range.Item2; ++line)
-                {
-                    for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
+                    for (var i = 0; i < _predictionWidth; ++i)
                     {
-                        var band = featureBands[bandIndex];
+                        features[i] = new double[numFeatures];
+                    }
 
-                        var transform = band.WorldToImage * scaleBand.ImageToWorld;
-
-                        unsafe
+                    for (var line = range.Item1; line < range.Item2; ++line)
+                    {
+                        for (var bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
                         {
-                            if (featureBands[bandIndex].Format == PixelFormats.Gray16)
-                            {
-                                ushort* dataPtr = (ushort*)data[bandIndex].ToPointer();
-                                for (int x = 0; x < _predictionWidth; ++x)
-                                {
-                                    var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
-                                    int pixelX = (int)pixelPosition[0];
-                                    int pixelY = (int)pixelPosition[1];
+                            var band = featureBands[bandIndex];
 
-                                    var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
-                                    features[x][bandIndex] = (double)pixelValue / ushort.MaxValue;
+                            var transform = band.WorldToImage * scaleBand.ImageToWorld;
+
+                            unsafe
+                            {
+                                if (featureBands[bandIndex].Format == PixelFormats.Gray16)
+                                {
+                                    var dataPtr = (ushort*)data[bandIndex].ToPointer();
+                                    for (var x = 0; x < _predictionWidth; ++x)
+                                    {
+                                        var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
+                                        var pixelX = (int)pixelPosition[0];
+                                        var pixelY = (int)pixelPosition[1];
+
+                                        var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
+                                        features[x][bandIndex] = (double)pixelValue / ushort.MaxValue;
+                                    }
                                 }
-                            }
-                            else if (featureBands[bandIndex].Format == PixelFormats.Gray32Float)
-                            {
-                                float* dataPtr = (float*)data[bandIndex].ToPointer();
-                                for (int x = 0; x < _predictionWidth; ++x)
+                                else if (featureBands[bandIndex].Format == PixelFormats.Gray32Float)
                                 {
-                                    var pixelPosition = transform * Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
-                                    int pixelX = (int)pixelPosition[0];
-                                    int pixelY = (int)pixelPosition[1];
+                                    var dataPtr = (float*)data[bandIndex].ToPointer();
+                                    for (var x = 0; x < _predictionWidth; ++x)
+                                    {
+                                        var pixelPosition = transform *
+                                                            Vector<double>.Build.DenseOfArray(new[] { x, line, 1.0 });
+                                        var pixelX = (int)pixelPosition[0];
+                                        var pixelY = (int)pixelPosition[1];
 
-                                    var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
-                                    features[x][bandIndex] = pixelValue;
+                                        var pixelValue = *(dataPtr + pixelY * band.ImagePixelWidth + pixelX);
+                                        features[x][bandIndex] = pixelValue;
+                                    }
                                 }
                             }
                         }
-                    }
-                    _classification[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(features);
 
-                    lock (this)
-                    {
-                        PredictionProgress += 100.0 / _predictionHeight;
-                    }
-                }
+                        var classifier = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier;
+                        _classification[line] = classifier.Predict(features);
 
-            }));
+                        if (PredictProbabilities) _probabilities[line] = classifier.Probabilities(features);
+
+                        lock (this)
+                        {
+                            PredictionProgress += 100.0 / _predictionHeight;
+                        }
+                    }
+                }));
 
             predict.ContinueWith(t =>
             {
-                int stride = _predictionWidth * 4;
-                int size = _predictionHeight * stride;
-                byte[] imageData = new byte[size];
+                var stride = _predictionWidth * 4;
+                var size = _predictionHeight * stride;
+                var imageData = new byte[size];
 
                 Parallel.For(0, _predictionWidth, x =>
                 {
-                    for (int y = 0; y < _predictionHeight; ++y)
+                    for (var y = 0; y < _predictionHeight; ++y)
                     {
-                        int index = 4 * y * _predictionWidth + 4 * x;
-                        LandcoverType type = (LandcoverType)_classification[y][x];
+                        var index = 4 * y * _predictionWidth + 4 * x;
+                        var type = (LandcoverType)_classification[y][x];
                         var color = type.GetColor();
                         imageData[index + 0] = color.B;
                         imageData[index + 1] = color.G;
@@ -631,7 +845,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 });
             });
         }
+    }
 
+    struct Point2D
+    {
+        public int X;
+        public int Y;
 
+        public Point2D(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
     }
 }

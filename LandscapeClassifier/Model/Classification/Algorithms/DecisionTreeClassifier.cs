@@ -41,14 +41,29 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             return (LandcoverType) _tree.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
 
-        public override double PredictionProbabilty(FeatureVector feature)
+        public override double Probabilty(FeatureVector feature)
         {
             return 0.0;
+        }
+
+        public override double Probabilty(FeatureVector feature, int classIndex)
+        {
+            throw new NotImplementedException();
         }
 
         public override int[] Predict(double[][] features)
         {
             return _tree.Decide(features);
+        }
+
+        public override double[] Probability(double[][] features)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double[][] Probabilities(double[][] features)
+        {
+            throw new NotImplementedException();
         }
     }
 }

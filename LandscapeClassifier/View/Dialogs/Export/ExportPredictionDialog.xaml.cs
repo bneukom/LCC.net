@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Windows;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.ViewModel.Dialogs;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MahApps.Metro.Controls;
@@ -13,17 +14,16 @@ namespace LandscapeClassifier.View.Export
     {
         public ExportPredictionDialogViewModel DialogViewModel { get; private set; }
 
-        public ExportPredicitonDialog()
+        public ExportPredicitonDialog(bool canExportAsProbabilities, List<LayerViewModel> layerPaths)
         {
             InitializeComponent();
 
             DialogViewModel = (ExportPredictionDialogViewModel)DataContext;
-            DialogViewModel.Reset();
+            DialogViewModel.Initialize(canExportAsProbabilities, layerPaths);
         }
 
         public bool? ShowDialog(List<LayerViewModel> layerPaths)
         {
-            DialogViewModel.ExistingLayers = layerPaths;
             return ShowDialog();
         }
 

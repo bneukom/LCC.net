@@ -9,8 +9,11 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
         public abstract Task Train(ClassificationModel classificationModel);
         public abstract LandcoverType Predict(FeatureVector feature);
-        public abstract double PredictionProbabilty(FeatureVector feature);
+        public abstract double Probabilty(FeatureVector feature);
+        public abstract double Probabilty(FeatureVector feature, int classIndex);
         public abstract int[] Predict(double[][] features);
+        public abstract double[] Probability(double[][] features);
+        public abstract double[][] Probabilities(double[][] features);
 
         protected AbstractLandCoverClassifier()
         {

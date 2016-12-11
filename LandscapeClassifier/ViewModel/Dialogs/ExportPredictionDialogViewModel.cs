@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -27,14 +28,10 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private double _minAltitude;
         private double _maxAltitude;
         private LayerViewModel _heightmapLayer;
-
-        public List<LayerViewModel> ExistingLayers { get; set; } = new List<LayerViewModel>();
-
-        public ExportLandCoverTypeViewModel SelectedLayer
-        {
-            get { return _selectedLayer; }
-            set { _selectedLayer = value; RaisePropertyChanged(); }
-        }
+        private bool _exportAsProbabilities;
+        private double _minAcceptanceProbability;
+        private bool _scaleToUnrealLandscape;
+        private object _canExportAsProbabilities;
 
         public string ExportPath
         {
@@ -45,6 +42,30 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 IsExportPathSet = !string.IsNullOrWhiteSpace(value);
                 RaisePropertyChanged();
             }
+        }
+
+        public bool ScaleToUnrealLandscape
+        {
+            get { return _scaleToUnrealLandscape; }
+            set { _scaleToUnrealLandscape = value; RaisePropertyChanged(); }
+        }
+
+        public object CanExportAsProbabilities
+        {
+            get { return _canExportAsProbabilities; }
+            set { _canExportAsProbabilities = value; RaisePropertyChanged(); }
+        }
+
+        public double MinAcceptanceProbability
+        {
+            get { return _minAcceptanceProbability; }
+            set { _minAcceptanceProbability = value; RaisePropertyChanged(); }
+        }
+
+        public bool ExportAsProbabilities
+        {
+            get { return _exportAsProbabilities; }
+            set { _exportAsProbabilities = value; RaisePropertyChanged(); }
         }
 
         public bool ExportHeightmap
@@ -74,7 +95,34 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public LayerViewModel HeightmapLayer
         {
             get { return _heightmapLayer; }
-            set { _heightmapLayer = value; RaisePropertyChanged(); }
+            set
+            {
+                _heightmapLayer = value;
+                RaisePropertyChanged();
+
+                Task.Run(() =>
+                {
+                    if (value != null)
+                    {
+                        var dataSet = Gdal.Open(value.Path, Access.GA_ReadOnly);
+                        var rasterBand = dataSet.GetRasterBand(1);
+
+                        double[] minMax = new double[2];
+                        rasterBand.ComputeRasterMinMax(minMax, 0);
+
+                        MinAltitude = minMax[0];
+                        MaxAltitude = minMax[1];
+                    }
+                });
+            }
+        }
+
+        public ObservableCollection<LayerViewModel> ExistingLayers { get; } = new ObservableCollection<LayerViewModel>();
+
+        public ExportLandCoverTypeViewModel SelectedLayer
+        {
+            get { return _selectedLayer; }
+            set { _selectedLayer = value; RaisePropertyChanged(); }
         }
 
         public ObservableCollection<ExportLandCoverTypeViewModel> ExportLayers { get; set; }
@@ -104,15 +152,6 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             {
                 var selectedLayer = browseLayerDialog.DialogViewModel.SelectedLayer;
                 HeightmapLayer = selectedLayer;
-
-                var dataSet = Gdal.Open(selectedLayer.Path, Access.GA_ReadOnly);
-                var rasterBand = dataSet.GetRasterBand(1);
-
-                double[] minMax = new double[2];
-                rasterBand.ComputeRasterMinMax(minMax,0 );
-
-                MinAltitude = minMax[0];
-                MaxAltitude = minMax[1];
             }
         }
 
@@ -148,35 +187,51 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private void AddLayer()
         {
-            var layerNumbers = ExportLayers.Where(l =>
-                Regex.IsMatch(l.Name, "layer[0-9]+.png")).
-                Select(l => int.Parse(Regex.Match(l.Name, "layer([0-9]+).png").Groups[1].Value)).ToList();
+            int missingLayer = MissingLayerIndex(ExportLayers);
+            ExportLayers.Add(new ExportLandCoverTypeViewModel("layer" + missingLayer + ".png", ExportLayers));
+        }
 
-            if (layerNumbers.Count == 0)
-            {
-                ExportLayers.Add(new ExportLandCoverTypeViewModel("layer0.png"));
-            }
-            else
-            {
-                var missing = Enumerable.Range(layerNumbers.Min(), layerNumbers.Count + 1).Except(layerNumbers).FirstOrDefault();
+        public static int MissingLayerIndex(ObservableCollection<ExportLandCoverTypeViewModel> layers)
+        {
+            var layerNumbers = layers.Where(l =>
+               Regex.IsMatch(l.Name, "layer[0-9]+.png")).
+               Select(l => int.Parse(Regex.Match(l.Name, "layer([0-9]+).png").Groups[1].Value)).ToList();
 
-                ExportLayers.Add(new ExportLandCoverTypeViewModel("layer" + missing + ".png"));
-            }
+            return layerNumbers.Count == 0 ? 0 : Enumerable.Range(layerNumbers.Min(), layerNumbers.Count + 1).Except(layerNumbers).FirstOrDefault();
         }
 
 
-        public void Reset()
+        public void Initialize(bool canExportAsProbabilities, List<LayerViewModel> layerPaths)
         {
             ExportHeightmap = false;
             ExistingLayers.Clear();
-            MinAltitude = 0.0;
-            MaxAltitude = 0.0;
-            HeightmapLayer = null;
+            ExistingLayers.AddRange(layerPaths);
+            CanExportAsProbabilities = canExportAsProbabilities;
+
+            var types = Enum.GetValues(typeof(LandcoverType));
+            foreach (LandcoverType type in types)
+            {
+                if (type == LandcoverType.None) continue;
+
+                var layer = new ExportLandCoverTypeViewModel(type + ".png", ExportLayers);
+
+                if (type == LandcoverType.Grass) layer.Grass = true;
+                if (type == LandcoverType.Gravel) layer.Gravel = true;
+                if (type == LandcoverType.Rock) layer.Rock = true;
+                if (type == LandcoverType.Snow) layer.Snow = true;
+                if (type == LandcoverType.Tree) layer.Tree = true;
+                if (type == LandcoverType.Water) layer.Water = true;
+                if (type == LandcoverType.Agriculture) layer.Agriculture = true;
+                if (type == LandcoverType.Settlement) layer.Settlement = true;
+
+                ExportLayers.Add(layer);
+            }
         }
     }
 
     public class ExportLandCoverTypeViewModel : ViewModelBase
     {
+        private readonly ObservableCollection<ExportLandCoverTypeViewModel> _existingLayers;
         private bool _grass;
         private bool _gravel;
         private bool _rock;
@@ -241,6 +296,23 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _settlement = value; RaisePropertyChanged(); }
         }
 
+        public int[] SelectedTypeIndices
+        {
+            get
+            {
+                var selectedIndices = new List<int>();
+                if (Grass) selectedIndices.Add((int)LandcoverType.Grass);
+                if (Gravel) selectedIndices.Add((int)LandcoverType.Gravel);
+                if (Rock) selectedIndices.Add((int)LandcoverType.Rock);
+                if (Snow) selectedIndices.Add((int)LandcoverType.Snow);
+                if (Tree) selectedIndices.Add((int)LandcoverType.Tree);
+                if (Water) selectedIndices.Add((int)LandcoverType.Water);
+                if (Agriculture) selectedIndices.Add((int)LandcoverType.Agriculture);
+                if (Settlement) selectedIndices.Add((int)LandcoverType.Settlement);
+                return selectedIndices.ToArray();
+            }
+        }
+
         public bool[] LandCoverTypes
         {
             get
@@ -262,9 +334,36 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             }
         }
 
-        public ExportLandCoverTypeViewModel(string name)
+        public ExportLandCoverTypeViewModel(string name, ObservableCollection<ExportLandCoverTypeViewModel> existingLayers)
         {
+            _existingLayers = existingLayers;
             Name = name;
+
+            PropertyChanged += OnPropertyChanged;
+        }
+
+        private void OnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
+        {
+            if (propertyChangedEventArgs.PropertyName != nameof(Name))
+            {
+                string newName = "";
+                if (Grass) newName += "Grass";
+                if (Gravel) newName += "Gravel";
+                if (Rock) newName += "Rock";
+                if (Snow) newName += "Snow";
+                if (Tree) newName += "Tree";
+                if (Water) newName += "Water";
+                if (Agriculture) newName += "Agriculture";
+                if (Settlement) newName += "Settlement";
+                if (newName.Length == 0)
+                {
+                    int missingLayer = ExportPredictionDialogViewModel.MissingLayerIndex(_existingLayers);
+                    newName = "layer" + missingLayer;
+                }
+
+                newName += ".png";
+                Name = newName;
+            }
         }
     }
 }

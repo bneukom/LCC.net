@@ -287,6 +287,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Extensions\BitmapFrameExtensions.cs" />
+    <Compile Include="Extensions\BitmapSourceExtensions.cs" />
     <Compile Include="Model\Classification\Algorithms\AbstractLandCoverClassifier.cs" />
     <Compile Include="Model\Classification\Algorithms\Classifier.cs" />
     <Compile Include="Model\Classification\Algorithms\ClassifierExtensions.cs" />

@@ -242,13 +242,14 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal">
                                 <Button Content="Predict All" Margin="5,5,5,5" Command="{Binding PredictionViewModel.PredictAllCommand}"></Button>
-                                <Button Content="Export" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
-                                <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Prediction Transparency:"></TextBlock>
-                                <Slider Style="{DynamicResource FlatSlider}" Orientation="Horizontal" Value="{Binding PredictionViewModel.OverlayOpacity}" Minimum="0" Maximum="1" Width="100" TickPlacement="BottomRight" TickFrequency="0.1" VerticalAlignment="Center"></Slider>
-                                <TextBlock Margin="2,5,5,5" Text="{Binding PredictionViewModel.OverlayOpacity, Converter={StaticResource DoubleRoundingConverter}}" VerticalAlignment="Center" Width="50"/>
+                                <CheckBox VerticalAlignment="Center" Content="Predict Probabilities" IsEnabled="{Binding PredictionViewModel.NotBlocking}" IsChecked="{Binding PredictionViewModel.PredictProbabilities}"></CheckBox>
                             </StackPanel>
                             <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                <Button Content="Assess Accuracy" Command="{Binding PredictionViewModel.AssessAccuracyCommand}" Margin="5,5,5,5"></Button>
+                                <TextBlock VerticalAlignment="Center" Margin="5,5,5,5" Text="Prediction Transparency:"></TextBlock>
+                                <Slider Style="{DynamicResource FlatSlider}" Orientation="Horizontal" Value="{Binding PredictionViewModel.OverlayOpacity}" IsEnabled="{Binding PredictionViewModel.NotBlocking}" Minimum="0" Maximum="1" Width="100" TickPlacement="BottomRight" TickFrequency="0.1" VerticalAlignment="Center"></Slider>
+                                <TextBlock Margin="2,5,5,5" Text="{Binding PredictionViewModel.OverlayOpacity, Converter={StaticResource DoubleRoundingConverter}}" IsEnabled="{Binding PredictionViewModel.NotBlocking}" VerticalAlignment="Center" Width="50"/>
+                                <Button Content="Export" Command="{Binding PredictionViewModel.ExportPredictionsCommand}" Margin="5,5,5,5"></Button>
+                                <Button Content="Assess Accuracy" Command="{Binding PredictionViewModel.AssessAccuracyCommand}" IsEnabled="{Binding PredictionViewModel.NotBlocking}" Margin="5,5,5,5"></Button>
                             </StackPanel>
                         </Grid>
                         <StackPanel Grid.Row="1" Orientation="Horizontal" IsEnabled="{Binding PredictionViewModel.IsAllPredicted}">
