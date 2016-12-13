@@ -16,6 +16,7 @@ using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.View.Export;
+using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using MahApps.Metro.Controls;
 using MathNet.Numerics.LinearAlgebra;
 using Microsoft.Win32;
@@ -405,7 +406,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private async void ExportPredictionsAsync()
         {
-            var dialog = new ExportPredicitonDialog(PredictProbabilities, _mainWindowViewModel.Layers.Where(l => l.Path != null).ToList());
+            
+            var dialog = new ExportPredicitonDialog(PredictProbabilities, _mainWindowViewModel.Layers.Any(l => l.IsRgb), _mainWindowViewModel.Layers.Where(l => l.Path != null).ToList());
 
             if (dialog.ShowDialog() == true)
             {
@@ -417,13 +419,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                 NotBlocking = false;
 
+                var scaleToUnrealLandscape = dialog.DialogViewModel.ScaleToUnrealLandscape;
+
                 var layerTasks = new List<Task<Tuple<int, ushort[]>>>();
+
                 for (var layerIndex = 0; layerIndex < layers.Count; ++layerIndex)
                 {
                     var layer = layers[layerIndex];
                     var types = layer.LandCoverTypes;
                     var selectedIndices = layer.SelectedTypeIndices;
                     var constLayerIndex = layerIndex;
+
 
                     if (dialog.DialogViewModel.ExportAsProbabilities)
                     {
@@ -482,105 +488,40 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                     }
                 }
 
-                var saveTasks = new List<Task>();
-
-                // Export Heightmap
-                if (dialog.DialogViewModel.ExportHeightmap)
+                // Export RGB
+                if (dialog.DialogViewModel.ExportRgb)
                 {
-                    var heightmapLayer = dialog.DialogViewModel.HeightmapLayer;
+                    var redLayer = _mainWindowViewModel.Layers.First(l => l.IsRed);
+                    var greenLayer = _mainWindowViewModel.Layers.First(l => l.IsGreen);
+                    var blueLayer = _mainWindowViewModel.Layers.First(l => l.IsBlue);
 
-                    var upperLeftImage = heightmapLayer.WorldToImage * PredictionUpperLeftWorld;
-                    var bottomRightImage = heightmapLayer.WorldToImage * PredictionBottomRightWorld;
+                    var upperLeftImage = redLayer.WorldToImage * PredictionUpperLeftWorld;
+                    var bottomRightImage = redLayer.WorldToImage * PredictionBottomRightWorld;
                     var upperLeftX = (int)upperLeftImage[0];
                     var upperLeftY = (int)upperLeftImage[1];
                     var bottomLeftX = (int)bottomRightImage[0];
                     var bottomLeftY = (int)bottomRightImage[1];
 
-                    var scaleToUnrealLandscape = dialog.DialogViewModel.ScaleToUnrealLandscape;
-
                     int heightmapPredictionWidth = bottomLeftX - upperLeftX;
                     int heightmapPredictionHeight = bottomLeftY - upperLeftY;
+
+                }
+
+                var saveTasks = new List<Task>();
+
+                // Export Heightmap
+                if (dialog.DialogViewModel.ExportHeightmap)
+                {
+
+                    var heightmapLayer = dialog.DialogViewModel.HeightmapLayer;
+
                     int heightmapImageWidth;
                     int heightmapImageHeight;
-                    if (scaleToUnrealLandscape)
-                    {
-                        var outputSize = ComputeUnrealLandscapeSize(new Point2D(heightmapPredictionWidth, heightmapPredictionHeight));
-                        heightmapImageWidth = outputSize.X;
-                        heightmapImageHeight = outputSize.Y;
-                    }
-                    else
-                    {
-                        heightmapImageWidth = heightmapPredictionWidth;
-                        heightmapImageHeight = heightmapPredictionHeight;
-                    }
+                    int transformedStride;
+                    int heightmapExportWidth;
+                    int heightmapExportHeight;
+                    var transform = LoadProjectedImage(out heightmapImageWidth, heightmapLayer, scaleToUnrealLandscape, out heightmapImageHeight, out transformedStride, out transformedPtr, out heightmapExportWidth, out heightmapExportHeight);
 
-                    var dataSet = Gdal.Open(heightmapLayer.Path, Access.GA_ReadOnly);
-                    var rasterBand = dataSet.GetRasterBand(1);
-
-                    var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
-                    var originalStride = (rasterBand.XSize * bitsPerPixel + 7) / 8;
-                    var originalPtr = Marshal.AllocHGlobal(originalStride * rasterBand.YSize);
-
-                    rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, originalPtr, rasterBand.XSize,
-                        rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, originalStride);
-
-                    var minMax = new double[2];
-                    rasterBand.ComputeRasterMinMax(minMax, 0);
-                    var minAltitude = minMax[0];
-                    var maxAltitude = minMax[1];
-
-                    double noDataValue;
-                    int hasValue;
-                    rasterBand.GetNoDataValue(out noDataValue, out hasValue);
-
-                    var targetFormat = PixelFormats.Gray16;
-                    var transformedStride = (heightmapImageWidth * targetFormat.BitsPerPixel + 7) / 8;
-                    var transformedPtr = Marshal.AllocHGlobal(transformedStride * heightmapImageHeight);
-
-                    var heightmapExportWidth = Math.Min(heightmapPredictionWidth, heightmapImageWidth);
-                    var heightmapExportHeight = Math.Min(heightmapPredictionHeight, heightmapImageHeight);
-
-                    var transform = Task.Run(() => Parallel.ForEach(Partitioner.Create(0, heightmapImageHeight), range =>
-                    {
-                        unsafe
-                        {
-                            var original = (float*)originalPtr.ToPointer();
-                            var transformed = (ushort*)transformedPtr.ToPointer();
-                            for (var y = upperLeftY + range.Item1; y < upperLeftY + range.Item2; ++y)
-                            {
-                                for (var x = upperLeftX; x < bottomLeftX; ++x)
-                                {
-                                    var transformedOffset = (y - upperLeftY) * heightmapImageWidth + (x - upperLeftX);
-
-                                    // TODO use min of pixelWidth and heightmap exportwidth
-                                    // TODO scale to mentioned above and then fill rest of image black for layers?
-                                    // Check if inside of bounds
-                                    if (x - upperLeftX < heightmapExportWidth && y - upperLeftY < heightmapExportHeight)
-                                    {
-                                        var originalOffset = y * heightmapLayer.ImagePixelWidth + x;
-
-                                        var value = *(original + originalOffset);
-
-                                        // Check for no data value
-                                        if (MoreMath.AlmostEquals(value, noDataValue))
-                                        {
-                                            *(transformed + transformedOffset) = 0;
-                                        }
-                                        else
-                                        {
-                                            var scaled = (ushort)Math.Min((value - minAltitude) / (maxAltitude - minAltitude) * ushort.MaxValue, ushort.MaxValue);
-                                            *(transformed + transformedOffset) = scaled;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        *(transformed + transformedOffset) = 0;
-                                    }
-
-                                }
-                            }
-                        }
-                    }));
 
                     // Wait for height map transformation
                     await transform;
@@ -589,7 +530,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                       {
                          // Write heightmap
                          var heightmapBitmap = BitmapSource.Create(heightmapImageWidth, heightmapImageHeight, 96, 96, PixelFormats.Gray16, null, transformedPtr, transformedStride * heightmapImageHeight, transformedStride);
-                          BitmapFrame.Create(heightmapBitmap).SaveAsPng(Path.Combine(dialog.DialogViewModel.ExportPath, "heightmap.png"));
+                         BitmapFrame.Create(heightmapBitmap).SaveAsPng(Path.Combine(dialog.DialogViewModel.ExportPath, "heightmap.png"));
                       }));
 
 
@@ -605,7 +546,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                             var bitmap = BitmapSource.Create(width, height, 96, 96, PixelFormats.Gray16, null, data, width * 2);
 
-                            // Save layer as RGB8
+                            // Save layer as Gray16
                             if (scaleToUnrealLandscape)
                             {
                                 var scaled = bitmap.Resize(heightmapExportWidth, heightmapExportHeight);
@@ -645,6 +586,106 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
                 NotBlocking = true;
             }
+        }
+
+        private unsafe ParallelLoopResult LoadProjectedImage(out int heightmapImageWidth, LayerViewModel heightmapLayer,
+            bool scaleToUnrealLandscape, out int heightmapImageHeight, out int transformedStride, out IntPtr transformedPtr,
+            out int heightmapExportWidth, out int heightmapExportHeight)
+        {
+            var upperLeftImage = heightmapLayer.WorldToImage*PredictionUpperLeftWorld;
+            var bottomRightImage = heightmapLayer.WorldToImage*PredictionBottomRightWorld;
+            var upperLeftX = (int) upperLeftImage[0];
+            var upperLeftY = (int) upperLeftImage[1];
+            var bottomLeftX = (int) bottomRightImage[0];
+            var bottomLeftY = (int) bottomRightImage[1];
+
+
+            int heightmapPredictionWidth = bottomLeftX - upperLeftX;
+            int heightmapPredictionHeight = bottomLeftY - upperLeftY;
+            int heightmapImageWidth;
+            int heightmapImageHeight;
+            if (scaleToUnrealLandscape)
+            {
+                var outputSize = ComputeUnrealLandscapeSize(new Point2D(heightmapPredictionWidth, heightmapPredictionHeight));
+                heightmapImageWidth = outputSize.X;
+                heightmapImageHeight = outputSize.Y;
+            }
+            else
+            {
+                heightmapImageWidth = heightmapPredictionWidth;
+                heightmapImageHeight = heightmapPredictionHeight;
+            }
+
+            var dataSet = Gdal.Open(heightmapLayer.Path, Access.GA_ReadOnly);
+            var rasterBand = dataSet.GetRasterBand(1);
+
+            var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
+            var originalStride = (rasterBand.XSize*bitsPerPixel + 7)/8;
+            var originalPtr = Marshal.AllocHGlobal(originalStride*rasterBand.YSize);
+
+            rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, originalPtr, rasterBand.XSize,
+                rasterBand.YSize, rasterBand.DataType, bitsPerPixel/8, originalStride);
+
+            var minMax = new double[2];
+            rasterBand.ComputeRasterMinMax(minMax, 0);
+            var minAltitude = minMax[0];
+            var maxAltitude = minMax[1];
+
+            double noDataValue;
+            int hasValue;
+            rasterBand.GetNoDataValue(out noDataValue, out hasValue);
+
+            var targetFormat = PixelFormats.Gray16;
+            transformedStride = (heightmapImageWidth*targetFormat.BitsPerPixel + 7)/8;
+            transformedPtr = Marshal.AllocHGlobal(transformedStride*heightmapImageHeight);
+
+            heightmapExportWidth = Math.Min(heightmapPredictionWidth, heightmapImageWidth);
+            heightmapExportHeight = Math.Min(heightmapPredictionHeight, heightmapImageHeight);
+
+            var transform = Task.Run(() => Parallel.ForEach(Partitioner.Create(0, heightmapImageHeight), range =>
+            {
+                unsafe
+                {
+                    var original = (float*) originalPtr.ToPointer();
+                    var transformed = (ushort*) transformedPtr.ToPointer();
+                    for (var y = upperLeftY + range.Item1; y < upperLeftY + range.Item2; ++y)
+                    {
+                        for (var x = upperLeftX; x < bottomLeftX; ++x)
+                        {
+                            var transformedOffset = (y - upperLeftY)*heightmapImageWidth + (x - upperLeftX);
+
+                            // TODO use min of pixelWidth and heightmap exportwidth
+                            // TODO scale to mentioned above and then fill rest of image black for layers?
+                            // Check if inside of bounds
+                            if (x - upperLeftX < heightmapExportWidth && y - upperLeftY < heightmapExportHeight)
+                            {
+                                var originalOffset = y*heightmapLayer.ImagePixelWidth + x;
+
+                                var value = *(original + originalOffset);
+
+                                // Check for no data value
+                                if (MoreMath.AlmostEquals(value, noDataValue))
+                                {
+                                    *(transformed + transformedOffset) = 0;
+                                }
+                                else
+                                {
+                                    var scaled =
+                                        (ushort)
+                                            Math.Min((value - minAltitude)/(maxAltitude - minAltitude)*ushort.MaxValue,
+                                                ushort.MaxValue);
+                                    *(transformed + transformedOffset) = scaled;
+                                }
+                            }
+                            else
+                            {
+                                *(transformed + transformedOffset) = 0;
+                            }
+                        }
+                    }
+                }
+            }));
+            return transform;
         }
 
         /// <summary>

@@ -298,7 +298,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
                             Layers.Insert(0,
                                 new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
-                                    transformMat, upperLeft, bottomRight, 0, 0, false, false, false, false,
+                                    transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false,
                                     ClassifierViewModel.FeaturesViewModel.HasFeatures()));
                         });
                     });
@@ -341,7 +341,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             }
         }
 
-        private LayerViewModel CreateLayerViewModel(Dataset dataSet, OSGeo.GDAL.Band rasterBand, int stride, IntPtr data, PixelFormat format, CreateLayerViewModel layer)
+        private LayerViewModel CreateLayerViewModel(Dataset dataSet, Band rasterBand, int stride, IntPtr data, PixelFormat format, CreateLayerViewModel layer)
         {
             WriteableBitmap bandImage = new WriteableBitmap(rasterBand.XSize, rasterBand.YSize, 96, 96, format, null);
             bandImage.Lock();
@@ -376,7 +376,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
             var imageBandViewModel = new LayerViewModel(
                 layer.GetName(), layer.SatelliteType, layer.Path, layer.ContrastEnhancement, xRes, yRes, bandImage, transformMat, upperLeft,
-                bottomRight, layer.MinCutOff, layer.MaxCutOff, layer.R, layer.G, layer.B, true,
+                bottomRight, layer.MinCutOff, layer.MaxCutOff, layer.R, layer.G, layer.B, false, true,
                 ClassifierViewModel.FeaturesViewModel.HasFeatures());
 
             return imageBandViewModel;

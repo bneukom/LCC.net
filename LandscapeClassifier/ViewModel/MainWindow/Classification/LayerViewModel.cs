@@ -168,6 +168,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public bool IsBlue { get; }
 
         /// <summary>
+        /// True if this layer represents is the RGB channel.  
+        /// </summary>
+        public bool IsRgb { get; }
+
+        /// <summary>
         /// The satellite type of the layer.
         /// </summary>
         public SatelliteType SatelliteType { get; }
@@ -179,7 +184,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         public LayerViewModel(string name, SatelliteType satelliteType, string path, bool contrastEnhanced, double xScale, double yScale, 
             WriteableBitmap bandImage, Matrix<double> imageToWorld, Vector<double> upperLeftWorld, Vector<double> bottomRightWorld, 
-            double minCutPercentage, double maxCutPercentage, bool isRed, bool isGreen, bool isBlue, bool isFeature = true, bool canChangeIsFeature = true)
+            double minCutPercentage, double maxCutPercentage, bool isRed, bool isGreen, bool isBlue, bool isRgb, bool isFeature = true, bool canChangeIsFeature = true)
         {
             Name = name;
             Path = path;
@@ -205,6 +210,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             IsRed = isRed;
             IsGreen = isGreen;
             IsBlue = isBlue;
+            IsRgb = isRgb;
         }
 
 

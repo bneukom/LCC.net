@@ -14,12 +14,12 @@ namespace LandscapeClassifier.View.Export
     {
         public ExportPredictionDialogViewModel DialogViewModel { get; private set; }
 
-        public ExportPredicitonDialog(bool canExportAsProbabilities, List<LayerViewModel> layerPaths)
+        public ExportPredicitonDialog(bool canExportAsProbabilities, bool canExportRgb, List<LayerViewModel> layerPaths)
         {
             InitializeComponent();
 
             DialogViewModel = (ExportPredictionDialogViewModel)DataContext;
-            DialogViewModel.Initialize(canExportAsProbabilities, layerPaths);
+            DialogViewModel.Initialize(canExportAsProbabilities, canExportRgb, layerPaths);
         }
 
         public bool? ShowDialog(List<LayerViewModel> layerPaths)

@@ -32,6 +32,8 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private double _minAcceptanceProbability;
         private bool _scaleToUnrealLandscape;
         private object _canExportAsProbabilities;
+        private bool _exportRgb;
+        private bool _canExportRgb;
 
         public string ExportPath
         {
@@ -92,6 +94,19 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _maxAltitude = value; RaisePropertyChanged(); }
         }
 
+
+        public bool ExportRgb
+        {
+            get { return _exportRgb; }
+            set { _exportRgb = value; RaisePropertyChanged(); }
+        }
+
+        public bool CanExportRgb
+        {
+            get { return _canExportRgb; }
+            set { _canExportRgb = value; RaisePropertyChanged(); }
+        }
+
         public LayerViewModel HeightmapLayer
         {
             get { return _heightmapLayer; }
@@ -131,6 +146,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public ICommand RemoveLayerCommand { get; set; }
         public ICommand BrowseExportPathCommand { get; set; }
         public ICommand BrowseHeightmapLayerCommand { get; set; }
+
 
         public ExportPredictionDialogViewModel()
         {
@@ -201,8 +217,9 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         }
 
 
-        public void Initialize(bool canExportAsProbabilities, List<LayerViewModel> layerPaths)
+        public void Initialize(bool canExportAsProbabilities, bool canExportRgb, List<LayerViewModel> layerPaths)
         {
+            CanExportRgb = canExportRgb;
             ExportHeightmap = false;
             ExistingLayers.Clear();
             ExistingLayers.AddRange(layerPaths);
