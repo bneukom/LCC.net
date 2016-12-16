@@ -29,7 +29,35 @@ namespace LandscapeClassifier.Extensions
         /// <param name="width"></param>
         /// <param name="height"></param>
         /// <returns></returns>
-        public static BitmapSource Crop(this BitmapSource source, int width, int height)
+        public static BitmapSource Crop(this BitmapSource source, int x, int y, int width, int height)
+        {
+            return new CroppedBitmap(source, new Int32Rect(x, y, width, height));
+
+            /*
+            RenderTargetBitmap renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            var group = new DrawingGroup();
+            RenderOptions.SetBitmapScalingMode(group, BitmapScalingMode.HighQuality);
+            group.Children.Add(new ImageDrawing(source, new Rect(x, y, source.Width, source.Height)));
+            group.ClipGeometry = new RectangleGeometry(new Rect(x, y, width, height));
+
+            var drawingVisual = new DrawingVisual();
+            using (var drawingContext = drawingVisual.RenderOpen())
+                drawingContext.DrawDrawing(group);
+
+            renderTargetBitmap.Render(drawingVisual);
+
+            return renderTargetBitmap;
+            */
+        }
+
+        /// <summary>
+        /// Crops the bitmap source to the given width and height and returns the result as a Pbgra32 image.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        public static BitmapSource Resize(this BitmapSource source, int width, int height)
         {
             RenderTargetBitmap renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
             var group = new DrawingGroup();
@@ -53,7 +81,7 @@ namespace LandscapeClassifier.Extensions
         /// <param name="width"></param>
         /// <param name="height"></param>
         /// <returns></returns>
-        public static BitmapSource Resize(this BitmapSource source, int width, int height)
+        public static BitmapSource Scale(this BitmapSource source, int width, int height)
         {
             var rect = new Rect(0, 0, width, height);
 

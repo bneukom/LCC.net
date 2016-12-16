@@ -9,8 +9,9 @@
         xmlns:system="clr-namespace:System;assembly=mscorlib"
         xmlns:converter="clr-namespace:LandscapeClassifier.Converter"
         xmlns:dialogs="clr-namespace:LandscapeClassifier.ViewModel.Dialogs"
+        xmlns:imaging="clr-namespace:System.Drawing.Imaging;assembly=System.Drawing"
         mc:Ignorable="d"
-        Title="Export Predictions" Height="423.056" Width="1024"
+        Title="Export Predictions" Height="568.642" Width="1024"
         GlowBrush="{DynamicResource AccentColorBrush}"
         DataContext="{StaticResource ExportPredictionDialogViewModel}">
     <Window.Resources>
@@ -28,6 +29,7 @@
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
@@ -49,35 +51,39 @@
                 <Label IsEnabled="{Binding ExportAsProbabilities}">Minimum Acceptance:</Label>
                 <controls:NumericUpDown IsEnabled="{Binding ExportAsProbabilities}" MinWidth="90" Minimum="0" Maximum="1" Interval="0.05" Value="{Binding MinAcceptanceProbability}"></controls:NumericUpDown>
             </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <CheckBox  Margin="5" IsChecked="{Binding ExportHeightmap, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center">Export 16 bit Grayscale Heightmap</CheckBox>
-                <ComboBox Margin="5" ItemsSource="{Binding ExistingLayers}" IsEnabled="{Binding ExportHeightmap}" SelectedItem="{Binding HeightmapLayer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectedIndex="0">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Label Content="{Binding Name}"></Label>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <CheckBox Margin="5" VerticalAlignment="Center" IsEnabled="{Binding ExportHeightmap}" Content="Crop/Scale Output To Unreal Landscape Dimensions" IsChecked="{Binding ScaleToUnrealLandscape}"></CheckBox>
-                <!--
-                <TextBox VerticalAlignment="Center" MinWidth="200" Margin="0,5,5,5" IsEnabled="{Binding ExportHeightmap}" Text="{Binding HeightmapLayer}"></TextBox>
-                <Button Content="Browse..." Margin="0,5,5,5" Command="{Binding BrowseHeightmapLayerCommand}"></Button>
-                -->
-            </StackPanel>
-            <StackPanel IsEnabled="{Binding ExportHeightmap}" Orientation="Horizontal">
-                <StackPanel.Resources>
-                    <converter:DoubleRoundingConverter x:Key="DoubleRoundingConverter"></converter:DoubleRoundingConverter>
-                </StackPanel.Resources>
-                <Label Margin="5" Content="Min Altitude [m]:"></Label>
-                <Label Margin="5" HorizontalAlignment="Left" Content="{Binding MinAltitude, Converter={StaticResource DoubleRoundingConverter}}"></Label>
-                <Label Margin="5" Content="Max Altitude [m]:"></Label>
-                <Label Margin="5" HorizontalAlignment="Left" Content="{Binding MaxAltitude, Converter={StaticResource DoubleRoundingConverter}}"></Label>
-            </StackPanel>
-            <StackPanel>
-                <CheckBox Margin="5" Content="Export RGB" Checked="{Binding ExportRgb}" IsEnabled="{Binding CanExportRgb}"></CheckBox>
-            </StackPanel>
+            <CheckBox Margin="5" VerticalAlignment="Center" Content="Crop/Scale Output To Unreal Landscape Dimensions" IsChecked="{Binding ScaleToUnrealLandscape}"></CheckBox>
+            <StackPanel/>
         </StackPanel>
-        <DataGrid Grid.Row="3" Grid.ColumnSpan="3" SelectedItem="{Binding SelectedLayer}"  AutoGenerateColumns="False" ItemsSource="{Binding ExportLayers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
+        <DataGrid Margin="5" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" AutoGenerateColumns="False" ItemsSource="{Binding ExportLayers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Width="*" Header="Name" Binding="{Binding Layer.Name}" IsReadOnly="True" />
+                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
+                                        Header="Export" Binding="{Binding Path=Export, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                <DataGridTemplateColumn Header="Is Heightmap">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsHeightmap,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding Export}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="Pixel Format">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <ComboBox HorizontalAlignment="Center" ItemsSource="{Binding Source={x:Static dialogs:ExportPredictionDialogViewModel.PixelFormats}}"
+                                            SelectedItem="{Binding Path=Format, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding Export}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        <DataGrid Grid.Row="4" Grid.ColumnSpan="3" SelectedItem="{Binding SelectedLayer}"  AutoGenerateColumns="False" ItemsSource="{Binding ExportLandCoverLayers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
             <DataGrid.Columns>
                 <DataGridTextColumn Width="*" Header="Path" Binding="{Binding Name}" IsReadOnly="True" />
                 <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
@@ -98,12 +104,12 @@
                                         Header="Settlement" Binding="{Binding Path=Settlement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </DataGrid.Columns>
         </DataGrid>
-        <StackPanel Grid.Row="4" Grid.Column="0" x:Name="AddRemoveBandsStackPanel" Orientation="Horizontal">
-            <Button Width="90" Command="{Binding AddLayerCommand}" Margin="5,5,5,5" HorizontalAlignment="Left" Content="Add Layer" ></Button>
-            <Button Width="125" Command="{Binding RemoveLayerCommand}" Margin="0,5,5,5" HorizontalAlignment="Left" Content="Remove Layer" ></Button>
+        <StackPanel Grid.Row="5" Grid.Column="0" x:Name="AddRemoveBandsStackPanel" Orientation="Horizontal">
+            <Button Command="{Binding AddLayerCommand}" Margin="5,5,5,5" HorizontalAlignment="Left" Content="Add Landcovertype Layer" ></Button>
+            <Button Command="{Binding RemoveLayerCommand}" Margin="0,5,5,5" HorizontalAlignment="Left" Content="Remove Landcovertype Layer" ></Button>
         </StackPanel>
 
-        <StackPanel Grid.Row="5" Grid.Column="0"  Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
+        <StackPanel Grid.Row="6" Grid.Column="0"  Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
             <Button IsDefault="True" Content="Export" IsEnabled="{Binding IsExportPathSet}" Click="OkClick" Width="75"/>
             <Button IsCancel="True" Content="Cancel" Click="CancelClick" Width="75" Margin="5,0,0,0"/>
         </StackPanel>

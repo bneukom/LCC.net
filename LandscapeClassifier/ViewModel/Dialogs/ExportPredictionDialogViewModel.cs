@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,15 +26,10 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private ExportLandCoverTypeViewModel _selectedLayer;
         private string _exportPath;
         private bool _isExportPathSet;
-        private double _minAltitude;
-        private double _maxAltitude;
-        private LayerViewModel _heightmapLayer;
         private bool _exportAsProbabilities;
         private double _minAcceptanceProbability;
         private bool _scaleToUnrealLandscape;
         private object _canExportAsProbabilities;
-        private bool _exportRgb;
-        private bool _canExportRgb;
 
         public string ExportPath
         {
@@ -82,57 +78,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _isExportPathSet = value; RaisePropertyChanged(); }
         }
 
-        public double MinAltitude
-        {
-            get { return _minAltitude; }
-            set { _minAltitude = value; RaisePropertyChanged(); }
-        }
-
-        public double MaxAltitude
-        {
-            get { return _maxAltitude; }
-            set { _maxAltitude = value; RaisePropertyChanged(); }
-        }
-
-
-        public bool ExportRgb
-        {
-            get { return _exportRgb; }
-            set { _exportRgb = value; RaisePropertyChanged(); }
-        }
-
-        public bool CanExportRgb
-        {
-            get { return _canExportRgb; }
-            set { _canExportRgb = value; RaisePropertyChanged(); }
-        }
-
-        public LayerViewModel HeightmapLayer
-        {
-            get { return _heightmapLayer; }
-            set
-            {
-                _heightmapLayer = value;
-                RaisePropertyChanged();
-
-                Task.Run(() =>
-                {
-                    if (value != null)
-                    {
-                        var dataSet = Gdal.Open(value.Path, Access.GA_ReadOnly);
-                        var rasterBand = dataSet.GetRasterBand(1);
-
-                        double[] minMax = new double[2];
-                        rasterBand.ComputeRasterMinMax(minMax, 0);
-
-                        MinAltitude = minMax[0];
-                        MaxAltitude = minMax[1];
-                    }
-                });
-            }
-        }
-
-        public ObservableCollection<LayerViewModel> ExistingLayers { get; } = new ObservableCollection<LayerViewModel>();
+        public ObservableCollection<LayerViewModel> Layers { get; } = new ObservableCollection<LayerViewModel>();
 
         public ExportLandCoverTypeViewModel SelectedLayer
         {
@@ -140,40 +86,27 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _selectedLayer = value; RaisePropertyChanged(); }
         }
 
-        public ObservableCollection<ExportLandCoverTypeViewModel> ExportLayers { get; set; }
+        public ObservableCollection<ExportLandCoverTypeViewModel> ExportLandCoverLayers { get; set; } = new ObservableCollection<ExportLandCoverTypeViewModel>();
+        public ObservableCollection<ExportLayerViewModel> ExportLayers { get; set; } = new ObservableCollection<ExportLayerViewModel>();
 
         public ICommand AddLayerCommand { get; set; }
         public ICommand RemoveLayerCommand { get; set; }
         public ICommand BrowseExportPathCommand { get; set; }
         public ICommand BrowseHeightmapLayerCommand { get; set; }
 
+        public static ObservableCollection<System.Windows.Media.PixelFormat> PixelFormats { get; set; } = new ObservableCollection<System.Windows.Media.PixelFormat>();
+
+        static ExportPredictionDialogViewModel()
+        {
+            PixelFormats.Add(System.Windows.Media.PixelFormats.Gray16);
+            PixelFormats.Add(System.Windows.Media.PixelFormats.Pbgra32);
+        }
 
         public ExportPredictionDialogViewModel()
         {
-            ExportLayers = new ObservableCollection<ExportLandCoverTypeViewModel>();
-
             AddLayerCommand = new RelayCommand(AddLayer);
             RemoveLayerCommand = new RelayCommand(RemoveLayer, CanRemoveLayer);
             BrowseExportPathCommand = new RelayCommand(BrowseExportPath);
-            BrowseHeightmapLayerCommand = new RelayCommand(BrowseHeightmapLayer, CanBrowseHeightmapLayer);
-        }
-
-        private void BrowseHeightmapLayer()
-        {
-            var browseLayerDialog = new BrowseLayerDialog();
-
-            browseLayerDialog.DialogViewModel.Layers.AddRange(ExistingLayers);
-
-            if (browseLayerDialog.ShowDialog() == true)
-            {
-                var selectedLayer = browseLayerDialog.DialogViewModel.SelectedLayer;
-                HeightmapLayer = selectedLayer;
-            }
-        }
-
-        private bool CanBrowseHeightmapLayer()
-        {
-            return ExportHeightmap;
         }
 
         private void BrowseExportPath()
@@ -198,13 +131,13 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private void RemoveLayer()
         {
-            ExportLayers.Remove(SelectedLayer);
+            ExportLandCoverLayers.Remove(SelectedLayer);
         }
 
         private void AddLayer()
         {
-            int missingLayer = MissingLayerIndex(ExportLayers);
-            ExportLayers.Add(new ExportLandCoverTypeViewModel("layer" + missingLayer + ".png", ExportLayers));
+            int missingLayer = MissingLayerIndex(ExportLandCoverLayers);
+            ExportLandCoverLayers.Add(new ExportLandCoverTypeViewModel("layer" + missingLayer + ".png", ExportLandCoverLayers));
         }
 
         public static int MissingLayerIndex(ObservableCollection<ExportLandCoverTypeViewModel> layers)
@@ -216,21 +149,21 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             return layerNumbers.Count == 0 ? 0 : Enumerable.Range(layerNumbers.Min(), layerNumbers.Count + 1).Except(layerNumbers).FirstOrDefault();
         }
 
-
-        public void Initialize(bool canExportAsProbabilities, bool canExportRgb, List<LayerViewModel> layerPaths)
+        public void Initialize(bool canExportAsProbabilities, List<LayerViewModel> layers)
         {
-            CanExportRgb = canExportRgb;
             ExportHeightmap = false;
-            ExistingLayers.Clear();
-            ExistingLayers.AddRange(layerPaths);
+            Layers.Clear();
+            Layers.AddRange(layers);
             CanExportAsProbabilities = canExportAsProbabilities;
+            ExportLayers.Clear();
+            ExportLayers.AddRange(layers.Select(l => new ExportLayerViewModel(l)));
 
             var types = Enum.GetValues(typeof(LandcoverType));
             foreach (LandcoverType type in types)
             {
                 if (type == LandcoverType.None) continue;
 
-                var layer = new ExportLandCoverTypeViewModel(type + ".png", ExportLayers);
+                var layer = new ExportLandCoverTypeViewModel(type + ".png", ExportLandCoverLayers);
 
                 if (type == LandcoverType.Grass) layer.Grass = true;
                 if (type == LandcoverType.Gravel) layer.Gravel = true;
@@ -241,8 +174,41 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 if (type == LandcoverType.Agriculture) layer.Agriculture = true;
                 if (type == LandcoverType.Settlement) layer.Settlement = true;
 
-                ExportLayers.Add(layer);
+                ExportLandCoverLayers.Add(layer);
             }
+        }
+    }
+
+    public class ExportLayerViewModel : ViewModelBase
+    {
+        private bool _export;
+        private bool _isHeightmap;
+        private System.Windows.Media.PixelFormat _format;
+
+        public System.Windows.Media.PixelFormat Format
+        {
+            get { return _format; }
+            set { _format = value; RaisePropertyChanged(); }
+        }
+
+        public bool Export
+        {
+            get { return _export; }
+            set { _export = value; RaisePropertyChanged(); }
+        }
+
+        public LayerViewModel Layer { get; }
+
+        public bool IsHeightmap
+        {
+            get { return _isHeightmap; }
+            set { _isHeightmap = value; RaisePropertyChanged(); }
+        }
+
+
+        public ExportLayerViewModel(LayerViewModel layer)
+        {
+            Layer = layer;
         }
     }
 
