@@ -16,7 +16,7 @@ TODO
 # Tool
 ![Classification](http://i.imgur.com/DEkn9QG.jpg)
 
-# TODO
+# Future Work
 - Only WGS84 coordinate system for importing supported
 - Better post processing support (color space adjustments)
 - Shadow in the ortho images are very error prone, more classes (for example shadowed snow) or using an illumination invariant color space are needed as for example described by Maddern et al. in "Illumination Invariant Imaging: Applications in Robust Vision-based Localisation, Mapping and Classification for Autonomous Vehicles"
