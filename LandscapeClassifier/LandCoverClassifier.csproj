@@ -314,6 +314,7 @@
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="Util\Either.cs" />
     <Compile Include="Util\GdalUtil.cs" />
+    <Compile Include="ViewModel\Dialogs\FlattenWaterBodiesViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\BrowseLayerDialogViewModel.cs" />
@@ -368,6 +369,9 @@
     <Compile Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml.cs">
       <DependentUpon>CreateSlopeFromHeightmapDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml.cs">
+      <DependentUpon>FlattenWaterBodiesDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\ValidationRules\DoubleValidationRule.cs" />
     <Page Include="Resources\Icons.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -412,6 +416,10 @@
     <Page Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="View\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

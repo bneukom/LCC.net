@@ -158,6 +158,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             ExportLayers.Clear();
             ExportLayers.AddRange(layers.Select(l => new ExportLayerViewModel(l)));
 
+            ExportLandCoverLayers.Clear();
             var types = Enum.GetValues(typeof(LandcoverType));
             foreach (LandcoverType type in types)
             {
@@ -173,6 +174,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 if (type == LandcoverType.Water) layer.Water = true;
                 if (type == LandcoverType.Agriculture) layer.Agriculture = true;
                 if (type == LandcoverType.Settlement) layer.Settlement = true;
+                if (type == LandcoverType.Soil) layer.Soil = true;
 
                 ExportLandCoverLayers.Add(layer);
             }
@@ -224,6 +226,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private bool _agriculture;
         private bool _settlement;
         private string _name;
+        private bool _soil;
 
         public string Name
         {
@@ -279,6 +282,12 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             set { _settlement = value; RaisePropertyChanged(); }
         }
 
+        public bool Soil
+        {
+            get { return _soil; }
+            set { _soil = value; RaisePropertyChanged(); }
+        }
+
         public int[] SelectedTypeIndices
         {
             get
@@ -292,6 +301,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 if (Water) selectedIndices.Add((int)LandcoverType.Water);
                 if (Agriculture) selectedIndices.Add((int)LandcoverType.Agriculture);
                 if (Settlement) selectedIndices.Add((int)LandcoverType.Settlement);
+                if (Soil) selectedIndices.Add((int)LandcoverType.Soil);
                 return selectedIndices.ToArray();
             }
         }
@@ -312,6 +322,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                     if (type == LandcoverType.Water) typesResult[(int)type] = Water;
                     if (type == LandcoverType.Agriculture) typesResult[(int)type] = Agriculture;
                     if (type == LandcoverType.Settlement) typesResult[(int)type] = Settlement;
+                    if (type == LandcoverType.Soil) typesResult[(int)type] = Soil;
                 }
                 return typesResult;
             }
@@ -338,6 +349,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 if (Water) newName += "Water";
                 if (Agriculture) newName += "Agriculture";
                 if (Settlement) newName += "Settlement";
+                if (Soil) newName += "Soil";
                 if (newName.Length == 0)
                 {
                     int missingLayer = ExportPredictionDialogViewModel.MissingLayerIndex(_existingLayers);

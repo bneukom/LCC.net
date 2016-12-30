@@ -27,6 +27,8 @@ namespace LandscapeClassifier.Model
                     return Colors.White;
                 case LandcoverType.Settlement:
                     return Colors.Black;
+                case LandcoverType.Soil:
+                    return Colors.SaddleBrown;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(self), self, null);
             }

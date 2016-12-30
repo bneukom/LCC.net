@@ -110,6 +110,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         public ICommand MoveLayerUpCommand { set; get; }
 
         /// <summary>
+        /// Flattens water bodies in the DEM by using the classification map.
+        /// </summary>
+        public ICommand FlattenWaterDEMCommand { set; get; }
+
+        /// <summary>
         /// Block the main window.
         /// </summary>
         public bool WindowEnabled
@@ -117,6 +122,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             get { return _windowEnabled; }
             set { _windowEnabled = value; RaisePropertyChanged(); }
         }
+
 
         public MainWindowViewModel()
         {
@@ -126,6 +132,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             CreateSlopeFromHeightmapCommand = new RelayCommand(() => new CreateSlopeFromHeightmapDialog().ShowDialog(), () => true);
             CreateTiledHeightmapCommand = new RelayCommand(() => new CreateTiledHeightmapDialog().ShowDialog(), () => true);
             AddLayersCommand = new RelayCommand(AddBands, () => PredictionViewModel.NotBlocking);
+
+
+            FlattenWaterDEMCommand = new RelayCommand(FlattenWaterDEM, () => true);
 
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);
@@ -155,6 +164,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             int current = Layers.IndexOf(SelectedLayer);
             if (current == 0) return;
             Layers.Move(current, current - 1);
+        }
+
+        private void FlattenWaterDEM()
+        {
+            
         }
 
         private void MoveLayerDown()
@@ -200,64 +214,65 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
                 // Parallel band loading
                 Task loadBands = Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Layers, (currentLayer, _, bandIndex) =>
+                {
+                    // Load raster
+                    var dataSet = Gdal.Open(currentLayer.Path, Access.GA_ReadOnly);
+                    var rasterBand = dataSet.GetRasterBand(1);
+
+                    var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
+
+                    int stride = (rasterBand.XSize * bitsPerPixel / 8);
+
+                    IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
+
+                    rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize, rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, stride);
+                    
+                    // Cutoff
+                    int minCutValue, maxCutValue;
+                    CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff, currentLayer.MaxCutOff, out minCutValue, out maxCutValue);
+
+                    // Apply RGB contrast enhancement
+                    if (viewModel.AddRgb && viewModel.RgbContrastEnhancement && (currentLayer.B || currentLayer.G || currentLayer.R))
                     {
-                        // Load raster
-                        var dataSet = Gdal.Open(currentLayer.Path, Access.GA_ReadOnly);
-                        var rasterBand = dataSet.GetRasterBand(1);
-
-                        var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
-                        int stride = (rasterBand.XSize * bitsPerPixel + 7) / 8;
-                        IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
-
-                        rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize,
-                            rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, stride);
-
-                        // Cutoff
-                        int minCutValue, maxCutValue;
-                        CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff, currentLayer.MaxCutOff, out minCutValue, out maxCutValue);
-
-                        // Apply RGB contrast enhancement
-                        if (viewModel.AddRgb && viewModel.RgbContrastEnhancement && (currentLayer.B || currentLayer.G || currentLayer.R))
+                        int colorOffset = currentLayer.B ? 0 : currentLayer.G ? 1 : currentLayer.R ? 2 : -1;
+                        unsafe
                         {
-                            int colorOffset = currentLayer.B ? 0 : currentLayer.G ? 1 : currentLayer.R ? 2 : -1;
-                            unsafe
-                            {
-                                // TODO what if layer is not of type uint?
-                                ushort* dataPtr = (ushort*)data.ToPointer();
-                                Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize),
-                                    (range) =>
+                            // TODO what if layer is not of type uint?
+                            ushort* dataPtr = (ushort*)data.ToPointer();
+                            Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize),
+                                (range) =>
+                                {
+                                    for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
                                     {
-                                        for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
-                                        {
-                                            ushort current = *(dataPtr + dataIndex);
-                                            byte val = (byte)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * byte.MaxValue, 0, byte.MaxValue - 1);
+                                        ushort current = *(dataPtr + dataIndex);
+                                        byte val = (byte)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * byte.MaxValue, 0, byte.MaxValue - 1);
 
-                                            bgra[dataIndex * 4 + colorOffset] = val;
-                                            bgra[dataIndex * 4 + 3] = 255;
-                                        }
-                                    });
-                            }
+                                        bgra[dataIndex * 4 + colorOffset] = val;
+                                        bgra[dataIndex * 4 + 3] = 255;
+                                    }
+                                });
                         }
+                    }
 
-                        // Apply band contrast enhancement
-                        if (currentLayer.ContrastEnhancement)
-                        {
-                            data = ApplyContrastEnhancement(rasterBand, data, minCutValue, maxCutValue);
-                        }
-
-
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, rasterBand.DataType.ToPixelFormat(), currentLayer);
-
-                            Layers.AddSorted(imageBandViewModel,
-                                Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
-
-                            Marshal.FreeHGlobal(data);
-                        });
+                    // Apply band contrast enhancement
+                    if (currentLayer.ContrastEnhancement)
+                    {
+                        data = ApplyContrastEnhancement(rasterBand, data, minCutValue, maxCutValue);
+                    }
 
 
-                    }));
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, currentLayer);
+
+                        Layers.AddSorted(imageBandViewModel,
+                            Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
+
+                        Marshal.FreeHGlobal(data);
+                    });
+
+
+                }));
 
                 // Load rgb image
                 if (viewModel.AddRgb)
@@ -296,14 +311,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                             var builder = Matrix<double>.Build;
                             var transformMat = builder.DenseOfArray(matArray);
 
-                            Layers.Insert(0,
-                                new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
-                                    transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false,
-                                    ClassifierViewModel.FeaturesViewModel.HasFeatures()));
+                            var layerViewModel = new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
+                                transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false,
+                                ClassifierViewModel.FeaturesViewModel.HasFeatures());
+
+                            Layers.Insert(0, layerViewModel);
                         });
                     });
 
-                    // Send message
                     addRgb.ContinueWith(t =>
                     {
                         // TODO use projection to get correct transformation?
@@ -341,16 +356,39 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             }
         }
 
-        private LayerViewModel CreateLayerViewModel(Dataset dataSet, Band rasterBand, int stride, IntPtr data, PixelFormat format, CreateLayerViewModel layer)
+        private LayerViewModel CreateLayerViewModel(Dataset dataSet, Band rasterBand, int stride, IntPtr data, CreateLayerViewModel layer)
         {
-            WriteableBitmap bandImage = new WriteableBitmap(rasterBand.XSize, rasterBand.YSize, 96, 96, format, null);
+            WriteableBitmap bandImage = new WriteableBitmap(rasterBand.XSize, rasterBand.YSize, 96, 96, rasterBand.DataType.ToPixelFormat(), null);
             bandImage.Lock();
+
+            int backBufferStride = bandImage.BackBufferStride;
 
             unsafe
             {
-                Buffer.MemoryCopy(data.ToPointer(), bandImage.BackBuffer.ToPointer(),
-                    stride * rasterBand.YSize,
-                    stride * rasterBand.YSize);
+                if (stride == backBufferStride)
+                {
+                    Buffer.MemoryCopy(data.ToPointer(), bandImage.BackBuffer.ToPointer(), stride * rasterBand.YSize, stride * rasterBand.YSize);
+                }
+                else
+                {
+                    if (rasterBand.DataType == DataType.GDT_UInt16)
+                    {
+                        ushort* sourcePtr = (ushort*)data.ToPointer();
+                        ushort* destPtr = (ushort*)bandImage.BackBuffer.ToPointer();
+                        for (int scanLine = 0; scanLine < rasterBand.YSize; ++scanLine)
+                        {
+                            ushort* source = sourcePtr + scanLine * stride / 2;
+                            ushort* dest = destPtr + scanLine * backBufferStride / 2;
+
+                            Buffer.MemoryCopy(source, dest, stride, stride);
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException();
+                    }
+
+                }
             }
 
             bandImage.AddDirtyRect(new Int32Rect(0, 0, rasterBand.XSize, rasterBand.YSize));
@@ -434,6 +472,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                     ushort* dataPtr = (ushort*)data.ToPointer();
                     ushort current = *(dataPtr + index);
                     *(dataPtr + index) = (ushort)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * ushort.MaxValue, 0, ushort.MaxValue);
+                };
+            }
+            else if (rasterBand.DataType == DataType.GDT_Int16)
+            {
+                action = (index) =>
+                {
+                    short* dataPtr = (short*)data.ToPointer();
+                    short current = *(dataPtr + index);
+                    *(dataPtr + index) = (short)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * short.MaxValue, 0, short.MaxValue);
                 };
             }
             else if (rasterBand.DataType == DataType.GDT_Float32)

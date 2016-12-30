@@ -32,14 +32,13 @@
                 <MenuItem Header="_Export Training Features" Command="{Binding ClassifierViewModel.ExportFeaturesCommand}"/>
                 <MenuItem Header="_Import Training Features" Command="{Binding ClassifierViewModel.ImportFeatureCommand}"/>
                 <MenuItem Header="_Export Predictions" Command="{Binding PredictionViewModel.ExportPredictionsCommand}"/>
-                <MenuItem Header="_Export Slope Image" Command="{Binding ExportSlopeImageCommand}"/>
-                <MenuItem Header="_Export Curvature Image" Command="{Binding ExportCurvatureImageCommand}"/>
-                <MenuItem Header="_Export Smoothed Heightmap Image" Command="{Binding ExportSmoothedHeightImageCommand}"/>
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
             <MenuItem Header="_Tools">
                 <MenuItem Header="_Create Slope From Heightmap" Command="{Binding CreateSlopeFromHeightmapCommand}"/>
                 <MenuItem Header="_Create Tiled Heightmap" Command="{Binding CreateTiledHeightmapCommand}"/>
+                <MenuItem Header="_Sanitize DEM" Command="{Binding CreateTiledHeightmapCommand}"/>
+                <MenuItem Header="_Flatten Water DEM" Command="{Binding FlattenWaterDEM}"/>
             </MenuItem>
         </Menu>
 
@@ -106,7 +105,7 @@
                             -->
                             <DataGrid SelectionMode="Single" SelectedItem="{Binding SelectedLayer}" x:Name="LayersGrid" Grid.Column="0" AllowDrop="True" CanUserResizeColumns="False" MaxWidth="250" Grid.Row="1"  AutoGenerateColumns="False" ItemsSource="{Binding Layers}" Margin="5" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Width="*" Header="Layer" Binding="{Binding Name}" />
+                                    <DataGridTextColumn Width="*" Header="Layer" Binding="{Binding Name}" IsReadOnly="True" />
                                     <DataGridCheckBoxColumn ElementStyle="{DynamicResource MetroDataGridCheckBox}"
                                         EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
                                         Header="Visible" Width="Auto"

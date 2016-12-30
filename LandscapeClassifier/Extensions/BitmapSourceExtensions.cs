@@ -32,22 +32,6 @@ namespace LandscapeClassifier.Extensions
         public static BitmapSource Crop(this BitmapSource source, int x, int y, int width, int height)
         {
             return new CroppedBitmap(source, new Int32Rect(x, y, width, height));
-
-            /*
-            RenderTargetBitmap renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
-            var group = new DrawingGroup();
-            RenderOptions.SetBitmapScalingMode(group, BitmapScalingMode.HighQuality);
-            group.Children.Add(new ImageDrawing(source, new Rect(x, y, source.Width, source.Height)));
-            group.ClipGeometry = new RectangleGeometry(new Rect(x, y, width, height));
-
-            var drawingVisual = new DrawingVisual();
-            using (var drawingContext = drawingVisual.RenderOpen())
-                drawingContext.DrawDrawing(group);
-
-            renderTargetBitmap.Render(drawingVisual);
-
-            return renderTargetBitmap;
-            */
         }
 
         /// <summary>
@@ -59,6 +43,8 @@ namespace LandscapeClassifier.Extensions
         /// <returns></returns>
         public static BitmapSource Resize(this BitmapSource source, int width, int height)
         {
+            return new TransformedBitmap(source, new ScaleTransform(width / (float)source.PixelWidth, height / (float)source.PixelHeight));
+            /*
             RenderTargetBitmap renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
             var group = new DrawingGroup();
             RenderOptions.SetBitmapScalingMode(group, BitmapScalingMode.HighQuality);
@@ -72,6 +58,7 @@ namespace LandscapeClassifier.Extensions
             renderTargetBitmap.Render(drawingVisual);
 
             return renderTargetBitmap;
+            */
         }
 
         /// <summary>

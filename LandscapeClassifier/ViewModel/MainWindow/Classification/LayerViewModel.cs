@@ -67,7 +67,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// Band bottom right in world coordinates.
         /// </summary>
-        public readonly Vector<double> BottomRightWorld;
+        public 
+            Vector<double> BottomRightWorld;
 
         /// <summary>
         /// Pixel width of the image.

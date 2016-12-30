@@ -463,11 +463,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                         int predictionHeight = bottomLeftY - upperLeftY;
 
                         var layerImage = layer.BandImage;
+
+                        // TODO possible loss of precision
                         var cropped = layerImage.Crop(upperLeftX, upperLeftY, predictionWidth, predictionHeight);
-                        var scaled = cropped.Scale(exportWidth, exportHeight);
-                        var resized = scaled.Resize(imageWidth, imageHeight);
+                        // var scaled = cropped.Scale(exportWidth, exportHeight);
+                        var resized = cropped.Resize(imageWidth, imageHeight);
                         var formatChanged = resized.ConvertFormat(exportLayer.Format);
 
+                        BitmapFrame.Create(cropped).SaveAsPng(Path.Combine(exportPath, layer.Name + "_cropped.png"));
+                        // BitmapFrame.Create(scaled).SaveAsPng(Path.Combine(exportPath, layer.Name + "_scaled.png"));
+                        BitmapFrame.Create(resized).SaveAsPng(Path.Combine(exportPath, layer.Name + "_resized.png"));
                         BitmapFrame.Create(formatChanged).SaveAsPng(Path.Combine(exportPath, layer.Name + ".png"));
                     }
                 }

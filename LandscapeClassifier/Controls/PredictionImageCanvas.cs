@@ -67,7 +67,7 @@ namespace LandscapeClassifier.Controls
             {
                 var featureVector = new FeatureVector(bandIntensities);
                 var predictedType = viewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(featureVector);
-                var predictionProbabilty = viewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Probabilty(featureVector, (int)LandcoverType.Snow);
+                var predictionProbabilty = viewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Probabilty(featureVector, (int)LandcoverType.Water);
 
                 viewModel.PredictionViewModel.MousePredictionType = predictedType;
                 viewModel.PredictionViewModel.MousePredictionProbability = predictionProbabilty;

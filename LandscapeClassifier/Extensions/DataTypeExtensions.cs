@@ -14,6 +14,8 @@ namespace LandscapeClassifier.Extensions
         {
             switch (dataType)
             {
+                case DataType.GDT_Int16:
+                    return PixelFormats.Gray16;
                 case DataType.GDT_UInt16:
                     return PixelFormats.Gray16;
                 case DataType.GDT_Float32:
