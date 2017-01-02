@@ -38,7 +38,7 @@
                 <MenuItem Header="_Create Slope From Heightmap" Command="{Binding CreateSlopeFromHeightmapCommand}"/>
                 <MenuItem Header="_Create Tiled Heightmap" Command="{Binding CreateTiledHeightmapCommand}"/>
                 <MenuItem Header="_Sanitize DEM" Command="{Binding CreateTiledHeightmapCommand}"/>
-                <MenuItem Header="_Flatten Water DEM" Command="{Binding FlattenWaterDEM}"/>
+                <MenuItem Header="_Flatten Water DEM" Command="{Binding FlattenWaterDEMCommand}"/>
             </MenuItem>
         </Menu>
 

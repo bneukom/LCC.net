@@ -25,5 +25,10 @@ namespace LandscapeClassifier.Util
         {
             return Math.Max(Math.Min(value, max), min);
         }
+
+        public static double Lerp(double a, double b, double v)
+        {
+            return a + (b - a)*v;
+        }
     }
 }

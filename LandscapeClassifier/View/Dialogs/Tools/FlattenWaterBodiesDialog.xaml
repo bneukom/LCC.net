@@ -14,14 +14,25 @@
         Title="Flatten Water Bodies" Height="359.9" Width="579.524"
         GlowBrush="{DynamicResource AccentColorBrush}"
         DataContext="{StaticResource FlattenWaterBodiesViewModel}">
+    <Window.Resources>
+        <ObjectDataProvider MethodName="GetValues"
+                    ObjectType="{x:Type system:Enum}"
+                    x:Key="SmoothModeObjectProvider">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="dialogs:SmoothMode" />
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </Window.Resources>
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="40"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -31,7 +42,7 @@
         <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
             <Label VerticalAlignment="Center">Digital Elevation Model:</Label>
             <TextBox VerticalAlignment="Center" Margin="5" Width="300" Text="{Binding DigitalElevationModelPath}"></TextBox>
-            <Button Margin="0,5,5,5" Command="{Binding BrowseDigitalElevationModelCommand}">Browse...</Button>
+            <Button Margin="0,5,5,5" Command="{Binding BrowseDigitalElevationModelPathCommand}">Browse...</Button>
         </StackPanel>
         <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal">
             <Label VerticalAlignment="Center">Water Map:</Label>
@@ -39,13 +50,26 @@
             <Button Margin="0,5,5,5" Command="{Binding BrowseWaterMapPathCommand}">Browse...</Button>
         </StackPanel>
         <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
-            <Label VerticalAlignment="Center">Min Water Area</Label>
-            <controls:NumericUpDown Minimum="0" Maximum="1" Interval="0.01" Value="{Binding MinWaterArea, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <Label VerticalAlignment="Center">Area Threshold:</Label>
+            <controls:NumericUpDown MaxHeight="22" MinWidth="100" Minimum="0" Interval="500" Value="{Binding AreaThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <Label VerticalAlignment="Center">Formfactor Threshold:</Label>
+            <controls:NumericUpDown MaxHeight="22" MinWidth="100" Minimum="0" Interval="500" Value="{Binding FormfactorThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="6" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
-            <Button IsDefault="True" Content="Run" IsEnabled="{Binding IsInputSet}" Click="OkClick" Width="75"/>
-            <Button IsCancel="True" Content="Cancel" Click="CancelClick" Width="75" Margin="5,0,0,0"/>
+        <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal">
+            <Label VerticalAlignment="Center">Smooth Mode:</Label>
+            <ComboBox Margin="5" SelectedItem="{Binding SmoothMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding Source={StaticResource SmoothModeObjectProvider}}"></ComboBox>
+            <Label VerticalAlignment="Center">Iterations: </Label>
+            <controls:NumericUpDown MaxHeight="22" Minimum="1" Maximum="10" Value="{Binding SmoothingIterations, Mode=TwoWay}"></controls:NumericUpDown>
+        </StackPanel>
+        <StackPanel Grid.Row="6" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+            <Button Margin="5" Command="{Binding ShowWaterMapCommand}">Show Water Map</Button>
+            <Button Margin="0,5,5,5" Command="{Binding FlattenWaterBodiesCommand}">Flatten Water Bodies</Button>
+        </StackPanel>
+       
+
+        <StackPanel Grid.Row="8" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
+            <Button IsCancel="True" Content="Done" Click="CancelClick" Width="75" Margin="5,0,0,0"/>
         </StackPanel>
 
     </Grid>

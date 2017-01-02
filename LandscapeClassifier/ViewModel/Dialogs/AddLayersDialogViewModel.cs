@@ -105,6 +105,10 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private void BandOnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
         {
+            if (propertyChangedEventArgs.PropertyName != nameof(CreateLayerViewModel.R) &&
+                propertyChangedEventArgs.PropertyName != nameof(CreateLayerViewModel.G) &&
+                propertyChangedEventArgs.PropertyName != nameof(CreateLayerViewModel.B)) return;
+
             foreach (var band in Layers)
             {
                 band.PropertyChanged -= BandOnPropertyChanged;

@@ -11,20 +11,15 @@ namespace LandscapeClassifier.View.Tools
     /// </summary>
     public partial class FlattenWaterBodiesDialog : MetroWindow
     {
-        public ExportPredictionDialogViewModel DialogViewModel { get; private set; }
+        public FlattenWaterBodiesViewModel DialogViewModel { get; private set; }
 
-        public FlattenWaterBodiesDialog(bool canExportAsProbabilities, List<LayerViewModel> layers)
+        public FlattenWaterBodiesDialog()
         {
             InitializeComponent();
 
-            DialogViewModel = (ExportPredictionDialogViewModel)DataContext;
-            DialogViewModel.Initialize(canExportAsProbabilities, layers);
+            DialogViewModel = (FlattenWaterBodiesViewModel)DataContext;
         }
 
-        public bool? ShowDialog(List<LayerViewModel> layerPaths)
-        {
-            return ShowDialog();
-        }
 
         private void OkClick(object sender, RoutedEventArgs e)
         {

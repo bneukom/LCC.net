@@ -1,16 +1,13 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using LandscapeClassifier.Model;
-using LandscapeClassifier.Util;
 using MahApps.Metro.Controls;
 
-namespace LandscapeClassifier.View
+namespace LandscapeClassifier.View.Export
 {
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml

@@ -168,7 +168,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
         private void FlattenWaterDEM()
         {
-            
+            FlattenWaterBodiesDialog dialog = new FlattenWaterBodiesDialog();
+
+            dialog.Show();
         }
 
         private void MoveLayerDown()
