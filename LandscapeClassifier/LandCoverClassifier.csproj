@@ -324,6 +324,7 @@
     <Compile Include="ViewModel\Dialogs\BrowseLayerDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\PredictionAccuracyDialogViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\Algorithms\Attributes\Attributes.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\BayesClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\Algorithms\DecisionTreeClassierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />

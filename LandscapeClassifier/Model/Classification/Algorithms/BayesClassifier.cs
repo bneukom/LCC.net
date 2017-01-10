@@ -7,21 +7,14 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 {
     public class BayesClassifier : AbstractLandCoverClassifier
     {
-        private NaiveBayesLearning _learning;
         private NaiveBayes _bayes;
 
         public override Task Train(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
-            int numClasses = Enum.GetValues(typeof(LandcoverType)).Length;
 
             int[][] input = new int[numFeatures][];
             int[] responses = new int[numFeatures];
-
-            int[] symbols = new int[numFeatures];
-            for (int i = 0; i < symbols.Length; ++i) symbols[i] = ushort.MaxValue;
-
-            _bayes = new NaiveBayes(numClasses, symbols);
 
             for (int featureIndex = 0;
                 featureIndex < classificationModel.ClassifiedFeatureVectors.Count;
@@ -32,17 +25,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 responses[featureIndex] = (int) featureVector.Type;
             }
 
-            _learning = new NaiveBayesLearning()
-            {
-                Model = _bayes,
-            };
+            NaiveBayesLearning learning = new NaiveBayesLearning();
+
 
 
             return Task.Factory.StartNew(() =>
             {
-                _learning.Options.InnerOption.UseLaplaceRule = true;
+                learning.Options.InnerOption.UseLaplaceRule = true;
 
-                _learning.Learn(input, responses);
+                _bayes = learning.Learn(input, responses);
             });
 
         }
