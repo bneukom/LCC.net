@@ -114,6 +114,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// </summary>
         public ICommand FlattenWaterDEMCommand { set; get; }
 
+
+
         /// <summary>
         /// Block the main window.
         /// </summary>
@@ -133,8 +135,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             CreateTiledHeightmapCommand = new RelayCommand(() => new CreateTiledHeightmapDialog().ShowDialog(), () => true);
             AddLayersCommand = new RelayCommand(AddBands, () => PredictionViewModel.NotBlocking);
 
-
-            FlattenWaterDEMCommand = new RelayCommand(FlattenWaterDEM, () => true);
+          FlattenWaterDEMCommand = new RelayCommand(FlattenWaterDEM, () => true);
 
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);
@@ -148,6 +149,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             ClassifierViewModel = new ClassifierViewModel(this);
             PredictionViewModel = new PredictionViewModel(this);
         }
+
 
         private bool CanMoveUp()
         {

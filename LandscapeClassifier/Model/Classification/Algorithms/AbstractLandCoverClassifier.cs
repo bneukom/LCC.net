@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Accord.MachineLearning;
 
 namespace LandscapeClassifier.Model.Classification.Algorithms
 {
@@ -14,6 +15,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         public abstract int[] Predict(double[][] features);
         public abstract double[] Probability(double[][] features);
         public abstract double[][] Probabilities(double[][] features);
+        public abstract Task GridSearchAsync(ClassificationModel classificationModel);
 
         protected AbstractLandCoverClassifier()
         {

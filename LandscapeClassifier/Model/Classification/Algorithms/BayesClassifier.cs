@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Accord.MachineLearning;
 using Accord.MachineLearning.Bayes;
 
 namespace LandscapeClassifier.Model.Classification.Algorithms
@@ -72,6 +73,11 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         }
 
         public override double[][] Probabilities(double[][] features)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task GridSearchAsync(ClassificationModel classificationModel)
         {
             throw new NotImplementedException();
         }

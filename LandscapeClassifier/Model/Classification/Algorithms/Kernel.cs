@@ -8,6 +8,6 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 {
     public enum Kernel
     {
-        Linear, Gaussian
+        Linear, Gaussian, Polynomial
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Accord.MachineLearning;
 
 namespace LandscapeClassifier.Model.Classification.Algorithms
 {
@@ -51,6 +52,12 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         /// <param name="features"></param>
         /// <returns></returns>
         double[][] Probabilities(double[][] features);
+
+        /// <summary>
+        /// Grid-search with cross-validation the parameters for the classifier.
+        /// </summary>
+        /// <param name="classificationModel"></param>
+        Task GridSearchAsync(ClassificationModel classificationModel);
 
         /// <summary>
         /// Cancels the classification process.

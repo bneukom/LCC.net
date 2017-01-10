@@ -145,6 +145,7 @@
                                         <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="Auto"></RowDefinition>
+                                        <RowDefinition Height="Auto"></RowDefinition>
                                     </Grid.RowDefinitions>
                                     <Label Grid.Row = "0" Grid.Column="0" Content="Classifier"  Foreground="White"  Margin="5,5,5,5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                     <ComboBox SelectedIndex="0" Grid.Row = "0" Grid.Column="1" SelectedValue="{Binding ClassifierViewModel.SelectededClassifier}" ItemsSource="{Binding ClassifierViewModel.ClassifierNamesEnumerable}"   HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center"/>
@@ -155,6 +156,9 @@
                                             <ColumnDefinition Width="*"></ColumnDefinition>
                                         </Grid.ColumnDefinitions>
                                     </Grid>
+                                    <StackPanel Orientation="Vertical" Grid.Row="2" Grid.ColumnSpan="2">
+                                        <Button Margin="5" Command="{Binding ClassifierViewModel.GridSearchCommand}">Grid Search</Button>
+                                    </StackPanel>
 
                                 </Grid>
                             </GroupBox>

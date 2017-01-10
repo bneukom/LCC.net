@@ -10,7 +10,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             switch (classifier)
             {
                 case Classifier.DecisionTrees:
-                    return null;
+                    return new DecisionTreeClassierViewModel();
                 case Classifier.Bayes:
                     return null;
                 case Classifier.SVM:

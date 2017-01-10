@@ -287,8 +287,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Converter\IntToPersistantStringConverter.cs" />
+    <Compile Include="Converter\DoubleToPersistantStringConverter.cs" />
     <Compile Include="Extensions\BitmapFrameExtensions.cs" />
     <Compile Include="Extensions\BitmapSourceExtensions.cs" />
+    <Compile Include="Extensions\CollectionExtensions.cs" />
     <Compile Include="Model\Classification\Algorithms\AbstractLandCoverClassifier.cs" />
     <Compile Include="Model\Classification\Algorithms\Classifier.cs" />
     <Compile Include="Model\Classification\Algorithms\ClassifierExtensions.cs" />
@@ -308,6 +311,7 @@
     <Compile Include="Extensions\LandCoverTypeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
+    <Compile Include="Model\Classification\Boosting\AdaBoostM1.cs" />
     <Compile Include="Model\Layer.cs" />
     <Compile Include="Model\Classification\ClassificationModel.cs" />
     <Compile Include="Model\Neighborhood.cs" />
@@ -319,7 +323,8 @@
     <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\BrowseLayerDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\PredictionAccuracyDialogViewModel.cs" />
-    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\OptionAttribute.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\Attributes\Attributes.cs" />
+    <Compile Include="ViewModel\MainWindow\Classification\Algorithms\DecisionTreeClassierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\LayerViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifierViewModel.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\FeaturesViewModel.cs" />
@@ -372,6 +377,9 @@
     <Compile Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml.cs">
       <DependentUpon>FlattenWaterBodiesDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="View\ValidationRules\SmallerThanValidationRule.cs" />
+    <Compile Include="View\ValidationRules\BiggerThanValidationRule.cs" />
+    <Compile Include="View\ValidationRules\IntValidationRule.cs" />
     <Compile Include="View\ValidationRules\DoubleValidationRule.cs" />
     <Page Include="Resources\Icons.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -495,7 +503,10 @@
     <Resource Include="Navigation-Down-24.png" />
     <Resource Include="Navigation-Down-32.png" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Model\Crossvalidation\" />
+    <Folder Include="Model\GridSearch\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

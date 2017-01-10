@@ -83,6 +83,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public ICommand RemoveAllFeaturesCommand { set; get; }
 
         /// <summary>
+        /// Executes the grid search for the current classifier.
+        /// </summary>
+        public ICommand GridSearchCommand { set; get; }
+
+        /// <summary>
         ///     Classified Features.
         /// </summary>
         public FeaturesViewModel FeaturesViewModel
@@ -324,9 +329,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
 
             TrainCommand = new RelayCommand(Train, CanTrain);
+            GridSearchCommand = new RelayCommand(GridSearchAsync, () => true);
 
             SelectededClassifier = Classifier.SVM;
         }
+
 
         private void CurrentClassifierViewModelOnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
         {
@@ -451,7 +458,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         {
             PredictionAccuracyDialog predictionAccuracyDialog = new PredictionAccuracyDialog();
 
-            int[,] data = new int[9,9];
+            int[,] data = new int[9, 9];
             for (int row = 0; row < 9; ++row)
             {
                 for (int column = 0; column < 9; ++column)
@@ -534,12 +541,22 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        private async void GridSearchAsync()
+        {
+            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
+            var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
+
+            await CurrentClassifierViewModel.Classifier.GridSearchAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+        }
+
+        /// <summary>
         ///     Trains the classifier.
         /// </summary>
         private void Train()
         {
-            var classifiedFeatureVectors =
-                FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
+            var classifiedFeatureVectors =FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
             var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
             Task trained = CurrentClassifierViewModel.Classifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
