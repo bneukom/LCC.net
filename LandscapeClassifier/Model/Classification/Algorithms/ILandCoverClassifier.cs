@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Accord.MachineLearning;
+using Accord.Statistics.Analysis;
 
 namespace LandscapeClassifier.Model.Classification.Algorithms
 {
@@ -8,10 +9,10 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         /// <summary>
         /// Trains the classifier with the given already classified features.
         /// </summary>
-        Task Train(ClassificationModel classificationModel);
+        Task TrainAsync(ClassificationModel classificationModel);
 
         /// <summary>
-        /// Predicts the land cover type for the given feature vector. <see cref="Train"/> must be called first.
+        /// Predicts the land cover type for the given feature vector. <see cref="TrainAsync"/> must be called first.
         /// </summary>
         /// <param name="feature"></param>
         /// <returns></returns>
@@ -33,7 +34,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         double Probabilty(FeatureVector feature, int classIndex);
 
         /// <summary>
-        /// Predicts all land cover types for the given feature vectors. <see cref="Train"/> must be called first.
+        /// Predicts all land cover types for the given feature vectors. <see cref="TrainAsync"/> must be called first.
         /// </summary>
         /// <param name="features"></param>
         /// <returns></returns>
@@ -57,7 +58,14 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         /// Grid-search with cross-validation the parameters for the classifier.
         /// </summary>
         /// <param name="classificationModel"></param>
-        Task GridSearchAsync(ClassificationModel classificationModel);
+        Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel);
+
+        /// <summary>
+        /// Computes the confusion matrix using 2-fold cross validation.
+        /// </summary>
+        /// <param name="classificationModel"></param>
+        /// <returns></returns>
+        Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel);
 
         /// <summary>
         /// Cancels the classification process.

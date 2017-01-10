@@ -1,18 +1,23 @@
-﻿using LandscapeClassifier.Model.Classification.Algorithms;
+﻿using System.Threading.Tasks;
+using Accord.MachineLearning;
+using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
+using LandscapeClassifier.Model.Classification.Algorithms;
 using LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms.Attributes;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
 {
     public class BayesClassifierViewModel : ClassifierViewModelBase
     {
-        private readonly BayesClassifier _classifier = new BayesClassifier();
-
-        public override ILandCoverClassifier Classifier => _classifier;
+        protected override ILandCoverClassifier Classifier { get; } = new BayesClassifier();
 
         public override bool PropertyAffectsOptions(string propertyName)
         {
             return false;
         }
 
+        public override void GridSearchAsync(ClassificationModel model)
+        {
+        }
     }
 }

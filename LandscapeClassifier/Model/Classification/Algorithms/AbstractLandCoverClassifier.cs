@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Accord.MachineLearning;
+using Accord.Statistics.Analysis;
 
 namespace LandscapeClassifier.Model.Classification.Algorithms
 {
@@ -8,14 +9,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
     {
         protected CancellationTokenSource CancellationTokenSource;
 
-        public abstract Task Train(ClassificationModel classificationModel);
+        public abstract Task TrainAsync(ClassificationModel classificationModel);
         public abstract LandcoverType Predict(FeatureVector feature);
         public abstract double Probabilty(FeatureVector feature);
         public abstract double Probabilty(FeatureVector feature, int classIndex);
         public abstract int[] Predict(double[][] features);
         public abstract double[] Probability(double[][] features);
         public abstract double[][] Probabilities(double[][] features);
-        public abstract Task GridSearchAsync(ClassificationModel classificationModel);
+        public abstract Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel);
+        public abstract Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel);
 
         protected AbstractLandCoverClassifier()
         {
@@ -26,5 +28,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         {
             CancellationTokenSource.Cancel();
         }
+
+        
     }
 }

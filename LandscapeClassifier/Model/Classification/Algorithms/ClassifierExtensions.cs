@@ -12,7 +12,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 case Classifier.DecisionTrees:
                     return new DecisionTreeClassierViewModel();
                 case Classifier.Bayes:
-                    return null;
+                    return new BayesClassifierViewModel();
                 case Classifier.SVM:
                     return new SvmClassifierViewModel();
                 default:

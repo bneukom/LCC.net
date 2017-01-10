@@ -88,6 +88,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public ICommand GridSearchCommand { set; get; }
 
         /// <summary>
+        /// Computes the confusion matrix with 2-fold cross-validation on the training set.
+        /// </summary>
+        public ICommand ComputeConfusionMatrixCommand { set; get; }
+
+        /// <summary>
         ///     Classified Features.
         /// </summary>
         public FeaturesViewModel FeaturesViewModel
@@ -274,6 +279,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         public ClassifierViewModelBase CurrentClassifierViewModel { get; private set; }
 
+
+
         /// <summary>
         ///     All option viewmodels.
         /// </summary>
@@ -329,10 +336,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
 
             TrainCommand = new RelayCommand(Train, CanTrain);
-            GridSearchCommand = new RelayCommand(GridSearchAsync, () => true);
+
+            GridSearchCommand = new RelayCommand(GridSearchAsync, () => FeaturesViewModel.HasFeatures());
+            ComputeConfusionMatrixCommand = new RelayCommand(ComputeConfusionMatrixAsync, () => FeaturesViewModel.HasFeatures());
 
             SelectededClassifier = Classifier.SVM;
         }
+
+
 
 
         private void CurrentClassifierViewModelOnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
@@ -456,19 +467,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private void ImportTrainingSet()
         {
-            PredictionAccuracyDialog predictionAccuracyDialog = new PredictionAccuracyDialog();
-
-            int[,] data = new int[9, 9];
-            for (int row = 0; row < 9; ++row)
-            {
-                for (int column = 0; column < 9; ++column)
-                {
-                    data[row, column] = 0;
-                }
-            }
-            predictionAccuracyDialog.DialogViewModel.SetPredictionData(data);
-            predictionAccuracyDialog.ShowDialog();
-
             // Create an instance of the open file dialog box.
             var openFileDialog = new OpenFileDialog
             {
@@ -543,12 +541,24 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// 
         /// </summary>
-        private async void GridSearchAsync()
+        private async void ComputeConfusionMatrixAsync()
         {
             var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
             var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
-            await CurrentClassifierViewModel.Classifier.GridSearchAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+            var confusionMatrix = await CurrentClassifierViewModel.ComputeConfusionMatrixAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+                
+        }
+
+        /// <summary>
+        /// Launch grid-search to find optimal parameters for the classifier.
+        /// </summary>
+        private void GridSearchAsync()
+        {
+            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
+            var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
+
+            CurrentClassifierViewModel.GridSearchAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
         }
 
         /// <summary>
@@ -556,10 +566,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private void Train()
         {
-            var classifiedFeatureVectors =FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
+            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
             var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
-            Task trained = CurrentClassifierViewModel.Classifier.Train(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+            Task trained = CurrentClassifierViewModel.TrainAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
 
             trained.ContinueWith(t => Application.Current.Dispatcher.Invoke(() =>
             {

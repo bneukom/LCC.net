@@ -1,4 +1,8 @@
-﻿using LandscapeClassifier.Model.Classification.Algorithms;
+﻿using System.Threading.Tasks;
+using Accord.MachineLearning;
+using LandscapeClassifier.Model;
+using LandscapeClassifier.Model.Classification;
+using LandscapeClassifier.Model.Classification.Algorithms;
 using LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms.Attributes;
 
 namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
@@ -7,11 +11,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
     {
         private readonly SvmClassifier _classifier = new SvmClassifier();
 
-        public override ILandCoverClassifier Classifier => _classifier;
+        protected override ILandCoverClassifier Classifier => _classifier;
 
         public override bool PropertyAffectsOptions(string propertyName)
         {
             return propertyName == nameof(Kernel);
+        }
+
+        public override async void GridSearchAsync(ClassificationModel model)
+        {
+            var collection = await Classifier.GridSearchAsync(model);
+
+            if (collection.Contains("complexity")) Complexity = collection["complexity"].Value;
+            if (collection.Contains("gamma")) Complexity = collection["gamma"].Value;
         }
 
         [Option]

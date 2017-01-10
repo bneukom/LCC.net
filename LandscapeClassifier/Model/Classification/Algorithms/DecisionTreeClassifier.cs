@@ -6,6 +6,7 @@ using Accord.MachineLearning.Boosting;
 using Accord.MachineLearning.Boosting.Learners;
 using Accord.MachineLearning.DecisionTrees;
 using Accord.MachineLearning.DecisionTrees.Learning;
+using Accord.Statistics.Analysis;
 using LandscapeClassifier.Model.Classification.Boosting;
 using LandscapeClassifier.Util;
 
@@ -18,7 +19,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         public bool Boosting { get; set; }
         public int Iterations { get; set; } = 5;
 
-        public override Task Train(ClassificationModel classificationModel)
+        public override Task TrainAsync(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
             DecisionVariable[]  decisionVariables = classificationModel.Bands.Select(b => DecisionVariable.Continuous(b.ToString())).ToArray();
@@ -114,7 +115,12 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             return new double[0][];
         }
 
-        public override Task GridSearchAsync(ClassificationModel classificationModel)
+        public override Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel)
         {
             throw new NotImplementedException();
         }

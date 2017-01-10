@@ -31,7 +31,6 @@ namespace LandscapeClassifier.View
 
         public delegate Point GetPosition(IInputElement element);
 
-
         public MainWindow()
         {
             InitializeComponent();

@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Accord.MachineLearning;
 using Accord.MachineLearning.VectorMachines;
 using Accord.MachineLearning.VectorMachines.Learning;
 using Accord.Math;
 using Accord.Math.Optimization.Losses;
+using Accord.Statistics.Analysis;
 using Accord.Statistics.Kernels;
 using LandscapeClassifier.Util;
 
@@ -20,7 +19,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         public double Gamma { get; set; } = 1;
         public Kernel Kernel { get; set; } = Kernel.Linear;
 
-        public override Task Train(ClassificationModel classificationModel)
+        public override Task TrainAsync(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
 
@@ -40,11 +39,11 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 case Kernel.Linear:
                     var linearLearning = new MulticlassSupportVectorLearning<Linear>
                     {
-                        Learner = (p) => new LinearDualCoordinateDescent<Linear>()
+                        Learner = p => new LinearDualCoordinateDescent<Linear>
                         {
                             Complexity = Complexity,
                             UseComplexityHeuristic = false,
-                            Token = CancellationTokenSource.Token,
+                            Token = CancellationTokenSource.Token
                         }
                     };
 
@@ -57,12 +56,12 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var gaussianLearning = new MulticlassSupportVectorLearning<Gaussian>
                     {
                         Kernel = Gaussian.FromGamma(Gamma),
-                        Learner = (p) => new SequentialMinimalOptimization<Gaussian>()
+                        Learner = p => new SequentialMinimalOptimization<Gaussian>
                         {
                             Complexity = Complexity,
                             UseComplexityHeuristic = false,
                             UseKernelEstimation = false,
-                            Token = CancellationTokenSource.Token,
+                            Token = CancellationTokenSource.Token
                         }
                     };
 
@@ -109,7 +108,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             return _svm.Case(l => l.Probabilities(features), r => r.Probabilities(features));
         }
 
-        public override Task GridSearchAsync(ClassificationModel classificationModel)
+        public override Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel)
         {
             return Task.Factory.StartNew(() =>
             {
@@ -117,7 +116,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 GridSearchRange[] ranges =
                 {
                     new GridSearchRange("complexity", new[] {100.0,50,10}),
-                    new GridSearchRange("gamma", new[] {1.0, 2.0, 5.0, 10.0, 20.0}),
+                    new GridSearchRange("gamma", new[] {1.0, 2.0, 5.0, 10.0, 20.0})
                 };
 
                 int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
@@ -129,15 +128,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 {
                     var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
 
-                    input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double) s/ushort.MaxValue);
-                    responses[featureIndex] = (int) featureVector.Type;
+                    input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
+                    responses[featureIndex] = (int)featureVector.Type;
                 }
 
                 // Instantiate a new Grid Search algorithm for Kernel Support Vector Machines
                 var gridsearch = new GridSearch<MulticlassSupportVectorMachine<Gaussian>>(ranges);
 
                 // Set the fitting function for the algorithm
-                gridsearch.Fitting = delegate(GridSearchParameterCollection parameters, out double error)
+                gridsearch.Fitting = delegate (GridSearchParameterCollection parameters, out double error)
                 {
                     // The parameters to be tried will be passed as a function parameter.
                     double complexity = parameters["complexity"].Value;
@@ -148,12 +147,8 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                     // Define a fitting function using Support Vector Machines. The objective of this
                     // function is to learn a SVM in the subset of the data indicated by cross-validation.
-                    crossvalidation.Fitting = delegate(int k, int[] indicesTrain, int[] indicesValidation)
+                    crossvalidation.Fitting = delegate (int k, int[] indicesTrain, int[] indicesValidation)
                     {
-                        // The fitting function is passing the indices of the original set which
-                        // should be considered training data and the indices of the original set
-                        // which should be considered validation data.
-
                         // Lets now grab the training data:
                         var trainingInputs = input.Get(indicesTrain);
                         var trainingOutputs = responses.Get(indicesTrain);
@@ -165,13 +160,13 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                         var gaussianLearningKfold = new MulticlassSupportVectorLearning<Gaussian>
                         {
                             Kernel = Gaussian.FromGamma(gamma),
-                            Learner = (p) => new SequentialMinimalOptimization<Gaussian>()
+                            Learner = p => new SequentialMinimalOptimization<Gaussian>
                             {
                                 UseKernelEstimation = false,
                                 UseComplexityHeuristic = false,
                                 Complexity = complexity,
                                 Token = CancellationTokenSource.Token,
-                                Tolerance = 0.01,
+                                Tolerance = 0.01
                             }
                         };
 
@@ -202,7 +197,73 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 double minError;
 
                 // Compute the grid search to find the best Support Vector Machine
-                var bestModel = gridsearch.Compute(out bestParameters, out minError);
+                gridsearch.Compute(out bestParameters, out minError);
+
+                return bestParameters;
+            });
+        }
+
+        public override Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
+
+                double[][] input = new double[numFeatures][];
+                int[] responses = new int[numFeatures];
+
+                for (int featureIndex = 0; featureIndex < classificationModel.ClassifiedFeatureVectors.Count; ++featureIndex)
+                {
+                    var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
+
+                    input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
+                    responses[featureIndex] = (int)featureVector.Type;
+                }
+
+                var folds = new int[input.Length][];
+                var splittings = CrossValidation.Splittings(input.Length, 2);
+                for (int i = 0; i < 2; ++i)
+                    folds[i] = splittings.Find(x => x == i);
+
+                int[] indicesTrain = folds[0];
+                int[] indicesValidation = folds[1];
+
+                // Lets now grab the training data:
+                var trainingInputs = input.Get(indicesTrain);
+                var trainingOutputs = responses.Get(indicesTrain);
+
+                // And now the validation data:
+                var validationInputs = input.Get(indicesValidation);
+                var validationOutputs = responses.Get(indicesValidation);
+
+                // Predict
+                int[] prediction;
+                switch (Kernel)
+                {
+                    case Kernel.Gaussian:
+                        var gaussianLearningKfold = new MulticlassSupportVectorLearning<Gaussian>
+                        {
+                            Kernel = Gaussian.FromGamma(Gamma),
+                            Learner = p => new SequentialMinimalOptimization<Gaussian>
+                            {
+                                UseKernelEstimation = false,
+                                UseComplexityHeuristic = false,
+                                Complexity = Complexity,
+                                Token = CancellationTokenSource.Token,
+                                Tolerance = 0.01
+                            }
+                        };
+                        var svmKfold = gaussianLearningKfold.Learn(trainingInputs, trainingOutputs);
+                        prediction = svmKfold.Decide(validationInputs);
+                        break;
+                    default:
+                        throw new NotImplementedException();
+
+                }
+
+                GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(classificationModel.Bands.Count, prediction, validationOutputs);
+
+                return confusionMatrix;
             });
         }
     }

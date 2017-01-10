@@ -2,18 +2,21 @@
 using System.Threading.Tasks;
 using Accord.MachineLearning;
 using Accord.MachineLearning.Bayes;
+using Accord.Statistics.Analysis;
+using Accord.Statistics.Distributions.Fitting;
+using Accord.Statistics.Distributions.Univariate;
 
 namespace LandscapeClassifier.Model.Classification.Algorithms
 {
     public class BayesClassifier : AbstractLandCoverClassifier
     {
-        private NaiveBayes _bayes;
+        private NaiveBayes<NormalDistribution> _bayes;
 
-        public override Task Train(ClassificationModel classificationModel)
+        public override Task TrainAsync(ClassificationModel classificationModel)
         {
             int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
 
-            int[][] input = new int[numFeatures][];
+            double[][] input = new double[numFeatures][];
             int[] responses = new int[numFeatures];
 
             for (int featureIndex = 0;
@@ -21,17 +24,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 ++featureIndex)
             {
                 var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
-                input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (int) s);
+                input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
                 responses[featureIndex] = (int) featureVector.Type;
             }
 
-            NaiveBayesLearning learning = new NaiveBayesLearning();
-
-
+            NaiveBayesLearning<NormalDistribution> learning = new NaiveBayesLearning<NormalDistribution>();
 
             return Task.Factory.StartNew(() =>
             {
-                learning.Options.InnerOption.UseLaplaceRule = true;
+                learning.Options.InnerOption = new NormalOptions() { Regularization = 1e-5 };
 
                 _bayes = learning.Learn(input, responses);
             });
@@ -40,35 +41,39 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
         public override LandcoverType Predict(FeatureVector feature)
         {
-            return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (int)s));
+            return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
-
         public override double Probabilty(FeatureVector feature)
         {
-            throw new NotImplementedException();
+            return _bayes.Probability(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
 
         public override double Probabilty(FeatureVector feature, int classIndex)
         {
-            throw new NotImplementedException();
+            return _bayes.Probability(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue), classIndex);
         }
 
         public override int[] Predict(double[][] features)
         {
-            throw new NotImplementedException();
+            return new int[0];
         }
 
         public override double[] Probability(double[][] features)
         {
-            throw new NotImplementedException();
+            return new double[0];
         }
 
         public override double[][] Probabilities(double[][] features)
         {
+            return new double[0][];
+        }
+
+        public override Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel)
+        {
             throw new NotImplementedException();
         }
 
-        public override Task GridSearchAsync(ClassificationModel classificationModel)
+        public override Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel)
         {
             throw new NotImplementedException();
         }

@@ -158,6 +158,7 @@
                                     </Grid>
                                     <StackPanel Orientation="Vertical" Grid.Row="2" Grid.ColumnSpan="2">
                                         <Button Margin="5" Command="{Binding ClassifierViewModel.GridSearchCommand}">Grid Search</Button>
+                                        <Button Margin="5,0,5,5" Command="{Binding ClassifierViewModel.ComputeConfusionMatrixCommand}">Compute Confusion Matrix</Button>
                                     </StackPanel>
 
                                 </Grid>

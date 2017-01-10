@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Accord.Statistics.Analysis;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Extensions;
@@ -243,83 +244,18 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private void AssessAccuracy()
         {
-            var openFileDialog = new OpenFileDialog
-            {
-                FilterIndex = 1,
-                Title = "Choose Feature File"
-            };
+            PredictionAccuracyDialog predictionAccuracyDialog = new PredictionAccuracyDialog();
 
-            var userClickedOk = openFileDialog.ShowDialog();
-
-            if (userClickedOk == true)
+            int[,] data = new int[9, 9];
+            for (int row = 0; row < 9; ++row)
             {
-                using (var file = new StreamReader(openFileDialog.FileName))
+                for (int column = 0; column < 9; ++column)
                 {
-                    var numLayers = int.Parse(file.ReadLine());
-
-                    for (var i = 0; i < numLayers * 8; ++i)
-                    {
-                        file.ReadLine();
-                    }
-
-                    string featureLine;
-
-                    var wrongPredictions = 0;
-                    var totalPredictions = 0;
-
-                    var numFeatures = Enum.GetValues(typeof(LandcoverType)).Length - 1;
-                    var predictionMatrix = new int[numFeatures, numFeatures];
-
-                    while ((featureLine = file.ReadLine()) != null)
-                    {
-                        var positionTypeIntensities = featureLine.Split(' ');
-                        var position = positionTypeIntensities[0];
-                        var coordinates = position.Split(',');
-
-                        var type = (LandcoverType)Enum.Parse(typeof(LandcoverType), positionTypeIntensities[1]);
-                        var featurePosition =
-                            Vector<double>.Build.DenseOfArray(new[]
-                            {double.Parse(coordinates[0]), double.Parse(coordinates[1]), 1.0});
-                        var featureBands =
-                            _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
-
-                        var bandPixels = new ushort[featureBands.Count];
-
-                        for (var bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
-                        {
-                            var band = featureBands[bandIndex];
-                            var bandPixelPosition = band.WorldToImage * featurePosition;
-
-                            var bandPixelValue = band.BandImage.GetScaledToUshort((int)bandPixelPosition[0],
-                                (int)bandPixelPosition[1]);
-
-                            bandPixels[bandIndex] = bandPixelValue;
-                        }
-
-
-                        var predictedType =
-                            _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier.Predict(
-                                new FeatureVector(bandPixels));
-                        if (predictedType != type) wrongPredictions++;
-
-                        predictionMatrix[(int)type, (int)predictedType]++;
-
-
-                        totalPredictions++;
-                    }
-
-                    Console.WriteLine("Total predictions: " + totalPredictions);
-                    Console.WriteLine("Wrong predictions: " + wrongPredictions);
-                    for (var i = 0; i < numFeatures; ++i)
-                    {
-                        for (var j = 0; j < numFeatures; ++j)
-                        {
-                            Console.Write(predictionMatrix[i, j] + ", ");
-                        }
-                        Console.Write(Environment.NewLine);
-                    }
+                    data[row, column] = 0;
                 }
             }
+            predictionAccuracyDialog.DialogViewModel.SetPredictionData(data);
+            predictionAccuracyDialog.ShowDialog();
         }
 
         private void ApplyMajorityFilter()
@@ -748,10 +684,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                             }
                         }
 
-                        var classifier = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Classifier;
-                        _classification[line] = classifier.Predict(features);
 
-                        if (PredictProbabilities) _probabilities[line] = classifier.Probabilities(features);
+                        _classification[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Predict(features);
+
+                        if (PredictProbabilities) _probabilities[line] = _mainWindowViewModel.ClassifierViewModel.CurrentClassifierViewModel.Probabilities(features);
 
                         lock (this)
                         {
