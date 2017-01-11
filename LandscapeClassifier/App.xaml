@@ -6,7 +6,8 @@
              xmlns:validationRules="clr-namespace:LandscapeClassifier.View.ValidationRules"
              xmlns:mainWindow="clr-namespace:LandscapeClassifier.ViewModel.MainWindow"
              xmlns:dialogs="clr-namespace:LandscapeClassifier.ViewModel.Dialogs"
-             StartupUri="View/MainWindow.xaml">
+             StartupUri="View/MainWindow.xaml"
+             DispatcherUnhandledException="App_OnDispatcherUnhandledException">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

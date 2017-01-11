@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Accord.MachineLearning;
 using Accord.Statistics.Analysis;
 
@@ -66,6 +67,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         /// <param name="classificationModel"></param>
         /// <returns></returns>
         Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel);
+
+        /// <summary>
+        /// Computes k confusion matrices using k-fold cross validation.
+        /// </summary>
+        /// <param name="classificationModel"></param>
+        /// <param name="folds"></param>
+        /// <returns></returns>
+        Task<List<GeneralConfusionMatrix>> ComputeFoldedConfusionMatrixAsync(ClassificationModel classificationModel, int folds);
+
 
         /// <summary>
         /// Cancels the classification process.

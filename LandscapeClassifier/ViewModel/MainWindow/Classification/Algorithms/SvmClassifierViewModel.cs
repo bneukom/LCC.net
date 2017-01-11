@@ -23,7 +23,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
             var collection = await Classifier.GridSearchAsync(model);
 
             if (collection.Contains("complexity")) Complexity = collection["complexity"].Value;
-            if (collection.Contains("gamma")) Complexity = collection["gamma"].Value;
+            if (collection.Contains("gamma")) Gamma = collection["gamma"].Value;
         }
 
         [Option]

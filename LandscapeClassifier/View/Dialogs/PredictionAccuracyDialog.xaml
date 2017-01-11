@@ -18,17 +18,23 @@
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"></ColumnDefinition>
         </Grid.ColumnDefinitions>
         <DataGrid Grid.Row="0" ItemsSource="{Binding PredictionDataTable.DefaultView}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" />
+
         <StackPanel Grid.Row="1" Orientation="Horizontal">
-            <Label>Kappa</Label>
-            <Label Content="{Binding Kappa}"></Label>
+            <Label>Kappa ( * 100):</Label>
+            <Label Content="{Binding Kappa, UpdateSourceTrigger=PropertyChanged}"></Label>
+        </StackPanel>
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <Label>Accuracy:</Label>
+            <Label Content="{Binding Accuracy, UpdateSourceTrigger=PropertyChanged}"></Label>
         </StackPanel>
         
-        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
+        <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
             <Button IsDefault="True" Content="Ok" Click="OkClick" Width="75"/>
         </StackPanel>
 

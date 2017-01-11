@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Accord.MachineLearning;
 using Accord.Statistics.Analysis;
@@ -18,6 +19,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         public abstract double[][] Probabilities(double[][] features);
         public abstract Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel);
         public abstract Task<GeneralConfusionMatrix> ComputeConfusionMatrixAsync(ClassificationModel classificationModel);
+        public abstract Task<List<GeneralConfusionMatrix>> ComputeFoldedConfusionMatrixAsync(ClassificationModel classificationModel, int folds);
 
         protected AbstractLandCoverClassifier()
         {
@@ -28,6 +30,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         {
             CancellationTokenSource.Cancel();
         }
+
 
         
     }

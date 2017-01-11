@@ -244,18 +244,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
 
         private void AssessAccuracy()
         {
-            PredictionAccuracyDialog predictionAccuracyDialog = new PredictionAccuracyDialog();
 
-            int[,] data = new int[9, 9];
-            for (int row = 0; row < 9; ++row)
-            {
-                for (int column = 0; column < 9; ++column)
-                {
-                    data[row, column] = 0;
-                }
-            }
-            predictionAccuracyDialog.DialogViewModel.SetPredictionData(data);
-            predictionAccuracyDialog.ShowDialog();
         }
 
         private void ApplyMajorityFilter()

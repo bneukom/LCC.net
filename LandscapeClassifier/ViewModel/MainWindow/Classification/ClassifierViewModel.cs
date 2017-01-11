@@ -546,8 +546,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
             var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
 
-            var confusionMatrix = await CurrentClassifierViewModel.ComputeConfusionMatrixAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
-                
+            var model = new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors);
+
+            var confusionMatrices = await CurrentClassifierViewModel.ComputeFoldedConfusionMatrixAsync(model, 10);
+
+            PredictionAccuracyDialog dialog = new PredictionAccuracyDialog();
+            dialog.ShowDialog(confusionMatrices);
         }
 
         /// <summary>

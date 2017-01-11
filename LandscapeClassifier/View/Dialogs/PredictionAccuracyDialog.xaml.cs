@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
+using Accord.Statistics.Analysis;
 using LandscapeClassifier.ViewModel.Dialogs;
 using MahApps.Metro.Controls;
 
@@ -26,5 +28,10 @@ namespace LandscapeClassifier.View.Export
             DialogResult = true;
         }
 
+        internal void ShowDialog(List<GeneralConfusionMatrix> confusionMatrices)
+        {
+            DialogViewModel.Initialize(confusionMatrices);
+            ShowDialog();
+        }
     }
 }

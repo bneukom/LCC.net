@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Accord.MachineLearning;
 using Accord.Statistics.Analysis;
 using GalaSoft.MvvmLight;
@@ -46,6 +47,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
             return Classifier.ComputeConfusionMatrixAsync(model);
         }
 
-        
+        public Task<List<GeneralConfusionMatrix>> ComputeFoldedConfusionMatrixAsync(ClassificationModel model, int folds)
+        {
+            return Classifier.ComputeFoldedConfusionMatrixAsync(model, folds);
+        }
+
+
     }
 }
