@@ -24,6 +24,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
 
             if (collection.Contains("complexity")) Complexity = collection["complexity"].Value;
             if (collection.Contains("gamma")) Gamma = collection["gamma"].Value;
+            if (collection.Contains("degree")) Degree = (int)collection["degree"].Value;
         }
 
         [Option]
@@ -58,6 +59,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
             set
             {
                 _classifier.Gamma = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        [Option]
+        [VisibleWhen(nameof(Kernel), Kernel.Polynomial)]
+        [BiggerThan(1)]
+        public int Degree
+        {
+            get { return _classifier.Degree; }
+            set
+            {
+                _classifier.Degree = value;
                 RaisePropertyChanged();
             }
         }

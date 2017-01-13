@@ -14,11 +14,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 {
     public class SvmClassifier : AbstractLandCoverClassifier
     {
-        private IEither<MulticlassSupportVectorMachine<Linear>, MulticlassSupportVectorMachine<Gaussian>> _svm;
+
+        private MulticlassSupportVectorMachine<Polynomial> _pSvm;
+        private MulticlassSupportVectorMachine<Linear> _lSvm;
+        private MulticlassSupportVectorMachine<Gaussian> _gSvm;
 
         public double Complexity { get; set; } = 100;
         public double Gamma { get; set; } = 1;
         public Kernel Kernel { get; set; } = Kernel.Linear;
+        public int Degree { get; set; } = 1;
 
         public override Task TrainAsync(ClassificationModel classificationModel)
         {
@@ -50,7 +54,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                     return Task.Factory.StartNew(() =>
                     {
-                        _svm = Either.Left<MulticlassSupportVectorMachine<Linear>, MulticlassSupportVectorMachine<Gaussian>>(linearLearning.Learn(input, responses));
+                        _lSvm = linearLearning.Learn(input, responses);
                     });
 
                 case Kernel.Gaussian:
@@ -68,7 +72,23 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                     return Task.Factory.StartNew(() =>
                     {
-                        _svm = Either.Right<MulticlassSupportVectorMachine<Linear>, MulticlassSupportVectorMachine<Gaussian>>(gaussianLearning.Learn(input, responses));
+                        _gSvm = gaussianLearning.Learn(input, responses);
+                    });
+                case Kernel.Polynomial:
+                    var polynomialLearning = new MulticlassSupportVectorLearning<Polynomial>
+                    {
+                        Kernel = new Polynomial(Degree),
+                        Learner = p => new SequentialMinimalOptimization<Polynomial>
+                        {
+                            Complexity = Complexity,
+                            UseKernelEstimation = false,
+                            UseComplexityHeuristic = false,
+                            Token = CancellationTokenSource.Token
+                        }
+                    };
+                    return Task.Factory.StartNew(() =>
+                    {
+                        _pSvm = polynomialLearning.Learn(input, responses);
                     });
                 default:
                     throw new InvalidOperationException();
@@ -79,34 +99,52 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
 
-            return _svm.Case(l => (LandcoverType)l.Decide(features), r => (LandcoverType)r.Decide(features));
+            if (Kernel == Kernel.Linear) return (LandcoverType)_lSvm.Decide(features);
+            if (Kernel == Kernel.Polynomial) return (LandcoverType)_pSvm.Decide(features);
+            if (Kernel == Kernel.Gaussian) return (LandcoverType)_gSvm.Decide(features);
+            return 0;
         }
 
         public override double Probabilty(FeatureVector feature)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
-            return _svm.Case(l => l.Probability(features), r => r.Probability(features));
+            if (Kernel == Kernel.Linear) return _lSvm.Probability(features);
+            if (Kernel == Kernel.Polynomial) return _pSvm.Probability(features);
+            if (Kernel == Kernel.Gaussian) return _gSvm.Probability(features);
+            return 0;
         }
 
         public override double Probabilty(FeatureVector feature, int classIndex)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
-            return _svm.Case(l => l.Probability(features, classIndex), r => r.Probability(features, classIndex));
+            if (Kernel == Kernel.Linear) return _lSvm.Probability(features, classIndex);
+            if (Kernel == Kernel.Polynomial) return _pSvm.Probability(features, classIndex);
+            if (Kernel == Kernel.Gaussian) return _gSvm.Probability(features, classIndex);
+            return 0;
         }
 
         public override int[] Predict(double[][] features)
         {
-            return _svm.Case(l => l.Decide(features), r => r.Decide(features));
+            if (Kernel == Kernel.Linear) return _lSvm.Decide(features);
+            if (Kernel == Kernel.Polynomial) return _pSvm.Decide(features);
+            if (Kernel == Kernel.Gaussian) return _gSvm.Decide(features);
+            return new int[0];
         }
 
         public override double[] Probability(double[][] features)
         {
-            return _svm.Case(l => l.Probability(features), r => r.Probability(features));
+            if (Kernel == Kernel.Linear) return _lSvm.Probability(features);
+            if (Kernel == Kernel.Polynomial) return _pSvm.Probability(features);
+            if (Kernel == Kernel.Gaussian) return _gSvm.Probability(features);
+            return new double[0];
         }
 
         public override double[][] Probabilities(double[][] features)
         {
-            return _svm.Case(l => l.Probabilities(features), r => r.Probabilities(features));
+            if (Kernel == Kernel.Linear) return _lSvm.Probabilities(features);
+            if (Kernel == Kernel.Polynomial) return _pSvm.Probabilities(features);
+            if (Kernel == Kernel.Gaussian) return _gSvm.Probabilities(features);
+            return new double[0][];
         }
 
         public override Task<GridSearchParameterCollection> GridSearchAsync(ClassificationModel classificationModel)
@@ -117,13 +155,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 List<GridSearchRange> ranges = new List<GridSearchRange>
                 {
                     new GridSearchRange("complexity", new[] {150.0,100.0,50,10,1}),
-                    
                 };
 
                 switch (Kernel)
                 {
-                        case Kernel.Gaussian:
-                            ranges.Add(new GridSearchRange("gamma", new[] { 1.0, 2.0, 5.0, 10.0, 20.0 }));
+                    case Kernel.Gaussian:
+                        ranges.Add(new GridSearchRange("gamma", new[] { 1.0, 2.0, 5.0, 10.0, 20.0 }));
+                        break;
+                    case Kernel.Polynomial:
+                        ranges.Add(new GridSearchRange("degree", new[] { 1.0, 2.0, 3.0, 4.0}));
                         break;
                 }
 
@@ -149,6 +189,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     // The parameters to be tried will be passed as a function parameter.
                     double complexity = parameters["complexity"].Value;
                     double gamma = parameters.Contains("gamma") ? parameters["gamma"].Value : 0;
+                    int degree = parameters.Contains("degree") ? (int)parameters["degree"].Value : 0;
 
                     // Create a new Cross-validation algorithm passing the data set size and the number of folds
                     var crossvalidation = new CrossValidation(size: input.Length, folds: 10);
@@ -167,43 +208,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                         int[] predictedTraining;
                         int[] predictedValidation;
-                        switch (Kernel)
-                        {
-                            case Kernel.Gaussian:
-                                var gaussianLearningKfold = new MulticlassSupportVectorLearning<Gaussian>
-                                {
-                                    Kernel = Gaussian.FromGamma(gamma),
-                                    Learner = p => new SequentialMinimalOptimization<Gaussian>
-                                    {
-                                        UseKernelEstimation = false,
-                                        UseComplexityHeuristic = false,
-                                        Complexity = complexity,
-                                        Token = CancellationTokenSource.Token,
-                                        Tolerance = 0.01
-                                    }
-                                };
-                                var svmGaussian = gaussianLearningKfold.Learn(trainingInputs, trainingOutputs);
-                                predictedTraining = svmGaussian.Decide(trainingInputs);
-                                predictedValidation = svmGaussian.Decide(validationInputs);
-                                break;
-                            case Kernel.Linear:
-                                var linearLearning = new MulticlassSupportVectorLearning<Linear>
-                                {
-                                    Learner = p => new LinearDualCoordinateDescent<Linear>
-                                    {
-                                        Complexity = complexity,
-                                        UseComplexityHeuristic = false,
-                                        Token = CancellationTokenSource.Token
-                                    }
-                                };
-                                var svmLinear = linearLearning.Learn(trainingInputs, trainingOutputs);
-                                predictedTraining = svmLinear.Decide(trainingInputs);
-                                predictedValidation = svmLinear.Decide(validationInputs);
-                                break;
-                            default:
-                                throw new NotImplementedException();
-
-                        }
+                        TrainAndPredict(complexity, gamma, degree, trainingInputs, trainingOutputs, validationInputs, out predictedTraining, out predictedValidation);
 
                         double trainingError = new ZeroOneLoss(trainingOutputs).Loss(predictedTraining);
                         double validationError = new ZeroOneLoss(validationOutputs).Loss(predictedValidation);
@@ -270,43 +275,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                     int[] predictedTraining;
                     int[] predictedValidation;
-                    switch (Kernel)
-                    {
-                        case Kernel.Gaussian:
-                            var gaussianLearningKfold = new MulticlassSupportVectorLearning<Gaussian>
-                            {
-                                Kernel = Gaussian.FromGamma(Gamma),
-                                Learner = p => new SequentialMinimalOptimization<Gaussian>
-                                {
-                                    UseKernelEstimation = false,
-                                    UseComplexityHeuristic = false,
-                                    Complexity = Complexity,
-                                    Token = CancellationTokenSource.Token,
-                                    Tolerance = 0.01
-                                }
-                            };
-                            var svmGaussian = gaussianLearningKfold.Learn(trainingInputs, trainingOutputs);
-                            predictedTraining = svmGaussian.Decide(trainingInputs);
-                            predictedValidation = svmGaussian.Decide(validationInputs);
-                            break;
-                        case Kernel.Linear:
-                            var linearLearning = new MulticlassSupportVectorLearning<Linear>
-                            {
-                                Learner = p => new LinearDualCoordinateDescent<Linear>
-                                {
-                                    Complexity = Complexity,
-                                    UseComplexityHeuristic = false,
-                                    Token = CancellationTokenSource.Token
-                                }
-                            };
-                            var svmLinear = linearLearning.Learn(trainingInputs, trainingOutputs);
-                            predictedTraining = svmLinear.Decide(trainingInputs);
-                            predictedValidation = svmLinear.Decide(validationInputs);
-                            break;
-                        default:
-                            throw new NotImplementedException();
-
-                    }
+                    TrainAndPredict(Complexity, Gamma, Degree, trainingInputs, trainingOutputs, validationInputs, out predictedTraining, out predictedValidation);
 
                     double trainingError = new ZeroOneLoss(trainingOutputs).Loss(predictedTraining);
                     double validationError = new ZeroOneLoss(validationOutputs).Loss(predictedValidation);
@@ -399,6 +368,64 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                 return confusionMatrix;
             });
+        }
+
+
+        private void TrainAndPredict(double complexity, double gamma, int degree, double[][] trainingInputs, int[] trainingOutputs, double[][] validationInputs, out int[] predictedTraining, out int[] predictedValidation)
+        {
+            switch (Kernel)
+            {
+                case Kernel.Gaussian:
+                    var gaussianLearningKfold = new MulticlassSupportVectorLearning<Gaussian>
+                    {
+                        Kernel = Gaussian.FromGamma(gamma),
+                        Learner = p => new SequentialMinimalOptimization<Gaussian>
+                        {
+                            UseKernelEstimation = false,
+                            UseComplexityHeuristic = false,
+                            Complexity = complexity,
+                            Token = CancellationTokenSource.Token,
+                            Tolerance = 0.01
+                        }
+                    };
+                    var svmGaussian = gaussianLearningKfold.Learn(trainingInputs, trainingOutputs);
+                    predictedTraining = svmGaussian.Decide(trainingInputs);
+                    predictedValidation = svmGaussian.Decide(validationInputs);
+                    break;
+                case Kernel.Linear:
+                    var linearLearning = new MulticlassSupportVectorLearning<Linear>
+                    {
+                        Learner = p => new LinearDualCoordinateDescent<Linear>
+                        {
+                            Complexity = complexity,
+                            UseComplexityHeuristic = false,
+                            Token = CancellationTokenSource.Token
+                        }
+                    };
+                    var svmLinear = linearLearning.Learn(trainingInputs, trainingOutputs);
+                    predictedTraining = svmLinear.Decide(trainingInputs);
+                    predictedValidation = svmLinear.Decide(validationInputs);
+                    break;
+                case Kernel.Polynomial:
+                    var polynomialLearning = new MulticlassSupportVectorLearning<Polynomial>
+                    {
+                        Kernel = new Polynomial(degree),
+                        Learner = p => new SequentialMinimalOptimization<Polynomial>
+                        {
+                            UseKernelEstimation = false,
+                            UseComplexityHeuristic = false,
+                            Complexity = complexity,
+                            Token = CancellationTokenSource.Token,
+                            Tolerance = 0.01
+                        }
+                    };
+                    var polynomialSvm = polynomialLearning.Learn(trainingInputs, trainingOutputs);
+                    predictedTraining = polynomialSvm.Decide(trainingInputs);
+                    predictedValidation = polynomialSvm.Decide(validationInputs);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
         }
     }
 }

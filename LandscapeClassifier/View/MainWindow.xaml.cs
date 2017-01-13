@@ -109,7 +109,7 @@ namespace LandscapeClassifier.View
 
                 if (!visible)
                 {
-                    break;
+                    continue;
                 }
 
                 DataGrid.RowDefinitions.Add(new RowDefinition() { Height = GridLength.Auto });

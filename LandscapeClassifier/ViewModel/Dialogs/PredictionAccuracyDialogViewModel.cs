@@ -132,6 +132,36 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
             Accuracy = $"{Math.Round(accuracyMean * 100, 2)} (± {Math.Round(accuracyStddev * 100, 4)})%";
             Kappa = $"{Math.Round(kappaMean * 100, 2)} (± {Math.Round(kappaStddev * 100, 4)})";
+
+            
+            printLatexTable(data, rowTotals, columnTotals);
+            Console.WriteLine();
+            Console.WriteLine("\\resulttable{\\DT}");
+            Console.WriteLine();
+            Console.WriteLine($"With an overall accuracy of ${Math.Round(accuracyMean * 100, 2)} (\\pm {Math.Round(accuracyStddev * 100, 4)})\\%$ and $\\kappa * 100 = {Math.Round(kappaMean * 100, 2)} (\\pm {Math.Round(kappaStddev * 100, 4)})$.");
+        }
+
+        private void printLatexTable(int[,] matrix, int[] rowTotals, int[] columnTotals)
+        {
+            Console.WriteLine("\\newarray\\DT");
+            Console.WriteLine("\\readarray{DT}{%");
+            int total = 0;
+            for (int row = 0; row < matrix.GetLength(1); ++row)
+            {
+                for (int column = 0; column < matrix.GetLength(0); ++column)
+                {
+                    Console.Write(matrix[column, row] + "&");
+                    total += matrix[column, row];
+                }
+                Console.Write(columnTotals[row] + "&%" + Environment.NewLine);
+            }
+            for (int column = 0; column < columnTotals.GetLength(0); ++column)
+            {
+                Console.Write(rowTotals[column] + "&");
+            }
+            Console.Write(total + "&%" + Environment.NewLine);
+            Console.WriteLine("}");
+            Console.WriteLine("\\dataheight=10");
         }
 
         private void InitializeTable()

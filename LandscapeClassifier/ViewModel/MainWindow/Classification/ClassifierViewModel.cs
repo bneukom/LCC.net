@@ -548,7 +548,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             var model = new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors);
 
-            var confusionMatrices = await CurrentClassifierViewModel.ComputeFoldedConfusionMatrixAsync(model, 10);
+            var confusionMatrices = await CurrentClassifierViewModel.ComputeFoldedConfusionMatrixAsync(model, 2);
 
             PredictionAccuracyDialog dialog = new PredictionAccuracyDialog();
             dialog.ShowDialog(confusionMatrices);
