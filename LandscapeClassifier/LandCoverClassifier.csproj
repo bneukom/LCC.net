@@ -80,24 +80,28 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Accord, Version=3.3.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Accord.3.3.0\lib\net45\Accord.dll</HintPath>
+    <Reference Include="Accord, Version=3.4.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Accord.3.4.0\lib\net46\Accord.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Accord.MachineLearning, Version=3.3.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Accord.MachineLearning.3.3.0\lib\net45\Accord.MachineLearning.dll</HintPath>
+    <Reference Include="Accord.MachineLearning, Version=3.4.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Accord.MachineLearning.3.4.0\lib\net46\Accord.MachineLearning.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Accord.Math, Version=3.3.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Accord.Math.3.3.0\lib\net45\Accord.Math.dll</HintPath>
+    <Reference Include="Accord.MachineLearning.GPL, Version=3.4.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Accord.MachineLearning.GPL.3.4.0\lib\net46\Accord.MachineLearning.GPL.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Accord.Math.Core, Version=3.3.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Accord.Math.3.3.0\lib\net45\Accord.Math.Core.dll</HintPath>
+    <Reference Include="Accord.Math, Version=3.4.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Accord.Math.3.4.0\lib\net46\Accord.Math.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Accord.Statistics, Version=3.3.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Accord.Statistics.3.3.0\lib\net45\Accord.Statistics.dll</HintPath>
+    <Reference Include="Accord.Math.Core, Version=3.4.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Accord.Math.3.4.0\lib\net46\Accord.Math.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Accord.Statistics, Version=3.4.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Accord.Statistics.3.4.0\lib\net46\Accord.Statistics.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="BruTile, Version=0.7.4.4, Culture=neutral, processorArchitecture=MSIL">
@@ -318,6 +322,7 @@
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="Util\Either.cs" />
     <Compile Include="Util\GdalUtil.cs" />
+    <Compile Include="ViewModel\Dialogs\FillDemHolesDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\FlattenWaterBodiesViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
@@ -378,6 +383,9 @@
     <Compile Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml.cs">
       <DependentUpon>CreateSlopeFromHeightmapDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="View\Dialogs\Tools\FillDemHoles.xaml.cs">
+      <DependentUpon>FillDemHoles.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml.cs">
       <DependentUpon>FlattenWaterBodiesDialog.xaml</DependentUpon>
     </Compile>
@@ -432,6 +440,10 @@
     <Page Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\Dialogs\Tools\FillDemHoles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -524,12 +536,12 @@
     <Error Condition="!Exists('..\packages\EmguCV.3.1.0\build\EmguCV.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EmguCV.3.1.0\build\EmguCV.targets'))" />
     <Error Condition="!Exists('..\packages\GDAL.Native.1.11.1\build\net40\GDAL.Native.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\GDAL.Native.1.11.1\build\net40\GDAL.Native.targets'))" />
     <Error Condition="!Exists('..\packages\GDAL.Plugins.1.11.1\build\net40\GDAL.Plugins.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\GDAL.Plugins.1.11.1\build\net40\GDAL.Plugins.targets'))" />
-    <Error Condition="!Exists('..\packages\Accord.3.3.0\build\Accord.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Accord.3.3.0\build\Accord.targets'))" />
+    <Error Condition="!Exists('..\packages\Accord.3.4.0\build\Accord.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Accord.3.4.0\build\Accord.targets'))" />
   </Target>
   <Import Project="..\packages\EmguCV.3.1.0\build\EmguCV.targets" Condition="Exists('..\packages\EmguCV.3.1.0\build\EmguCV.targets')" />
   <Import Project="..\packages\GDAL.Native.1.11.1\build\net40\GDAL.Native.targets" Condition="Exists('..\packages\GDAL.Native.1.11.1\build\net40\GDAL.Native.targets')" />
   <Import Project="..\packages\GDAL.Plugins.1.11.1\build\net40\GDAL.Plugins.targets" Condition="Exists('..\packages\GDAL.Plugins.1.11.1\build\net40\GDAL.Plugins.targets')" />
-  <Import Project="..\packages\Accord.3.3.0\build\Accord.targets" Condition="Exists('..\packages\Accord.3.3.0\build\Accord.targets')" />
+  <Import Project="..\packages\Accord.3.4.0\build\Accord.targets" Condition="Exists('..\packages\Accord.3.4.0\build\Accord.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

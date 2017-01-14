@@ -60,13 +60,14 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 case Kernel.Gaussian:
                     var gaussianLearning = new MulticlassSupportVectorLearning<Gaussian>
                     {
-                        Kernel = Gaussian.FromGamma(Gamma),
+                        
                         Learner = p => new SequentialMinimalOptimization<Gaussian>
                         {
                             Complexity = Complexity,
                             UseComplexityHeuristic = false,
                             UseKernelEstimation = false,
-                            Token = CancellationTokenSource.Token
+                            Token = CancellationTokenSource.Token,
+                            Kernel = Gaussian.FromGamma(Gamma),
                         }
                     };
 
@@ -77,15 +78,16 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 case Kernel.Polynomial:
                     var polynomialLearning = new MulticlassSupportVectorLearning<Polynomial>
                     {
-                        Kernel = new Polynomial(Degree),
                         Learner = p => new SequentialMinimalOptimization<Polynomial>
                         {
                             Complexity = Complexity,
                             UseKernelEstimation = false,
                             UseComplexityHeuristic = false,
-                            Token = CancellationTokenSource.Token
+                            Token = CancellationTokenSource.Token,
+                            Kernel = new Polynomial(Degree, 1)
                         }
                     };
+
                     return Task.Factory.StartNew(() =>
                     {
                         _pSvm = polynomialLearning.Learn(input, responses);
@@ -160,7 +162,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 switch (Kernel)
                 {
                     case Kernel.Gaussian:
-                        ranges.Add(new GridSearchRange("gamma", new[] { 1.0, 2.0, 5.0, 10.0, 20.0 }));
+                        ranges.Add(new GridSearchRange("gamma", new[] { 0.1, 1.0, 2.0, 5.0, 10.0, 20.0 }));
                         break;
                     case Kernel.Polynomial:
                         ranges.Add(new GridSearchRange("degree", new[] { 1.0, 2.0, 3.0, 4.0}));
@@ -378,14 +380,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 case Kernel.Gaussian:
                     var gaussianLearningKfold = new MulticlassSupportVectorLearning<Gaussian>
                     {
-                        Kernel = Gaussian.FromGamma(gamma),
+                        
                         Learner = p => new SequentialMinimalOptimization<Gaussian>
                         {
                             UseKernelEstimation = false,
                             UseComplexityHeuristic = false,
                             Complexity = complexity,
                             Token = CancellationTokenSource.Token,
-                            Tolerance = 0.01
+                            Tolerance = 0.01,
+                            Kernel = Gaussian.FromGamma(gamma),
                         }
                     };
                     var svmGaussian = gaussianLearningKfold.Learn(trainingInputs, trainingOutputs);
@@ -409,14 +412,14 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 case Kernel.Polynomial:
                     var polynomialLearning = new MulticlassSupportVectorLearning<Polynomial>
                     {
-                        Kernel = new Polynomial(degree),
+                        
                         Learner = p => new SequentialMinimalOptimization<Polynomial>
                         {
                             UseKernelEstimation = false,
                             UseComplexityHeuristic = false,
                             Complexity = complexity,
                             Token = CancellationTokenSource.Token,
-                            Tolerance = 0.01
+                            Kernel = new Polynomial(degree, 1)
                         }
                     };
                     var polynomialSvm = polynomialLearning.Learn(trainingInputs, trainingOutputs);

@@ -1,4 +1,4 @@
-﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Tools.FlattenWaterBodiesDialog"
+﻿<controls:MetroWindow  x:Class="LandscapeClassifier.View.Tools.FillDemHoles"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,7 +11,7 @@
         xmlns:dialogs="clr-namespace:LandscapeClassifier.ViewModel.Dialogs"
         xmlns:imaging="clr-namespace:System.Drawing.Imaging;assembly=System.Drawing"
         mc:Ignorable="d"
-        Title="Flatten Water Bodies" Height="359.9" Width="579.524"
+        Title="Fill DEM Holes" Height="359.9" Width="579.524"
         GlowBrush="{DynamicResource AccentColorBrush}"
         DataContext="{StaticResource FlattenWaterBodiesViewModel}">
     <Window.Resources>
@@ -69,7 +69,7 @@
        
 
         <StackPanel Grid.Row="8" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,5,5,5">
-            <Button IsCancel="True" Content="Done" Click="DoneClick" Width="75" Margin="5,0,0,0"/>
+            <Button IsCancel="True" Content="Done"  Width="75" Margin="5,0,0,0"/>
         </StackPanel>
 
     </Grid>
