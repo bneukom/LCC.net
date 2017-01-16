@@ -15,6 +15,7 @@ using GalaSoft.MvvmLight.CommandWpf;
 using LandscapeClassifier.Util;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using Microsoft.Win32;
+using static Emgu.CV.CvInvoke;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
 {
@@ -88,8 +89,8 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private void FlattenWaterBodies()
         {
-            using (Mat demMat = CvInvoke.Imread(DigitalElevationModelPath, LoadImageType.AnyDepth | LoadImageType.Grayscale))
-            using (Mat waterBodiesMat = CvInvoke.Imread(WaterMapPath, LoadImageType.Grayscale))
+            using (Mat demMat = Imread(DigitalElevationModelPath, LoadImageType.AnyDepth | LoadImageType.Grayscale))
+            using (Mat waterBodiesMat = Imread(WaterMapPath, LoadImageType.Grayscale))
             {
                 var demImage = demMat.ToImage<Gray, ushort>();
                 var smoothedImage = demImage.Clone();
@@ -100,7 +101,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
                 {
                     var contour = contours[contourIndex];
-                    var boundingRect = CvInvoke.BoundingRectangle(contour);
+                    var boundingRect = BoundingRectangle(contour);
 
                     List<PointF> waterPoints = new List<PointF>();
 
@@ -109,7 +110,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                     {
                         for (int y = boundingRect.Top; y < boundingRect.Bottom; ++y)
                         {
-                            if (CvInvoke.PointPolygonTest(contour, new PointF(x, y), false) > 0)
+                            if (PointPolygonTest(contour, new PointF(x, y), false) > 0)
                             {
                                 waterPoints.Add(new PointF(x, y));
                                 total += demImage[y, x].Intensity;
@@ -153,7 +154,6 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                             }
                             break;
                         case SmoothMode.Average:
-
                             foreach (PointF waterPoint in waterPoints)
                             {
                                 smoothedImage[(int)waterPoint.Y, (int)waterPoint.X] = new Gray(average);
@@ -164,7 +164,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                     }
 
 
-                    CvInvoke.Imwrite($@"C:\temp\flatten_dem_{contourIndex}.png", smoothedImage);
+                    Imwrite($@"C:\temp\flatten_dem_{contourIndex}.png", smoothedImage);
                 }
             }
         }
@@ -172,21 +172,21 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         private void ShowWaterMap()
         {
-            using (Mat imageMat = CvInvoke.Imread(WaterMapPath, LoadImageType.Grayscale))
+            using (Mat imageMat = Imread(WaterMapPath, LoadImageType.Grayscale))
             using (Mat contourMat = new Mat(imageMat.Size, DepthType.Cv32F, 3))
             {
                 var contours = FindContours(imageMat);
 
                 for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
                 {
-                    CvInvoke.DrawContours(contourMat, contours, contourIndex, new MCvScalar(200, 0, 0), -1, LineType.EightConnected);
+                    DrawContours(contourMat, contours, contourIndex, new MCvScalar(200, 0, 0), -1, LineType.EightConnected);
                 }
 
                 Mat resized = new Mat();
-                CvInvoke.Resize(contourMat, resized, new Size(1900, 1000), 0D, 0D, Inter.Linear);
-                CvInvoke.Imshow("Contours", resized);
+                Resize(contourMat, resized, new Size(1900, 1000), 0D, 0D, Inter.Linear);
+                Imshow("Contours", resized);
 
-                CvInvoke.Imwrite(@"C:\temp\contours.png", contourMat);
+                Imwrite(@"C:\temp\contours.png", contourMat);
             }
         }
 
@@ -200,15 +200,15 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
                 for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
                 {
-                    double area = CvInvoke.ContourArea(contours[contourIndex], false);
+                    double area = ContourArea(contours[contourIndex], false);
 
-                    double perimeter = CvInvoke.ArcLength(contours[contourIndex], true);
+                    double perimeter = ArcLength(contours[contourIndex], true);
 
                     double formfactor = 4 * Math.PI * area / (perimeter * perimeter);
 
                     if (area > AreaThreshold && formfactor > FormfactorThreshold)
                     {
-                        var moments = CvInvoke.Moments(contours[contourIndex], true);
+                        var moments = Moments(contours[contourIndex], true);
                         double x = moments.M20 + moments.M02;
                         double y = 4 * Math.Pow(moments.M11, 2) + Math.Pow((moments.M20 - moments.M02), 2);
                         double elongation = (x + Math.Pow(y, 0.5)) / (x - Math.Pow(y, 0.5));

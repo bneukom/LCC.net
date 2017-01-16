@@ -9,15 +9,15 @@ namespace LandscapeClassifier.View.Tools
     /// <summary>
     /// Interaction logic for CreateSlopeFromDEMDialog.xaml
     /// </summary>
-    public partial class FlattenWaterBodiesDialog : MetroWindow
+    public partial class FillDemHolesDialog : MetroWindow
     {
-        public FlattenWaterBodiesViewModel DialogViewModel { get; private set; }
+        public FillDemHolesDialogViewModel DialogViewModel { get; private set; }
 
-        public FlattenWaterBodiesDialog()
+        public FillDemHolesDialog()
         {
             InitializeComponent();
 
-            DialogViewModel = (FlattenWaterBodiesViewModel)DataContext;
+            DialogViewModel = (FillDemHolesDialogViewModel)DataContext;
         }
 
 

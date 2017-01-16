@@ -296,6 +296,7 @@
     <Compile Include="Extensions\BitmapFrameExtensions.cs" />
     <Compile Include="Extensions\BitmapSourceExtensions.cs" />
     <Compile Include="Extensions\CollectionExtensions.cs" />
+    <Compile Include="Extensions\RectangleExtensions.cs" />
     <Compile Include="Model\Classification\Algorithms\AbstractLandCoverClassifier.cs" />
     <Compile Include="Model\Classification\Algorithms\Classifier.cs" />
     <Compile Include="Model\Classification\Algorithms\ClassifierExtensions.cs" />
@@ -383,8 +384,8 @@
     <Compile Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml.cs">
       <DependentUpon>CreateSlopeFromHeightmapDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="View\Dialogs\Tools\FillDemHoles.xaml.cs">
-      <DependentUpon>FillDemHoles.xaml</DependentUpon>
+    <Compile Include="View\Dialogs\Tools\FillDemHolesDialog.xaml.cs">
+      <DependentUpon>FillDemHolesDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml.cs">
       <DependentUpon>FlattenWaterBodiesDialog.xaml</DependentUpon>
@@ -441,7 +442,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="View\Dialogs\Tools\FillDemHoles.xaml">
+    <Page Include="View\Dialogs\Tools\FillDemHolesDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

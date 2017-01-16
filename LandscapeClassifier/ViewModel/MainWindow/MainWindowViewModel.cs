@@ -114,7 +114,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// </summary>
         public ICommand FlattenWaterDEMCommand { set; get; }
 
-
+        /// <summary>
+        /// Fills holes in the DEM.
+        /// </summary>
+        public object FillDEMHolesCommand { set; get; }
 
         /// <summary>
         /// Block the main window.
@@ -135,7 +138,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             CreateTiledHeightmapCommand = new RelayCommand(() => new CreateTiledHeightmapDialog().ShowDialog(), () => true);
             AddLayersCommand = new RelayCommand(AddBands, () => PredictionViewModel.NotBlocking);
 
-          FlattenWaterDEMCommand = new RelayCommand(FlattenWaterDEM, () => true);
+            FlattenWaterDEMCommand = new RelayCommand(FlattenWaterDEM, () => true);
+            FillDEMHolesCommand = new RelayCommand(FillDEMHoles, () => true);
 
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);
@@ -166,6 +170,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             int current = Layers.IndexOf(SelectedLayer);
             if (current == 0) return;
             Layers.Move(current, current - 1);
+        }
+
+        private void FillDEMHoles()
+        {
+            FillDemHolesDialog dialog = new FillDemHolesDialog();
+            dialog.ShowDialog();
         }
 
         private void FlattenWaterDEM()
@@ -230,7 +240,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                     IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
 
                     rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize, rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, stride);
-                    
+
                     // Cutoff
                     int minCutValue, maxCutValue;
                     CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff, currentLayer.MaxCutOff, out minCutValue, out maxCutValue);
