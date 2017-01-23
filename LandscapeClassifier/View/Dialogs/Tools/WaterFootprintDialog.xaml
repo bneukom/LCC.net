@@ -63,8 +63,9 @@
             <controls:NumericUpDown MaxHeight="22" Minimum="1" Maximum="10" Value="{Binding SmoothingIterations, Mode=TwoWay}"></controls:NumericUpDown>
         </StackPanel>
         <StackPanel Grid.Row="6" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
-            <Button Margin="5" Command="{Binding ShowWaterMapCommand}">Show Water Map</Button>
-            <Button Margin="0,5,5,5" Command="{Binding FlattenWaterBodiesCommand}">Flatten Water Bodies</Button>
+            <Button Margin="5" Command="{Binding ShowWaterMaskCommand}">Show Mask</Button>
+            <Button Margin="0,5,5,5" Command="{Binding ShowWaterMaskCommand}">Show Footprint</Button>
+            <Button Margin="0,5,5,5" Command="{Binding FlattenWaterBodiesCommand}">Blend With DEM</Button>
         </StackPanel>
        
 

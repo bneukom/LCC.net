@@ -25,8 +25,8 @@
             <dialogs:CreateTiledHeightmapDialogViewModel x:Key="CreateTiledHeightmapDialogViewModel"/>
             <dialogs:ExportPredictionDialogViewModel x:Key="ExportPredictionDialogViewModel"/>
             <dialogs:BrowseLayerDialogViewModel x:Key="BrowseLayerDialogViewModel"/>
-            <dialogs:FlattenWaterBodiesViewModel x:Key="FlattenWaterBodiesViewModel"/>
-            <dialogs:FillDemHolesDialogViewModel x:Key="FillDemHolesDialogViewModel"/>
+            <dialogs:WaterFootprintViewModel x:Key="FlattenWaterBodiesViewModel"/>
+            <dialogs:DemHolesFootprintViewModel x:Key="FillDemHolesDialogViewModel"/>
             <dialogs:PredictionAccuracyDialogViewModel x:Key="PredictionAccuracyDialogViewModel"/>
             <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>

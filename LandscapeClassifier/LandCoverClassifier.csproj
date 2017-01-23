@@ -323,8 +323,8 @@
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="Util\Either.cs" />
     <Compile Include="Util\GdalUtil.cs" />
-    <Compile Include="ViewModel\Dialogs\FillDemHolesDialogViewModel.cs" />
-    <Compile Include="ViewModel\Dialogs\FlattenWaterBodiesViewModel.cs" />
+    <Compile Include="ViewModel\Dialogs\DemHolesFootprintViewModel.cs" />
+    <Compile Include="ViewModel\Dialogs\WaterFootprintViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\ExportPredictionDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\BrowseLayerDialogViewModel.cs" />
@@ -384,11 +384,11 @@
     <Compile Include="View\Dialogs\Tools\CreateSlopeFromHeightmapDialog.xaml.cs">
       <DependentUpon>CreateSlopeFromHeightmapDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="View\Dialogs\Tools\FillDemHolesDialog.xaml.cs">
-      <DependentUpon>FillDemHolesDialog.xaml</DependentUpon>
+    <Compile Include="View\Dialogs\Tools\DemHolesFootprintDialog.xaml.cs">
+      <DependentUpon>DemHolesFootprintDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml.cs">
-      <DependentUpon>FlattenWaterBodiesDialog.xaml</DependentUpon>
+    <Compile Include="View\Dialogs\Tools\WaterFootprintDialog.xaml.cs">
+      <DependentUpon>WaterFootprintDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\ValidationRules\SmallerThanValidationRule.cs" />
     <Compile Include="View\ValidationRules\BiggerThanValidationRule.cs" />
@@ -442,11 +442,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="View\Dialogs\Tools\FillDemHolesDialog.xaml">
+    <Page Include="View\Dialogs\Tools\DemHolesFootprintDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="View\Dialogs\Tools\FlattenWaterBodiesDialog.xaml">
+    <Page Include="View\Dialogs\Tools\WaterFootprintDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

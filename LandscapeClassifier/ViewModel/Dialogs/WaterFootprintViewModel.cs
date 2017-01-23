@@ -19,7 +19,7 @@ using static Emgu.CV.CvInvoke;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
 {
-    public class FlattenWaterBodiesViewModel : ViewModelBase
+    public class WaterFootprintViewModel : ViewModelBase
     {
         private string _digitalElevationModelPath;
         private string _waterMapPath;
@@ -75,128 +75,118 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
         public ICommand BrowseWaterMapPathCommand { get; set; }
 
-        public ICommand ShowWaterMapCommand { get; set; }
+        public ICommand ShowWaterMaskCommand { get; set; }
 
         public ICommand FlattenWaterBodiesCommand { get; set; }
 
-        public FlattenWaterBodiesViewModel()
+        public WaterFootprintViewModel()
         {
             BrowseWaterMapPathCommand = new RelayCommand(BrowseWaterMapPath, () => true);
             BrowseDigitalElevationModelPathCommand = new RelayCommand(BrowserDigitalElevationModelPath, () => true);
-            ShowWaterMapCommand = new RelayCommand(ShowWaterMap, () => !string.IsNullOrEmpty(WaterMapPath));
+            ShowWaterMaskCommand = new RelayCommand(ShowWaterMap, () => !string.IsNullOrEmpty(WaterMapPath));
             FlattenWaterBodiesCommand = new RelayCommand(FlattenWaterBodies, () => !string.IsNullOrEmpty(WaterMapPath) && !string.IsNullOrEmpty(DigitalElevationModelPath));
         }
 
         private void FlattenWaterBodies()
         {
-            using (Mat demMat = Imread(DigitalElevationModelPath, LoadImageType.AnyDepth | LoadImageType.Grayscale))
-            using (Mat waterBodiesMat = Imread(WaterMapPath, LoadImageType.Grayscale))
+            try
             {
-                var demImage = demMat.ToImage<Gray, ushort>();
-                var smoothedImage = demImage.Clone();
-
-                var contours = FindContours(waterBodiesMat);
-
-                demImage[0, 0] = new Gray(0);
-                for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
+                using (Mat demMat = Imread(DigitalElevationModelPath, LoadImageType.AnyDepth | LoadImageType.Grayscale))
                 {
-                    var contour = contours[contourIndex];
-                    var boundingRect = BoundingRectangle(contour);
+                    var demImage = demMat.ToImage<Gray, ushort>();
+                    var smoothedImage = demImage.Clone();
 
-                    List<PointF> waterPoints = new List<PointF>();
+                    var waterMask = ComputeWaterMask(WaterMapPath);
+                    var waterMaskImage = waterMask.ToImage<Gray, byte>();
 
-                    double total = 0.0;
-                    for (int x = boundingRect.Left; x < boundingRect.Right; ++x)
+                    Imwrite($@"C:\temp\watermask.png", waterMaskImage);
+
+                    using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
+                    using (Mat hierachy = new Mat())
                     {
-                        for (int y = boundingRect.Top; y < boundingRect.Bottom; ++y)
+                        FindContours(waterMask.Clone(), contours, hierachy, RetrType.Tree, ChainApproxMethod.ChainApproxNone);
+
+                        for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
                         {
-                            if (PointPolygonTest(contour, new PointF(x, y), false) > 0)
+                            var contour = contours[contourIndex];
+                            var boundingRect = BoundingRectangle(contour);
+
+                            List<Point> waterPoints = new List<Point>();
+
+                            double total = 0.0;
+                            for (int x = boundingRect.Left; x < boundingRect.Right; ++x)
                             {
-                                waterPoints.Add(new PointF(x, y));
-                                total += demImage[y, x].Intensity;
+                                for (int y = boundingRect.Top; y < boundingRect.Bottom; ++y)
+                                {
+                                    if (PointPolygonTest(contour, new PointF(x, y), false) > 0)
+                                    {
+                                        waterPoints.Add(new Point(x, y));
+                                        total += demImage[y, x].Intensity;
+                                    }
+                                }
                             }
+
+                            double average = total/waterPoints.Count;
+
+                            foreach (Point waterPoint in waterPoints)
+                            {
+
+                                var demGray = demImage[waterPoint.Y, waterPoint.X].Intensity;
+                                var alpha = waterMaskImage[waterPoint.Y, waterPoint.X].Intensity/255.0d;
+                                var lerp = MoreMath.Lerp(demGray, average, alpha);
+
+                                smoothedImage[waterPoint.Y, waterPoint.X] = new Gray(lerp);
+                            }
+
+                            Imwrite($@"C:\temp\flatten_dem_{contourIndex}.png", smoothedImage);
                         }
                     }
-
-                    double average = total / waterPoints.Count;
-
-                    switch (SmoothMode)
-                    {
-                        case SmoothMode.Relaxation:
-                            // Smooth
-                            for (int iteration = 0; iteration < SmoothingIterations; ++iteration)
-                            {
-                                Parallel.ForEach(waterPoints, waterPoint =>
-                                {
-                                    int y = (int)waterPoint.Y;
-                                    int x = (int)waterPoint.X;
-
-                                    // TODO lerp to average?
-                                    double height = MoreMath.Lerp(demImage[y, x].Intensity, average, 0.1);
-                                    double smoothedHeight = height;
-
-                                    // http://paulbourke.net/geometry/polygonmesh/
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y - 1, x - 1].Intensity, average, 0.1) - height) / 8;
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y - 1, x].Intensity, average, 0.1) - height) / 8;
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y - 1, x + 1].Intensity, average, 0.1) - height) / 8;
-
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y, x - 1].Intensity, average, 0.1) - height) / 8;
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y, x + 1].Intensity, average, 0.1) - height) / 8;
-
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y + 1, x - 1].Intensity, average, 0.1) - height) / 8;
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y + 1, x].Intensity, average, 0.1) - height) / 8;
-                                    smoothedHeight += (MoreMath.Lerp(demImage[y + 1, x + 1].Intensity, average, 0.1) - height) / 8;
-
-                                    smoothedImage[y, x] = new Gray(smoothedHeight);
-                                });
-
-                                demImage = smoothedImage.Clone();
-                            }
-                            break;
-                        case SmoothMode.Average:
-                            foreach (PointF waterPoint in waterPoints)
-                            {
-                                smoothedImage[(int)waterPoint.Y, (int)waterPoint.X] = new Gray(average);
-                            }
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-
-                    Imwrite($@"C:\temp\flatten_dem_{contourIndex}.png", smoothedImage);
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        private Mat ComputeWaterMask(string waterMaskPath)
+        {
+            using (Mat imageMat = Imread(waterMaskPath, LoadImageType.Grayscale))
+            using (Mat contourMat = new Mat(imageMat.Size, DepthType.Cv8U, 1))
+            {
+                var contours = FindWaterContours(imageMat);
+
+                for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
+                {
+                    DrawContours(contourMat, contours, contourIndex, new MCvScalar(byte.MaxValue), -1, LineType.EightConnected);
+                }
+
+                var footprint = new Mat(contourMat.Size, DepthType.Cv8U, 1);
+                var crossStructure = GetStructuringElement(ElementShape.Cross, new Size(3, 3), new Point(1, 1));
+                Dilate(contourMat, footprint, crossStructure, new Point(1, 1), 4, BorderType.Default, new MCvScalar(0));
+
+
+                var blurred = new Mat(contourMat.Size, DepthType.Cv8U, 1);
+                GaussianBlur(footprint, blurred, new Size(9, 9), 0);
+
+                return blurred;
             }
         }
 
 
         private void ShowWaterMap()
         {
-            using (Mat imageMat = Imread(WaterMapPath, LoadImageType.Grayscale))
-            using (Mat contourMat = new Mat(imageMat.Size, DepthType.Cv32F, 3))
-            {
-                var contours = FindContours(imageMat);
-
-                for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
-                {
-                    DrawContours(contourMat, contours, contourIndex, new MCvScalar(200, 0, 0), -1, LineType.EightConnected);
-                }
-
-                Mat resized = new Mat();
-                Resize(contourMat, resized, new Size(1900, 1000), 0D, 0D, Inter.Linear);
-                Imshow("Contours", resized);
-
-                Imwrite(@"C:\temp\contours.png", contourMat);
-            }
+            var waterMask = ComputeWaterMask(WaterMapPath);
+            Imwrite(@"C:\temp\contours0.png", waterMask);
         }
 
-        private VectorOfVectorOfPoint FindContours(IInputOutputArray input)
+        private VectorOfVectorOfPoint FindWaterContours(IInputOutputArray input)
         {
             VectorOfVectorOfPoint waterContours = new VectorOfVectorOfPoint();
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             using (Mat hierachy = new Mat())
             {
-                CvInvoke.FindContours(input, contours, hierachy, RetrType.Tree, ChainApproxMethod.ChainApproxNone);
+                FindContours(input, contours, hierachy, RetrType.Tree, ChainApproxMethod.ChainApproxNone);
 
                 for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
                 {

@@ -47,7 +47,9 @@
             <controls:NumericUpDown MaxHeight="22" MinWidth="100" Minimum="1" Maximum="10" Value="{Binding Iterations, Mode=TwoWay}"></controls:NumericUpDown>
         </StackPanel>
         <StackPanel Grid.Row="6" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
-            <Button Margin="0,5,5,5" Command="{Binding FillHolesCommand}">Fill Holes</Button>
+            <Button Margin="0,5,5,5" Command="{Binding FillHolesCommand}">Show Mask</Button>
+            <Button Margin="0,5,5,5" Command="{Binding FillHolesCommand}">Show Footprint</Button>
+            <Button Margin="0,5,5,5" Command="{Binding FillHolesCommand}">Blend with DEM</Button>
         </StackPanel>
        
 

@@ -19,7 +19,7 @@ using static Emgu.CV.CvInvoke;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
 {
-    public class FillDemHolesDialogViewModel : ViewModelBase
+    public class DemHolesFootprintViewModel : ViewModelBase
     {
         private string _digitalElevationModelPath;
         private double _heightThreshold = 200;
@@ -58,7 +58,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         public ICommand FillHolesCommand { get; set; }
 
 
-        public FillDemHolesDialogViewModel()
+        public DemHolesFootprintViewModel()
         {
             BrowseDigitalElevationModelPathCommand = new RelayCommand(BrowserDigitalElevationModelPath, () => true);
             FillHolesCommand = new RelayCommand(FillHoleAsync, () => !string.IsNullOrEmpty(DigitalElevationModelPath));
