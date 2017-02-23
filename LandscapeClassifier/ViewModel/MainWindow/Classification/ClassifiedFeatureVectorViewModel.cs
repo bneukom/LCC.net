@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows;
 using System.Windows.Media;
 using GalaSoft.MvvmLight;
 using LandscapeClassifier.Extensions;
@@ -24,6 +25,11 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// The class of this feature.
         /// </summary>
         public LandcoverType FeatureType => ClassifiedFeatureVector.Type;
+
+        /// <summary>
+        /// Position of the feature.
+        /// </summary>
+        public Point Position => ClassifiedFeatureVector.Position;
 
         /// <summary>
         /// The values of this feature vector.

@@ -35,8 +35,9 @@
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
             <MenuItem Header="_Tools">
-                <MenuItem Header="_DEM Footprint" Command="{Binding FillDEMHolesCommand}"/>
-                <MenuItem Header="_Water Footprint" Command="{Binding FlattenWaterDEMCommand}"/>
+                <MenuItem Header="_Fill DEM Holes" Command="{Binding FillDEMHolesCommand}"/>
+                <MenuItem Header="_Flatten Waterbodies" Command="{Binding FlattenWaterDEMCommand}"/>
+                <MenuItem Header="_Create Tiled Heightmap" Command="{Binding CreateTiledHeightmapCommand}"/>
             </MenuItem>
         </Menu>
 
@@ -111,9 +112,15 @@
                                         />
                                     <DataGridCheckBoxColumn ElementStyle="{DynamicResource MetroDataGridCheckBox}"
                                         EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Feature" Width="Auto"
-                                        Binding="{Binding Path=IsFeature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        />
+                                        Header="Use Feature" Width="Auto"
+                                        IsReadOnly="{Binding Path=CanChangeUseFeature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Binding="{Binding Path=UseFeature, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <DataGridCheckBoxColumn.CellStyle>
+                                            <Style TargetType="DataGridCell">
+                                                <Setter Property="IsEnabled" Value="{Binding CanChangeUseFeature}" />
+                                            </Style>
+                                        </DataGridCheckBoxColumn.CellStyle>
+                                    </DataGridCheckBoxColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>

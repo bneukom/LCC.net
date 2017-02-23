@@ -15,8 +15,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         private int _bitmapImagePixelWidth;
         private int _bitmapImagePixelHeight;
         private bool _isVisible;
-        private bool _isFeature = true;
-        private bool _canChangeIsFeature = true;
+        private bool _useFeature = true;
+        private bool _canChangeUseFeature = true;
 
         private Brush _currentPositionBrush;
 
@@ -134,23 +134,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// <summary>
         /// Whether this band is used as a feature in the classification or not.
         /// </summary>
-        public bool IsFeature
+        public bool UseFeature
         {
-            get { return _isFeature; }
-            set { _isFeature = value; OnPropertyChanged(nameof(IsFeature)); }
+            get { return _useFeature && _canChangeUseFeature; }
+            set { _useFeature = value; OnPropertyChanged(nameof(UseFeature)); }
         }
 
-
         /// <summary>
-        /// Whether this view model is enabled to be used as a feature.
+        /// Whether this band has a feature value associated with it.
         /// </summary>
-        public bool CanChangeIsFeature
+        public bool CanChangeUseFeature
         {
-            set {
-                _canChangeIsFeature = value;
-                OnPropertyChanged(nameof(CanChangeIsFeature));
-            }
-            get { return _canChangeIsFeature; }
+            get { return _canChangeUseFeature; }
+            set { _canChangeUseFeature = value; OnPropertyChanged(nameof(CanChangeUseFeature)); }
         }
 
         /// <summary>
@@ -185,7 +181,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         public LayerViewModel(string name, SatelliteType satelliteType, string path, bool contrastEnhanced, double xScale, double yScale, 
             WriteableBitmap bandImage, Matrix<double> imageToWorld, Vector<double> upperLeftWorld, Vector<double> bottomRightWorld, 
-            double minCutPercentage, double maxCutPercentage, bool isRed, bool isGreen, bool isBlue, bool isRgb, bool isFeature = true, bool canChangeIsFeature = true)
+            double minCutPercentage, double maxCutPercentage, bool isRed, bool isGreen, bool isBlue, bool isRgb, bool useFeature = true, bool canChangeUseFeature = true)
         {
             Name = name;
             Path = path;
@@ -205,8 +201,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             ScaleX = xScale;
             ScaleY = yScale;
 
-            IsFeature = isFeature;
-            CanChangeIsFeature = canChangeIsFeature;
+            UseFeature = useFeature;
+            CanChangeUseFeature = canChangeUseFeature;
 
             IsRed = isRed;
             IsGreen = isGreen;

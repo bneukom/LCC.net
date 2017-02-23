@@ -49,10 +49,11 @@ namespace LandscapeClassifier.Controls
             var position = args.GetPosition(this);
             var posVec = _vecBuilder.DenseOfArray(new[] { position.X, position.Y, 1 });
 
-            var featureBands = viewModel.Layers.Where(b => b.IsFeature).ToList();
+            var featureBands = viewModel.Layers.Where(b => b.UseFeature).ToList();
+            var indices = viewModel.Layers.Where(b => b.UseFeature).Select((b, i) => i);
 
             ushort[] bandIntensities = new ushort[featureBands.Count];
-            for (int bandIndex = 0; bandIndex < featureBands.Count; ++bandIndex)
+            foreach (int bandIndex in indices)
             {
                 var band = featureBands[bandIndex];
                 var viewToPixelMat = band.WorldToImage * viewModel.ClassifierViewModel.ScreenToWorld * _scaleMat.Inverse() * _screenToViewMat.Inverse();

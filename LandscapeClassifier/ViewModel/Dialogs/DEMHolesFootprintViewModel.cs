@@ -24,7 +24,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private string _digitalElevationModelPath;
         private double _heightThreshold = 200;
         private bool _isInputSet;
-        private FillHoleMode _fillHoleMode = FillHoleMode.Bilinear;
+        private FillHoleMode _fillHoleMode = FillHoleMode.Linear;
 
         private float _cutOff = 0.99999f;
 
@@ -71,9 +71,11 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                 using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
                 using (Mat demMat = Imread(DigitalElevationModelPath, LoadImageType.AnyDepth | LoadImageType.Grayscale))
                 {
+                    var enforcedHeightMat = new Mat(demMat.Size, DepthType.Cv8U, 1);
+                    var enforcedHeightImage = enforcedHeightMat.ToImage<Gray, byte>();
+
                     var demImage = demMat.ToImage<Gray, float>();
                     var demByte = demImage.Convert<Gray, byte>();
-
 
                     var sobelX = demByte.Sobel(1, 0, 3);
                     var sobelY = demByte.Sobel(0, 1, 3);
@@ -91,8 +93,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                     var voidAreas = new Image<Gray, byte>(combined.Size);
                     Dilate(combined, voidAreas, crossStructure, new Point(1, 1), 3, BorderType.Default, new MCvScalar(0));
 
-                    Imwrite($@"C:\temp\voidAreas.png", voidAreas);
-                    Imwrite($@"C:\temp\voidPixels.png", combined);
+                    Imwrite($@"C:\temp\footprint_holes.png", voidAreas);
 
                     var mask = new Matrix<byte>(voidAreas.Rows, voidAreas.Cols, voidAreas.NumberOfChannels);
                     voidAreas.CopyTo(mask);
@@ -137,7 +138,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
                             Imwrite($@"C:\temp\holeFixed.png", fixedImage);
                             break;
-                        case FillHoleMode.Bilinear:
+                        case FillHoleMode.Linear:
 
                             for (int contourIndex = 0; contourIndex < contours.Size; contourIndex++)
                             {
@@ -162,6 +163,7 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                                             {
                                                 double lerp = MoreMath.Lerp(left, right, (float)(x2 - trackLeft) / width);
                                                 fixedImage[y, x2] = new Gray(lerp);
+                                                enforcedHeightImage[y, x2] = new Gray(lerp/ushort.MaxValue*byte.MaxValue);
                                             }
 
                                             x += width;
@@ -170,7 +172,8 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                                     }
                                 }
                             }
-                            Imwrite($@"C:\temp\holeFixed.png", fixedImage);
+                            Imwrite($@"C:\temp\combined_holes.png", fixedImage);
+                            Imwrite($@"C:\temp\enforced_height_holes.png", enforcedHeightImage);
                             break;
                     }
                 }
@@ -250,6 +253,6 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
     public enum FillHoleMode
     {
-        Bilinear, MovingWindowAverage
+        Linear, MovingWindowAverage
     }
 }

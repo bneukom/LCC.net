@@ -147,7 +147,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             Layers = new ObservableCollection<LayerViewModel>();
             Layers.CollectionChanged += (sender, args) =>
             {
-                FeatureLayerView = new ObservableCollection<LayerViewModel>(Layers.Where(l => l.IsFeature).ToList());
+                FeatureLayerView = new ObservableCollection<LayerViewModel>(Layers.Where(l => l.UseFeature).ToList());
             };
 
             ClassifierViewModel = new ClassifierViewModel(this);
@@ -326,8 +326,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                             var transformMat = builder.DenseOfArray(matArray);
 
                             var layerViewModel = new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
-                                transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false,
-                                ClassifierViewModel.FeaturesViewModel.HasFeatures());
+                                transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false, false);
 
                             Layers.Insert(0, layerViewModel);
                         });
@@ -428,8 +427,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
             var imageBandViewModel = new LayerViewModel(
                 layer.GetName(), layer.SatelliteType, layer.Path, layer.ContrastEnhancement, xRes, yRes, bandImage, transformMat, upperLeft,
-                bottomRight, layer.MinCutOff, layer.MaxCutOff, layer.R, layer.G, layer.B, false, true,
-                ClassifierViewModel.FeaturesViewModel.HasFeatures());
+                bottomRight, layer.MinCutOff, layer.MaxCutOff, layer.R, layer.G, layer.B, false, true, true);
 
             return imageBandViewModel;
         }

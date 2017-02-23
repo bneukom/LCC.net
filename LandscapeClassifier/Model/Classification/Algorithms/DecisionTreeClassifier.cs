@@ -24,17 +24,17 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
         public override Task TrainAsync(ClassificationModel classificationModel)
         {
-            int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
+            int numFeatures = classificationModel.FeatureVectors.Count;
             DecisionVariable[]  decisionVariables = Enumerable.ToArray(classificationModel.Bands.Select(b => DecisionVariable.Continuous(b.ToString())));
 
             double[][] input = new double[numFeatures][];
             int[] responses = new int[numFeatures];
             
             for (int featureIndex = 0;
-                featureIndex < classificationModel.ClassifiedFeatureVectors.Count;
+                featureIndex < classificationModel.FeatureVectors.Count;
                 ++featureIndex)
             {
-                var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
+                var featureVector = classificationModel.FeatureVectors[featureIndex];
                 input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
                 responses[featureIndex] = (int) featureVector.Type;
             }
@@ -132,15 +132,15 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         {
             return Task.Factory.StartNew(() =>
             {
-                int numFeatures = classificationModel.ClassifiedFeatureVectors.Count;
+                int numFeatures = classificationModel.FeatureVectors.Count;
                 DecisionVariable[] decisionVariables = Enumerable.ToArray(classificationModel.Bands.Select(b => DecisionVariable.Continuous(b.ToString())));
 
                 double[][] input = new double[numFeatures][];
                 int[] responses = new int[numFeatures];
 
-                for (int featureIndex = 0; featureIndex < classificationModel.ClassifiedFeatureVectors.Count; ++featureIndex)
+                for (int featureIndex = 0; featureIndex < classificationModel.FeatureVectors.Count; ++featureIndex)
                 {
-                    var featureVector = classificationModel.ClassifiedFeatureVectors[featureIndex];
+                    var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                     input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
                     responses[featureIndex] = (int)featureVector.Type;

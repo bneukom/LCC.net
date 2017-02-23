@@ -56,7 +56,7 @@ namespace LandscapeClassifier.Controls
                 var mousePosition = mouseButtonEventArgs.GetPosition(this);
                 Vector<double> mouseVec = _vecBuilder.DenseOfArray(new[] { mousePosition.X, mousePosition.Y, 1.0f });
 
-                var featureBands = viewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name).ToList();
+                var featureBands = viewModel.Layers.Where(b => b.UseFeature).OrderBy(b => b.Name).ToList();
 
                 ushort[] bandPixels = new ushort[featureBands.Count];
 
@@ -97,7 +97,7 @@ namespace LandscapeClassifier.Controls
                 viewModel.ClassifierViewModel.MouseWorldPoisition = new Point(mouseWorld[0], mouseWorld[1]);
             }
 
-            var featureBands = viewModel.Layers.Where(b => b.IsFeature).ToList();
+            var featureBands = viewModel.Layers.Where(b => b.UseFeature).ToList();
 
             foreach (var band in featureBands)
             {

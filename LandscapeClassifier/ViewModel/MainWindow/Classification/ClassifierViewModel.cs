@@ -320,6 +320,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 }
             };
 
+            /*
             FeaturesViewModel.PropertyChanged += (sender, args) =>
             {
                 if (args.PropertyName == FeaturesViewModel.FeatureProperty)
@@ -331,6 +332,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     }
                 }
             };
+            */
 
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
@@ -434,7 +436,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 var csvPath = saveFileDialog.FileName;
                 using (var outputStreamWriter = new StreamWriter(csvPath))
                 {
-                    var layers = _mainWindowViewModel.Layers.Where(b => b.IsFeature).OrderBy(b => b.Name);
+                    var layers = _mainWindowViewModel.Layers.Where(b => b.UseFeature).OrderBy(b => b.Name);
                     outputStreamWriter.WriteLine(layers.Count());
                     foreach (var layerViewModel in layers)
                     {
@@ -543,10 +545,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private async void ComputeConfusionMatrixAsync()
         {
-            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
-            var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
-
-            var model = new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors);
+            var model = new ClassificationModel(ProjectionName, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView);
 
             var confusionMatrices = await CurrentClassifierViewModel.ComputeFoldedConfusionMatrixAsync(model, 10);
 
@@ -559,10 +558,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private void GridSearchAsync()
         {
-            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
-            var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
-
-            CurrentClassifierViewModel.GridSearchAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+            CurrentClassifierViewModel.GridSearchAsync(new ClassificationModel(ProjectionName, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView));
         }
 
         /// <summary>
@@ -570,10 +566,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private void Train()
         {
-            var classifiedFeatureVectors = FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector).ToList();
-            var bands = _mainWindowViewModel.Layers.Where(b => b.IsFeature).Select(b => b.Name).ToList();
-
-            Task trained = CurrentClassifierViewModel.TrainAsync(new ClassificationModel(ProjectionName, bands, classifiedFeatureVectors));
+            Task trained = CurrentClassifierViewModel.TrainAsync(new ClassificationModel(ProjectionName, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView));
 
             trained.ContinueWith(t => Application.Current.Dispatcher.Invoke(() =>
             {

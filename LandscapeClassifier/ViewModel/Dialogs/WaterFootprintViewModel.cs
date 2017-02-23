@@ -96,10 +96,13 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                     var demImage = demMat.ToImage<Gray, ushort>();
                     var smoothedImage = demImage.Clone();
 
+                    var enforcedHeightMat = new Mat(demMat.Size, DepthType.Cv8U, 1);
+                    var enfocedHeightImgage = enforcedHeightMat.ToImage<Gray, byte>();
+
                     var waterMask = ComputeWaterMask(WaterMapPath);
                     var waterMaskImage = waterMask.ToImage<Gray, byte>();
 
-                    Imwrite($@"C:\temp\watermask.png", waterMaskImage);
+                   
 
                     using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
                     using (Mat hierachy = new Mat())
@@ -135,11 +138,14 @@ namespace LandscapeClassifier.ViewModel.Dialogs
                                 var alpha = waterMaskImage[waterPoint.Y, waterPoint.X].Intensity/255.0d;
                                 var lerp = MoreMath.Lerp(demGray, average, alpha);
 
+                                enfocedHeightImgage[waterPoint.Y, waterPoint.X] = new Gray(average / ushort.MaxValue * byte.MaxValue);
                                 smoothedImage[waterPoint.Y, waterPoint.X] = new Gray(lerp);
                             }
-
-                            Imwrite($@"C:\temp\flatten_dem_{contourIndex}.png", smoothedImage);
                         }
+
+                        Imwrite($@"C:\temp\footprint.png", waterMaskImage);
+                        Imwrite($@"C:\temp\enforced.png", enfocedHeightImgage);
+                        Imwrite($@"C:\temp\merged.png", smoothedImage);
                     }
                 }
             }
@@ -163,11 +169,11 @@ namespace LandscapeClassifier.ViewModel.Dialogs
 
                 var footprint = new Mat(contourMat.Size, DepthType.Cv8U, 1);
                 var crossStructure = GetStructuringElement(ElementShape.Cross, new Size(3, 3), new Point(1, 1));
-                Dilate(contourMat, footprint, crossStructure, new Point(1, 1), 4, BorderType.Default, new MCvScalar(0));
+                Dilate(contourMat, footprint, crossStructure, new Point(1, 1), 5, BorderType.Default, new MCvScalar(0));
 
 
                 var blurred = new Mat(contourMat.Size, DepthType.Cv8U, 1);
-                GaussianBlur(footprint, blurred, new Size(9, 9), 0);
+                GaussianBlur(footprint, blurred, new Size(15, 15), 0);
 
                 return blurred;
             }

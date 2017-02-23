@@ -6,8 +6,8 @@
         xmlns:local="clr-namespace:LandscapeClassifier.View.Dialogs"
         xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
+        GlowBrush="{DynamicResource AccentColorBrush}"
         Title="Unhandled Exception" Height="400" Width="800">
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"></RowDefinition>

@@ -586,7 +586,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             ProgressVisibility = Visibility.Visible;
             PredictionProgress = 0.0;
 
-            var featureBands = _mainWindowViewModel.Layers.Where(f => f.IsFeature).ToList();
+            var featureBands = _mainWindowViewModel.Layers.Where(f => f.UseFeature).ToList();
             var numFeatures = featureBands.Count;
 
             var bounds = new List<Rect>();
