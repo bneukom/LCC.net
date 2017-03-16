@@ -28,6 +28,7 @@
             <dialogs:WaterFootprintViewModel x:Key="FlattenWaterBodiesViewModel"/>
             <dialogs:DemHolesFootprintViewModel x:Key="FillDemHolesDialogViewModel"/>
             <dialogs:PredictionAccuracyDialogViewModel x:Key="PredictionAccuracyDialogViewModel"/>
+            <dialogs:EditLandcoverTypesDialogViewModel x:Key="EditLandcoverTypesDialogViewModel"/>
             <validationRules:DoubleValidationRule x:Key="DoubleValidationRule"/>
         </ResourceDictionary>
     </Application.Resources>

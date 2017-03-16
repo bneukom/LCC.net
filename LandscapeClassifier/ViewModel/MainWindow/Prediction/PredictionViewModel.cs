@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using Accord.Statistics.Analysis;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using GalaSoft.MvvmLight.Ioc;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
@@ -41,7 +42,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         private Neighborhood _majorityFilterNeighborhood;
         private double _mousePredictionProbability;
 
-        private LandcoverType _mousePredictionType;
+        private LandcoverTypeViewModel _mousePredictionTypeViewModel;
 
         private bool _notBlocking = true;
         private double _overlayOpacity = 0.5d;
@@ -117,14 +118,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         /// <summary>
         ///     Landcover type at mouse position.
         /// </summary>
-        public LandcoverType MousePredictionType
+        public LandcoverTypeViewModel MousePredictionTypeViewModel
         {
             set
             {
-                _mousePredictionType = value;
+                _mousePredictionTypeViewModel = value;
                 RaisePropertyChanged();
             }
-            get { return _mousePredictionType; }
+            get { return _mousePredictionTypeViewModel; }
         }
 
         /// <summary>
@@ -258,7 +259,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             var majorityFilter = Task.Factory.StartNew(() => Parallel.For(0, _predictionHeight, y =>
             {
                 var line = new int[_predictionWidth];
-                var neighbors = new int[Enum.GetValues(typeof(LandcoverType)).Length - 1];
+                var neighbors = new int[Enum.GetValues(typeof(LandcoverTypeViewModel)).Length - 1];
 
                 for (var x = 0; x < _predictionWidth; ++x)
                 {
@@ -306,13 +307,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 var size = _predictionHeight * stride;
                 var imageData = new byte[size];
 
+                var types = SimpleIoc.Default.GetInstance<MainWindowViewModel>().LandcoverTypes;
+
                 Parallel.For(0, _predictionWidth, x =>
                 {
                     for (var y = 0; y < _predictionHeight; ++y)
                     {
                         var index = 4 * y * _predictionWidth + 4 * x;
-                        var type = (LandcoverType)_classification[y][x];
-                        var color = type.GetColor();
+                        LandcoverTypeViewModel typeViewModel = types[_classification[y][x]];
+                        var color = typeViewModel.Color;
                         imageData[index + 0] = color.B;
                         imageData[index + 1] = color.G;
                         imageData[index + 2] = color.R;
@@ -497,15 +500,16 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
             return await Task.Run(() =>
             {
                 var layerData = new ushort[stride * height];
+
                 Parallel.ForEach(Partitioner.Create(0, height), range =>
                 {
                     for (var y = range.Item1; y < range.Item2; ++y)
                     {
                         for (var x = 0; x < width; ++x)
                         {
-                            var prediction = (LandcoverType)_classification[y][x];
+                            var prediction = _classification[y][x];
 
-                            var color = types[(int)prediction] ? ushort.MaxValue : (ushort)0;
+                            var color = types[prediction] ? ushort.MaxValue : (ushort)0;
 
                             var dataIndex = y * stride + x;
                             layerData[dataIndex] = color;
@@ -691,13 +695,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
                 var size = _predictionHeight * stride;
                 var imageData = new byte[size];
 
+                var types = MainWindowViewModel.Default.LandcoverTypes;
+
                 Parallel.For(0, _predictionWidth, x =>
                 {
                     for (var y = 0; y < _predictionHeight; ++y)
                     {
                         var index = 4 * y * _predictionWidth + 4 * x;
-                        var type = (LandcoverType)_classification[y][x];
-                        var color = type.GetColor();
+                        var type = types[_classification[y][x]];
+                        var color = type.Color;
                         imageData[index + 0] = color.B;
                         imageData[index + 1] = color.G;
                         imageData[index + 2] = color.R;

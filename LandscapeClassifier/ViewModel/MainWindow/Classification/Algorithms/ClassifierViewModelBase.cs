@@ -17,7 +17,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification.Algorithms
 
         protected abstract ILandCoverClassifier Classifier { get; }
 
-        public LandcoverType Predict(FeatureVector featureVector)
+        public int Predict(FeatureVector featureVector)
         {
             return Classifier.Predict(featureVector);
         }

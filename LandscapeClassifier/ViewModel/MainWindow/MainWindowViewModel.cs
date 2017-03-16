@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -14,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using GalaSoft.MvvmLight.Ioc;
 using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Annotations;
 using LandscapeClassifier.Extensions;
@@ -40,6 +42,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         private bool _windowEnabled = true;
         private LayerViewModel _selectedLayer;
         private ObservableCollection<LayerViewModel> _featureLayerView;
+        private LandcoverTypeViewModel _selectedLandCoverTypeViewModel;
+        private ImmutableDictionary<int, LandcoverTypeViewModel> _landcoverTypes = ImmutableDictionary.Create<int, LandcoverTypeViewModel>();
+
+        /// <summary>
+        /// Default instance of the MainWindowViewModel
+        /// </summary>
+        public static MainWindowViewModel Default => ((MainWindowViewModel) Application.Current.FindResource("MainWindowViewModel"));
 
         /// <summary>
         /// The bands of the image.
@@ -117,7 +126,12 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// <summary>
         /// Fills holes in the DEM.
         /// </summary>
-        public object FillDEMHolesCommand { set; get; }
+        public ICommand FillDEMHolesCommand { set; get; }
+
+        /// <summary>
+        /// Modify land cover types.
+        /// </summary>
+        public ICommand LandcoverTypesCommand { set; get; }
 
         /// <summary>
         /// Block the main window.
@@ -128,10 +142,44 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             set { _windowEnabled = value; RaisePropertyChanged(); }
         }
 
+        /// <summary>
+        /// List of all landcover types.
+        /// </summary>
+        public ImmutableDictionary<int, LandcoverTypeViewModel> LandcoverTypes
+        {
+            get { return _landcoverTypes; }
+            set
+            {
+                if (value == null) throw new ArgumentException();
+                _landcoverTypes = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        /// <summary>
+        ///     The current land cover type.
+        /// </summary>
+        public LandcoverTypeViewModel SelectedLandCoverTypeViewModel
+        {
+            get { return _selectedLandCoverTypeViewModel; }
+            set
+            {
+                _selectedLandCoverTypeViewModel = value;
+                RaisePropertyChanged();
+            }
+        }
 
         public MainWindowViewModel()
         {
             GdalConfiguration.ConfigureGdal();
+
+            Dictionary<int, LandcoverTypeViewModel> landcoverTypes = new Dictionary<int, LandcoverTypeViewModel>();
+            foreach (LandcoverTypeViewModel landcoverType in LandcoverTypeViewModel.DefaultLandcoverTypesViewModel)
+            {
+                landcoverTypes.Add(landcoverType.Id, landcoverType);
+            }
+            LandcoverTypes = landcoverTypes.ToImmutableDictionary();
+
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown(), () => true);
 
             CreateSlopeFromHeightmapCommand = new RelayCommand(() => new CreateSlopeFromHeightmapDialog().ShowDialog(), () => true);
@@ -144,6 +192,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             MoveLayerDownCommand = new RelayCommand(MoveLayerDown, CanMoveDown);
             MoveLayerUpCommand = new RelayCommand(MoveLayerUp, CanMoveUp);
 
+            LandcoverTypesCommand = new RelayCommand(ChangeLandCoverTypes, () => true);
+
             Layers = new ObservableCollection<LayerViewModel>();
             Layers.CollectionChanged += (sender, args) =>
             {
@@ -154,6 +204,30 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             PredictionViewModel = new PredictionViewModel(this);
         }
 
+        private void ChangeLandCoverTypes()
+        {
+            EditLandCoverTypesDialog editLandCoverTypesDialog = new EditLandCoverTypesDialog();
+
+            var editingLandcoverTypes = new ObservableCollection<LandcoverTypeViewModel>(LandcoverTypes.Values.Select(t => new LandcoverTypeViewModel(t)).ToList());
+            if ((bool)editLandCoverTypesDialog.ShowDialog(editingLandcoverTypes))
+            {
+                Dictionary<int, LandcoverTypeViewModel> newLandcoverTypeViewModels = new Dictionary<int, LandcoverTypeViewModel>();
+                foreach (LandcoverTypeViewModel type in editingLandcoverTypes)
+                {
+                    newLandcoverTypeViewModels.Add(type.Id, type);
+                }
+
+                var oldSelection = SelectedLandCoverTypeViewModel;
+                LandcoverTypes = newLandcoverTypeViewModels.ToImmutableDictionary();
+
+                if (newLandcoverTypeViewModels.ContainsKey(oldSelection.Id))
+                    SelectedLandCoverTypeViewModel = newLandcoverTypeViewModels[oldSelection.Id];
+                else
+                    SelectedLandCoverTypeViewModel = LandcoverTypes.Values.Any() ? LandcoverTypes.Values.First() : null;
+
+
+            }
+        }
 
         private bool CanMoveUp()
         {
@@ -181,7 +255,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         private void FlattenWaterDEM()
         {
             FlattenWaterBodiesDialog dialog = new FlattenWaterBodiesDialog();
-
             dialog.Show();
         }
 

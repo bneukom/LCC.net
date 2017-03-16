@@ -12,9 +12,11 @@ using System.Windows.Input;
 using Accord.Collections;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using GalaSoft.MvvmLight.Ioc;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.View.Export;
+using LandscapeClassifier.ViewModel.MainWindow;
 using LandscapeClassifier.ViewModel.MainWindow.Classification;
 using OSGeo.GDAL;
 
@@ -159,23 +161,14 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             ExportLayers.AddRange(layers.Select(l => new ExportLayerViewModel(l)));
 
             ExportLandCoverLayers.Clear();
-            var types = Enum.GetValues(typeof(LandcoverType));
-            foreach (LandcoverType type in types)
+            var types = Enum.GetValues(typeof(LandcoverTypeViewModel));
+            foreach (LandcoverTypeViewModel type in types)
             {
-                if (type == LandcoverType.None) continue;
+                if (type == LandcoverTypeViewModel.None) continue;
 
                 var layer = new ExportLandCoverTypeViewModel(type + ".png", ExportLandCoverLayers);
 
-                if (type == LandcoverType.Grass) layer.Grass = true;
-                if (type == LandcoverType.Gravel) layer.Gravel = true;
-                if (type == LandcoverType.Rock) layer.Rock = true;
-                if (type == LandcoverType.Snow) layer.Snow = true;
-                if (type == LandcoverType.Tree) layer.Tree = true;
-                if (type == LandcoverType.Water) layer.Water = true;
-                if (type == LandcoverType.Agriculture) layer.Agriculture = true;
-                if (type == LandcoverType.Settlement) layer.Settlement = true;
-                if (type == LandcoverType.Soil) layer.Soil = true;
-
+                layer.ExportedLandCoverTypes.Add(type);
                 ExportLandCoverLayers.Add(layer);
             }
         }
@@ -217,92 +210,23 @@ namespace LandscapeClassifier.ViewModel.Dialogs
     public class ExportLandCoverTypeViewModel : ViewModelBase
     {
         private readonly ObservableCollection<ExportLandCoverTypeViewModel> _existingLayers;
-        private bool _grass;
-        private bool _gravel;
-        private bool _rock;
-        private bool _snow;
-        private bool _tree;
-        private bool _water;
-        private bool _agriculture;
-        private bool _settlement;
-        private string _name;
-        private bool _soil;
 
+        private string _name;
+        
         public string Name
         {
             get { return _name; }
             set { _name = value; RaisePropertyChanged(); }
         }
 
-        public bool Grass
-        {
-            get { return _grass; }
-            set { _grass = value; RaisePropertyChanged(); }
-        }
-
-        public bool Gravel
-        {
-            get { return _gravel; }
-            set { _gravel = value; RaisePropertyChanged(); }
-        }
-
-        public bool Rock
-        {
-            get { return _rock; }
-            set { _rock = value; RaisePropertyChanged(); }
-        }
-
-        public bool Snow
-        {
-            get { return _snow; }
-            set { _snow = value; RaisePropertyChanged(); }
-        }
-
-        public bool Tree
-        {
-            get { return _tree; }
-            set { _tree = value; RaisePropertyChanged(); }
-        }
-
-        public bool Water
-        {
-            get { return _water; }
-            set { _water = value; RaisePropertyChanged(); }
-        }
-
-        public bool Agriculture
-        {
-            get { return _agriculture; }
-            set { _agriculture = value; RaisePropertyChanged(); }
-        }
-
-        public bool Settlement
-        {
-            get { return _settlement; }
-            set { _settlement = value; RaisePropertyChanged(); }
-        }
-
-        public bool Soil
-        {
-            get { return _soil; }
-            set { _soil = value; RaisePropertyChanged(); }
-        }
+        public ObservableCollection<LandcoverTypeViewModel> ExportedLandCoverTypes { get; } = new ObservableCollection<LandcoverTypeViewModel>();
 
         public int[] SelectedTypeIndices
         {
             get
             {
-                var selectedIndices = new List<int>();
-                if (Grass) selectedIndices.Add((int)LandcoverType.Grass);
-                if (Gravel) selectedIndices.Add((int)LandcoverType.Gravel);
-                if (Rock) selectedIndices.Add((int)LandcoverType.Rock);
-                if (Snow) selectedIndices.Add((int)LandcoverType.Snow);
-                if (Tree) selectedIndices.Add((int)LandcoverType.Tree);
-                if (Water) selectedIndices.Add((int)LandcoverType.Water);
-                if (Agriculture) selectedIndices.Add((int)LandcoverType.Agriculture);
-                if (Settlement) selectedIndices.Add((int)LandcoverType.Settlement);
-                if (Soil) selectedIndices.Add((int)LandcoverType.Soil);
-                return selectedIndices.ToArray();
+                return ExportedLandCoverTypes.Select(l => l.Id).ToArray();
+
             }
         }
 
@@ -310,20 +234,15 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         {
             get
             {
-                var types = Enum.GetValues(typeof(LandcoverType));
+                var types = SimpleIoc.Default.GetInstance<MainWindowViewModel>().LandcoverTypes.Values.ToArray();
                 bool[] typesResult = new bool[types.Length - 1];
-                foreach (LandcoverType type in types)
+                
+                for (int typeIndex = 0; typeIndex < types.Length; ++typeIndex)
                 {
-                    if (type == LandcoverType.Grass) typesResult[(int)type] = Grass;
-                    if (type == LandcoverType.Gravel) typesResult[(int)type] = Gravel;
-                    if (type == LandcoverType.Rock) typesResult[(int)type] = Rock;
-                    if (type == LandcoverType.Snow) typesResult[(int)type] = Snow;
-                    if (type == LandcoverType.Tree) typesResult[(int)type] = Tree;
-                    if (type == LandcoverType.Water) typesResult[(int)type] = Water;
-                    if (type == LandcoverType.Agriculture) typesResult[(int)type] = Agriculture;
-                    if (type == LandcoverType.Settlement) typesResult[(int)type] = Settlement;
-                    if (type == LandcoverType.Soil) typesResult[(int)type] = Soil;
+                    LandcoverTypeViewModel typeViewModel = types[typeIndex];
+                    typesResult[typeIndex] = ExportedLandCoverTypes.Contains(typeViewModel);
                 }
+
                 return typesResult;
             }
         }
@@ -341,15 +260,12 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             if (propertyChangedEventArgs.PropertyName != nameof(Name))
             {
                 string newName = "";
-                if (Grass) newName += "Grass";
-                if (Gravel) newName += "Gravel";
-                if (Rock) newName += "Rock";
-                if (Snow) newName += "Snow";
-                if (Tree) newName += "Tree";
-                if (Water) newName += "Water";
-                if (Agriculture) newName += "Agriculture";
-                if (Settlement) newName += "Settlement";
-                if (Soil) newName += "Soil";
+
+                foreach (LandcoverTypeViewModel type in ExportedLandCoverTypes)
+                {
+                    newName += type.Name;
+                }
+
                 if (newName.Length == 0)
                 {
                     int missingLayer = ExportPredictionDialogViewModel.MissingLayerIndex(_existingLayers);

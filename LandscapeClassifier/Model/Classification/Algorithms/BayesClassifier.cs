@@ -30,7 +30,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             {
                 var featureVector = classificationModel.FeatureVectors[featureIndex];
                 input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                responses[featureIndex] = (int) featureVector.Type;
+                responses[featureIndex] = (int) featureVector.FeatureClass;
             }
 
             NaiveBayesLearning<NormalDistribution> learning = new NaiveBayesLearning<NormalDistribution>();
@@ -44,9 +44,9 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
         }
 
-        public override LandcoverType Predict(FeatureVector feature)
+        public override int Predict(FeatureVector feature)
         {
-            return (LandcoverType)_bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
+            return _bayes.Decide(Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue));
         }
         public override double Probabilty(FeatureVector feature)
         {
@@ -97,7 +97,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                     input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                    responses[featureIndex] = (int)featureVector.Type;
+                    responses[featureIndex] = featureVector.FeatureClass;
                 }
 
                 List<GeneralConfusionMatrix> confusionMatrices = new List<GeneralConfusionMatrix>();
@@ -124,7 +124,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     double trainingError = new ZeroOneLoss(trainingOutputs).Loss(predictedTraining);
                     double validationError = new ZeroOneLoss(validationOutputs).Loss(predictedValidation);
 
-                    GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(Enum.GetValues(typeof(LandcoverType)).Length - 1, validationOutputs, predictedValidation);
+                    GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(Enum.GetValues(typeof(LandcoverTypeViewModel)).Length - 1, validationOutputs, predictedValidation);
                     confusionMatrices.Add(confusionMatrix);
 
                     // Return a new information structure containing the model and the errors achieved.

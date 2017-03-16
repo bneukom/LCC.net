@@ -55,8 +55,10 @@
             </Grid.RowDefinitions>
             <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.Row="0">
                 <Button x:Name="OpenOrthoImage" Command="{Binding AddLayersCommand}"  Content="Add Layer" HorizontalAlignment="Left" Margin="5" VerticalAlignment="Top"/>
-                <Label Margin="5" ToolTip="Right click into image to add a feature with the current landcover type.">Feature Landcover Type:</Label>
-                <ComboBox SelectedIndex="0" SelectedValue="{Binding ClassifierViewModel.SelectedLandCoverType}" ItemsSource="{Binding ClassifierViewModel.LandCoverTypesEnumerable}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5" VerticalAlignment="Center"/>
+                <Label Margin="5" ToolTip="Right click into bands view to add a feature with the current landcover type.">Right click into bands to add feature:</Label>
+                <ComboBox SelectedIndex="0" SelectedValue="{Binding SelectedLandCoverTypeViewModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding LandcoverTypes.Values}" x:Name="ComboBox"  HorizontalAlignment="Stretch" Margin="5" VerticalAlignment="Center"/>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock>
+                <Button Margin="5" Command="{Binding LandcoverTypesCommand}">Change Landcover Types</Button>
             </StackPanel>
             <TabControl Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
                 <TabItem  Header="Training" IsEnabled="{Binding PredictionViewModel.NotBlocking}">
@@ -170,14 +172,20 @@
                             </GroupBox>
                             <TreeView  Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ClassifierViewModel.FeaturesViewModel.FeaturesByType}">
                                 <TreeView.Resources>
+                                    <converter:ColorToBrushConverter x:Key="ColorToBrushConverter"></converter:ColorToBrushConverter>
                                     <HierarchicalDataTemplate DataType = "{x:Type classification:FeatureByTypeViewModel}" ItemsSource = "{Binding Path=Features}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Path=Type}"/>
+                                            <TextBlock Text="{Binding Path=LandCoverType}"/>
                                             <TextBlock Margin="5,0,0,0" Text="{Binding Path=Features.Count}"></TextBlock>
                                         </StackPanel>
                                     </HierarchicalDataTemplate>
                                     <HierarchicalDataTemplate DataType = "{x:Type classification:ClassifiedFeatureVectorViewModel}">
-                                        <TextBlock FontSize="9" Foreground="{Binding FeatureClassColorBrush}" Text="{Binding Path=FeatureValues}"/>
+                                        <!--<TextBlock FontSize="9" Foreground="{Binding FeatureTypeViewModel.Color, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorToBrushConverter}}" Text="{Binding Path=FeatureValues}"/>-->
+                                        <TextBlock FontSize="9" 
+                                                   Foreground="{Binding DataContext.LandCoverType.Color, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource ColorToBrushConverter}, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TreeViewItem}, AncestorLevel=2}}" 
+                                                   Text="{Binding Path=FeatureValues}"/>
+
+                                        
                                     </HierarchicalDataTemplate>
                                 </TreeView.Resources>
                             </TreeView>
@@ -300,7 +308,7 @@
                             </Grid.RowDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal"  HorizontalAlignment="Stretch" Margin="5,5,5,5" VerticalAlignment="Center">
                                 <Label Content="Pixel Prediction:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
-                                <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionType}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
+                                <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionTypeViewModel}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                                 <Label Content="Prediction Probability:" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
                                 <Label MinWidth="150" Content="{Binding PredictionViewModel.MousePredictionProbability}" HorizontalAlignment="Left"  Margin="0,0,0,0"  VerticalAlignment="Center" />
 

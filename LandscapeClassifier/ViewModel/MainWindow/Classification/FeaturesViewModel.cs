@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using GalaSoft.MvvmLight;
+using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using Xceed.Wpf.Toolkit.PropertyGrid.Converters;
 
@@ -14,19 +15,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
     public class FeatureByTypeViewModel : ViewModelBase
     {
         public ObservableCollection<ClassifiedFeatureVectorViewModel> Features { get; set; }
-        private LandcoverType _type;
+        private LandcoverTypeViewModel _landCoverType;
 
-        public LandcoverType Type
+        public LandcoverTypeViewModel LandCoverType
         {
-            get { return _type; }
-            set { _type = value; RaisePropertyChanged(); }
+            get { return _landCoverType; }
+            set { _landCoverType = value; RaisePropertyChanged(); }
         }
 
         public int NumberOfFeatures => Features.Count;
 
-        public FeatureByTypeViewModel(LandcoverType type)
+        public FeatureByTypeViewModel(LandcoverTypeViewModel landCoverType)
         {
-            Type = type;
+            LandCoverType = landCoverType;
             Features = new ObservableCollection<ClassifiedFeatureVectorViewModel>();
         }
     }
@@ -39,19 +40,42 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         public static readonly string FeatureProperty = "Feature";
 
-        public FeaturesViewModel()
+        public FeaturesViewModel(MainWindowViewModel mainWindowViewModel)
         {
+            // Initialize with initial land cover types
             FeaturesByType = new ObservableCollection<FeatureByTypeViewModel>();
-
-            foreach (LandcoverType landCoverType in Enum.GetValues(typeof(LandcoverType)))
+            foreach (LandcoverTypeViewModel landCoverType in mainWindowViewModel.LandcoverTypes.Values)
             {
                 FeaturesByType.Add(new FeatureByTypeViewModel(landCoverType));
             }
+
+            // Check if landcover types has been newly set
+            var idComparer = new LandCoverTypeIdComparer();
+            mainWindowViewModel.PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == nameof(MainWindowViewModel.LandcoverTypes))
+                {
+                    foreach (LandcoverTypeViewModel landcoverTypeViewModel in mainWindowViewModel.LandcoverTypes.Values)
+                    {
+                        // Update land cover type
+                        var featureByType = FeaturesByType.FirstOrDefault(f => f.LandCoverType.Id == landcoverTypeViewModel.Id);
+                        if (featureByType != null) featureByType.LandCoverType = landcoverTypeViewModel;
+                    }
+
+                    // Remove deleted
+                    var remove = FeaturesByType.Select(f => f.LandCoverType).Except(mainWindowViewModel.LandcoverTypes.Values, idComparer);
+                    FeaturesByType.RemoveAll(f => remove.Contains(f.LandCoverType, idComparer));
+
+                    // Add new
+                    var add = mainWindowViewModel.LandcoverTypes.Values.Except(FeaturesByType.Select(f => f.LandCoverType), idComparer);
+                    FeaturesByType.AddRange(add.Select(f => new FeatureByTypeViewModel(f)));
+                }
+            };
         }
 
-        public ObservableCollection<ClassifiedFeatureVectorViewModel> GetFeaturesByType(LandcoverType type)
+        public ObservableCollection<ClassifiedFeatureVectorViewModel> GetFeaturesByType(LandcoverTypeViewModel typeViewModel)
         {
-            return FeaturesByType.First(f => f.Type == type).Features;
+            return FeaturesByType.First(f => f.LandCoverType == typeViewModel).Features;
         }
 
         public bool HasFeatures()
@@ -69,16 +93,29 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         public void AddFeature(ClassifiedFeatureVectorViewModel classifiedFeatureVector)
         {
-            FeaturesByType.First(f => f.Type == classifiedFeatureVector.FeatureType).Features.Add(classifiedFeatureVector);
+            FeaturesByType.First(f => f.LandCoverType == classifiedFeatureVector.FeatureTypeViewModel).Features.Add(classifiedFeatureVector);
 
             RaisePropertyChanged(FeatureProperty);
         }
 
         public void RemoveFeature(ClassifiedFeatureVectorViewModel classifiedFeatureVector)
         {
-            FeaturesByType.First(f => f.Type == classifiedFeatureVector.FeatureType).Features.Remove(classifiedFeatureVector);
+            FeaturesByType.First(f => f.LandCoverType == classifiedFeatureVector.FeatureTypeViewModel).Features.Remove(classifiedFeatureVector);
 
             RaisePropertyChanged(FeatureProperty);
+        }
+
+        class LandCoverTypeIdComparer : IEqualityComparer<LandcoverTypeViewModel>
+        {
+            public bool Equals(LandcoverTypeViewModel x, LandcoverTypeViewModel y)
+            {
+                return x.Id == y.Id;
+            }
+
+            public int GetHashCode(LandcoverTypeViewModel obj)
+            {
+                return obj.Id;
+            }
         }
     }
 }

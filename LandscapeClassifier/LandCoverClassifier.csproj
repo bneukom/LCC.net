@@ -234,6 +234,10 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.1.3.0\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Data.SQLite, Version=1.0.86.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Data.SQLite.MSIL.1.0.86.0\lib\net45\System.Data.SQLite.dll</HintPath>
@@ -296,6 +300,7 @@
     <Compile Include="Extensions\BitmapFrameExtensions.cs" />
     <Compile Include="Extensions\BitmapSourceExtensions.cs" />
     <Compile Include="Extensions\CollectionExtensions.cs" />
+    <Compile Include="Extensions\ObservableCollectionExtensions.cs" />
     <Compile Include="Extensions\RectangleExtensions.cs" />
     <Compile Include="Model\Classification\Algorithms\AbstractLandCoverClassifier.cs" />
     <Compile Include="Model\Classification\Algorithms\Classifier.cs" />
@@ -313,7 +318,6 @@
     <Compile Include="Converter\InverseBoolConverter.cs" />
     <Compile Include="Converter\PointToStringConverter.cs" />
     <Compile Include="Extensions\DataTypeExtensions.cs" />
-    <Compile Include="Extensions\LandCoverTypeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\WriteableBitmapExtensions.cs" />
     <Compile Include="Model\Classification\Boosting\AdaBoostM1.cs" />
@@ -323,6 +327,7 @@
     <Compile Include="Model\SatelliteType.cs" />
     <Compile Include="Util\Either.cs" />
     <Compile Include="Util\GdalUtil.cs" />
+    <Compile Include="ViewModel\Dialogs\EditLandcoverTypesDialogViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\DemHolesFootprintViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\WaterFootprintViewModel.cs" />
     <Compile Include="ViewModel\Dialogs\CreateTiledHeightmapDialogViewModel.cs" />
@@ -342,6 +347,9 @@
     <Compile Include="ViewModel\MainWindow\Prediction\PredictionViewModel.cs" />
     <Compile Include="View\Dialogs\ExceptionHandlerDialog.xaml.cs">
       <DependentUpon>ExceptionHandlerDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\Dialogs\EditLandCoverTypesDialog.xaml.cs">
+      <DependentUpon>EditLandCoverTypesDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Dialogs\PredictionAccuracyDialog.xaml.cs">
       <DependentUpon>PredictionAccuracyDialog.xaml</DependentUpon>
@@ -363,10 +371,9 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Model\AspectSlope.cs" />
     <Compile Include="Model\Classification\FeatureVector.cs" />
-    <Compile Include="Model\LandcoverType.cs" />
+    <Compile Include="Model\LandcoverTypeViewModel.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="ViewModel\MainWindow\Classification\ClassifiedFeatureVectorViewModel.cs" />
-    <Compile Include="Model\LandcoverTypeExtensions.cs" />
     <Compile Include="Util\wgs84_ch1903.cs" />
     <Compile Include="Model\WorldFile.cs" />
     <Compile Include="View\Dialogs\Export\ExportSmoothedDEMDialog.xaml.cs">
@@ -405,6 +412,10 @@
     <Page Include="View\Dialogs\ExceptionHandlerDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\Dialogs\EditLandCoverTypesDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="View\Dialogs\PredictionAccuracyDialog.xaml">
       <Generator>MSBuild:Compile</Generator>

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
@@ -40,7 +42,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
         private ClassifiedFeatureVectorViewModel _selectedFeatureVector;
 
-        private LandcoverType _selectedLandCoverType;
+
         private SolidColorBrush _trainingStatusBrush;
 
         private string _trainingStatusText;
@@ -238,18 +240,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             }
         }
 
-        /// <summary>
-        ///     The current land cover type.
-        /// </summary>
-        public LandcoverType SelectedLandCoverType
-        {
-            get { return _selectedLandCoverType; }
-            set
-            {
-                _selectedLandCoverType = value;
-                RaisePropertyChanged();
-            }
-        }
+
 
         /// <summary>
         ///     Whether the preview of the band intensity should scale to min max.
@@ -264,10 +255,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
             }
         }
 
-        /// <summary>
-        ///     Possible land cover types.
-        /// </summary>
-        public IEnumerable<string> LandCoverTypesEnumerable { get; set; }
 
         /// <summary>
         ///     Possible classifiers.
@@ -278,8 +265,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         ///     The current used classifier.
         /// </summary>
         public ClassifierViewModelBase CurrentClassifierViewModel { get; private set; }
-
-
 
         /// <summary>
         ///     All option viewmodels.
@@ -296,14 +281,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
 
-            LandCoverTypesEnumerable = Enum.GetNames(typeof(LandcoverType));
             ClassifierNamesEnumerable = Enum.GetNames(typeof(Classifier));
 
             ClassifierViewModels = Enum.GetValues(typeof(Classifier))
                 .Cast<Classifier>()
                 .ToDictionary(c => c, c => c.CreateClassifierViewModel());
 
-            FeaturesViewModel = new FeaturesViewModel();
+            FeaturesViewModel = new FeaturesViewModel(mainWindowViewModel);
 
             RemoveAllFeaturesCommand = new RelayCommand(() => FeaturesViewModel.RemoveAllFeatures(), () => FeaturesViewModel.HasFeatures());
 
@@ -344,8 +328,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
             SelectededClassifier = Classifier.SVM;
         }
-
-
 
 
         private void CurrentClassifierViewModelOnPropertyChanged(object sender, PropertyChangedEventArgs propertyChangedEventArgs)
@@ -436,6 +418,15 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                 var csvPath = saveFileDialog.FileName;
                 using (var outputStreamWriter = new StreamWriter(csvPath))
                 {
+
+                    var landcoverTypes = _mainWindowViewModel.LandcoverTypes.Values;
+                    outputStreamWriter.WriteLine(landcoverTypes.Count());
+                    foreach (var landcoverType in landcoverTypes)
+                    {
+                        outputStreamWriter.WriteLine(landcoverType.Id);
+                        outputStreamWriter.WriteLine(landcoverType.Name);
+                        outputStreamWriter.WriteLine(landcoverType.Color);
+                    }
                     var layers = _mainWindowViewModel.Layers.Where(b => b.UseFeature).OrderBy(b => b.Name);
                     outputStreamWriter.WriteLine(layers.Count());
                     foreach (var layerViewModel in layers)
@@ -453,7 +444,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     foreach (var feature in FeaturesViewModel.AllFeaturesView.Select(f => f.ClassifiedFeatureVector))
                     {
                         outputStreamWriter.Write(feature.Position + " ");
-                        outputStreamWriter.Write(feature.Type + " ");
+                        outputStreamWriter.Write(feature.FeatureClass + " ");
                         var featureString = feature.FeatureVector.BandIntensities.Select(i => i.ToString()).Aggregate((accu, intensity) => accu + ";" + intensity);
                         outputStreamWriter.Write(featureString);
                         outputStreamWriter.Write(Environment.NewLine);
@@ -486,6 +477,19 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                 using (var file = new StreamReader(openFileDialog.FileName))
                 {
+                    int numLandcoverTypes = int.Parse(file.ReadLine());
+                    Dictionary<int, LandcoverTypeViewModel> landCoverTypes = new Dictionary<int, LandcoverTypeViewModel>();
+                    for (int i = 0; i < numLandcoverTypes; ++i)
+                    {
+                        int id = int.Parse(file.ReadLine());
+                        string name = file.ReadLine();
+                        Color color = (Color) ColorConverter.ConvertFromString(file.ReadLine());
+                        LandcoverTypeViewModel landcoverType = new LandcoverTypeViewModel(id, name, color);
+                        landCoverTypes.Add(id, landcoverType);
+                    }
+
+                    _mainWindowViewModel.LandcoverTypes = landCoverTypes.ToImmutableDictionary();
+
                     int numLayers = int.Parse(file.ReadLine());
                     var layers = new List<CreateLayerViewModel>();
                     for (int i = 0; i < numLayers; ++i)
@@ -526,10 +530,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                         string[] positionTypeIntensities = featureLine.Split(' ');
                         string position = positionTypeIntensities[0];
                         string[] coordinates = position.Split(',');
-                        var type = (LandcoverType)Enum.Parse(typeof(LandcoverType), positionTypeIntensities[1]);
+                        var landCoverType = _mainWindowViewModel.LandcoverTypes.Values.ToList().FindIndex(t => t.Id == int.Parse(positionTypeIntensities[1]));
                         var intensities = positionTypeIntensities[2].Split(';').Select(ushort.Parse).ToArray();
 
-                        FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(type, new FeatureVector(intensities), new Point(double.Parse(coordinates[0]), double.Parse(coordinates[1])))));
+                        FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(new ClassifiedFeatureVector(landCoverType, new FeatureVector(intensities), new Point(double.Parse(coordinates[0]), double.Parse(coordinates[1])))));
                     }
                 }
             }
@@ -545,7 +549,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private async void ComputeConfusionMatrixAsync()
         {
-            var model = new ClassificationModel(ProjectionName, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView);
+            var landCoverTypes = _mainWindowViewModel.LandcoverTypes.Values.Select(t => t.Name).ToList();
+            var model = new ClassificationModel(ProjectionName, landCoverTypes, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView, _mainWindowViewModel.LandcoverTypes.Values.ToImmutableList());
 
             var confusionMatrices = await CurrentClassifierViewModel.ComputeFoldedConfusionMatrixAsync(model, 10);
 
@@ -558,15 +563,17 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         /// </summary>
         private void GridSearchAsync()
         {
-            CurrentClassifierViewModel.GridSearchAsync(new ClassificationModel(ProjectionName, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView));
+            var landCoverTypes = _mainWindowViewModel.LandcoverTypes.Values.Select(t => t.Name).ToList();
+            CurrentClassifierViewModel.GridSearchAsync(new ClassificationModel(ProjectionName, landCoverTypes, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView, _mainWindowViewModel.LandcoverTypes.Values.ToImmutableList()));
         }
 
         /// <summary>
-        ///     Trains the classifier.
+        /// Trains the classifier.
         /// </summary>
         private void Train()
         {
-            Task trained = CurrentClassifierViewModel.TrainAsync(new ClassificationModel(ProjectionName, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView));
+            var landCoverTypes = _mainWindowViewModel.LandcoverTypes.Values.Select(t => t.Name).ToList();
+            Task trained = CurrentClassifierViewModel.TrainAsync(new ClassificationModel(ProjectionName, landCoverTypes, _mainWindowViewModel.Layers.ToList(), FeaturesViewModel.AllFeaturesView, _mainWindowViewModel.LandcoverTypes.Values.ToImmutableList()));
 
             trained.ContinueWith(t => Application.Current.Dispatcher.Invoke(() =>
             {

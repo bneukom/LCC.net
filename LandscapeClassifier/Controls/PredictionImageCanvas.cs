@@ -36,7 +36,7 @@ namespace LandscapeClassifier.Controls
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
             if (viewModel == null) return;
 
-            viewModel.PredictionViewModel.MousePredictionType = LandcoverType.None;
+            viewModel.PredictionViewModel.MousePredictionTypeViewModel = LandcoverTypeViewModel.None;
             viewModel.PredictionViewModel.MousePredictionProbability = 0.0;
         }
 
@@ -68,10 +68,8 @@ namespace LandscapeClassifier.Controls
             {
                 var featureVector = new FeatureVector(bandIntensities);
                 var predictedType = viewModel.ClassifierViewModel.CurrentClassifierViewModel.Predict(featureVector);
-                var predictionProbabilty = viewModel.ClassifierViewModel.CurrentClassifierViewModel.Probabilty(featureVector, (int)LandcoverType.Water);
 
-                viewModel.PredictionViewModel.MousePredictionType = predictedType;
-                viewModel.PredictionViewModel.MousePredictionProbability = predictionProbabilty;
+                viewModel.PredictionViewModel.MousePredictionTypeViewModel = viewModel.LandcoverTypes.Values.ToList()[predictedType];
             }
         }
 

@@ -75,7 +75,7 @@ namespace LandscapeClassifier.Controls
 
                 var worldMousePosition = viewToToWorld*mouseVec;
 
-                var classifiedFeatureVector = new ClassifiedFeatureVector(viewModel.ClassifierViewModel.SelectedLandCoverType, new FeatureVector(bandPixels), new Point(worldMousePosition[0], worldMousePosition[1]));
+                var classifiedFeatureVector = new ClassifiedFeatureVector(viewModel.SelectedLandCoverTypeViewModel, new FeatureVector(bandPixels), new Point(worldMousePosition[0], worldMousePosition[1]));
                 viewModel.ClassifierViewModel.FeaturesViewModel.AddFeature(new ClassifiedFeatureVectorViewModel(classifiedFeatureVector));
             }
         }

@@ -11,7 +11,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         protected CancellationTokenSource CancellationTokenSource;
 
         public abstract Task TrainAsync(ClassificationModel classificationModel);
-        public abstract LandcoverType Predict(FeatureVector feature);
+        public abstract int Predict(FeatureVector feature);
         public abstract double Probabilty(FeatureVector feature);
         public abstract double Probabilty(FeatureVector feature, int classIndex);
         public abstract int[] Predict(double[][] features);

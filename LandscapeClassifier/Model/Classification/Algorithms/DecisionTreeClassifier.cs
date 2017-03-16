@@ -30,13 +30,11 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             double[][] input = new double[numFeatures][];
             int[] responses = new int[numFeatures];
             
-            for (int featureIndex = 0;
-                featureIndex < classificationModel.FeatureVectors.Count;
-                ++featureIndex)
+            for (int featureIndex = 0; featureIndex < classificationModel.FeatureVectors.Count; ++featureIndex)
             {
                 var featureVector = classificationModel.FeatureVectors[featureIndex];
                 input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                responses[featureIndex] = (int) featureVector.Type;
+                responses[featureIndex] = featureVector.FeatureClass;
             }
 
             if (Boosting)
@@ -50,7 +48,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     {
                         Creation = (weights) =>
                         {
-                            var tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
+                            var tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverTypeViewModel)).Length);
                             var c45Learning = new C45Learning(tree);
                             c45Learning.Learn(input, responses, weights);
                             return new Weak<DecisionTree>(tree, (s, x) => s.Decide(x));
@@ -70,7 +68,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             {
                 return Task.Factory.StartNew(() =>
                 {
-                    var tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
+                    var tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverTypeViewModel)).Length);
                     C45Learning id3Learning = new C45Learning(tree);
                     id3Learning.Learn(input, responses);
 
@@ -80,10 +78,10 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         }
 
         
-        public override LandcoverType Predict(FeatureVector feature)
+        public override int Predict(FeatureVector feature)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double) s/ushort.MaxValue);
-            return (LandcoverType)_tree.Case(l => l.Decide(features), r => r.Compute(features));
+            return _tree.Case(l => l.Decide(features), r => r.Compute(features));
         }
 
         public override double Probabilty(FeatureVector feature)
@@ -98,7 +96,6 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
         public override int[] Predict(double[][] features)
         {
-
             return _tree.Case(l => l.Decide(features), r =>
             {
                 int[] actual = new int[features.Length];
@@ -143,7 +140,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                     input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                    responses[featureIndex] = (int)featureVector.Type;
+                    responses[featureIndex] = featureVector.FeatureClass;
                 }
 
                 List<GeneralConfusionMatrix> confusionMatrices = new List<GeneralConfusionMatrix>();
@@ -161,7 +158,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var validationInputs = input.Get(indicesValidation);
                     var validationOutputs = responses.Get(indicesValidation);
 
-                    var tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverType)).Length);
+                    var tree = new DecisionTree(decisionVariables, Enum.GetValues(typeof(LandcoverTypeViewModel)).Length);
                     C45Learning id3Learning = new C45Learning(tree);
                     id3Learning.Learn(trainingInputs, trainingOutputs);
 
@@ -171,7 +168,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     double trainingError = new ZeroOneLoss(trainingOutputs).Loss(predictedTraining);
                     double validationError = new ZeroOneLoss(validationOutputs).Loss(predictedValidation);
 
-                    GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(Enum.GetValues(typeof(LandcoverType)).Length - 1, validationOutputs, predictedValidation );
+                    GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(Enum.GetValues(typeof(LandcoverTypeViewModel)).Length - 1, validationOutputs, predictedValidation );
                     confusionMatrices.Add(confusionMatrix);
 
                     // Return a new information structure containing the model and the errors achieved.

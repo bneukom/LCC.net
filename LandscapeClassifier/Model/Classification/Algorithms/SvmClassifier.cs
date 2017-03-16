@@ -36,7 +36,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                 var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                 input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                responses[featureIndex] = (int)featureVector.Type;
+                responses[featureIndex] = featureVector.FeatureClass;
             }
 
             switch (Kernel)
@@ -97,14 +97,14 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             }
         }
 
-        public override LandcoverType Predict(FeatureVector feature)
+        public override int Predict(FeatureVector feature)
         {
             var features = Array.ConvertAll(feature.BandIntensities, s => (double)s / ushort.MaxValue);
 
-            if (Kernel == Kernel.Linear) return (LandcoverType)_lSvm.Decide(features);
-            if (Kernel == Kernel.Polynomial) return (LandcoverType)_pSvm.Decide(features);
-            if (Kernel == Kernel.Gaussian) return (LandcoverType)_gSvm.Decide(features);
-            return 0;
+            if (Kernel == Kernel.Linear) return _lSvm.Decide(features);
+            if (Kernel == Kernel.Polynomial) return _pSvm.Decide(features);
+            if (Kernel == Kernel.Gaussian) return _gSvm.Decide(features);
+            return LandcoverTypeViewModel.None;
         }
 
         public override double Probabilty(FeatureVector feature)
@@ -179,7 +179,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                     input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                    responses[featureIndex] = (int)featureVector.Type;
+                    responses[featureIndex] = (int)featureVector.FeatureClass;
                 }
 
                 // Instantiate a new Grid Search algorithm for Kernel Support Vector Machines
@@ -257,7 +257,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                     input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                    responses[featureIndex] = (int)featureVector.Type;
+                    responses[featureIndex] = featureVector.FeatureClass;
                 }
 
                 List<GeneralConfusionMatrix> confusionMatrices = new List<GeneralConfusionMatrix>();
@@ -282,7 +282,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     double trainingError = new ZeroOneLoss(trainingOutputs).Loss(predictedTraining);
                     double validationError = new ZeroOneLoss(validationOutputs).Loss(predictedValidation);
 
-                    GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(Enum.GetValues(typeof(LandcoverType)).Length - 1, validationOutputs, predictedValidation);
+                    GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(classificationModel.LandCoverTypes.Count, validationOutputs, predictedValidation);
                     confusionMatrices.Add(confusionMatrix);
 
                     // Return a new information structure containing the model and the errors achieved.
@@ -309,7 +309,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
                     var featureVector = classificationModel.FeatureVectors[featureIndex];
 
                     input[featureIndex] = Array.ConvertAll(featureVector.FeatureVector.BandIntensities, s => (double)s / ushort.MaxValue);
-                    responses[featureIndex] = (int)featureVector.Type;
+                    responses[featureIndex] = featureVector.FeatureClass;
                 }
 
                 var folds = new int[input.Length][];
@@ -366,7 +366,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
 
                 }
 
-                GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(Enum.GetValues(typeof(LandcoverType)).Length - 1, prediction, validationOutputs);
+                GeneralConfusionMatrix confusionMatrix = new GeneralConfusionMatrix(classificationModel.LandCoverTypes.Count, prediction, validationOutputs);
 
                 return confusionMatrix;
             });

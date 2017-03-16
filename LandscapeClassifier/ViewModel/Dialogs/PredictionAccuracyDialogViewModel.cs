@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Accord.Statistics.Analysis;
 using GalaSoft.MvvmLight;
 using LandscapeClassifier.Model;
+using LandscapeClassifier.ViewModel.MainWindow;
 
 namespace LandscapeClassifier.ViewModel.Dialogs
 {
@@ -45,11 +46,10 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         {
             PredictionDataTable.Clear();
 
-            var landcoverArray = Enum.GetValues(typeof(LandcoverType)).Cast<LandcoverType>().Where(l => l != LandcoverType.None);
-            var landcoverTypes = landcoverArray as IList<LandcoverType> ?? landcoverArray.ToList();
+            var landcoverTypes = MainWindowViewModel.Default.LandcoverTypes.Values.ToList();
             var numClasses = landcoverTypes.Count;
 
-            foreach (LandcoverType type in landcoverTypes)
+            foreach (LandcoverTypeViewModel type in landcoverTypes)
             {
                 var row = PredictionDataTable.NewRow();
                 row[PredictionDataTable.Columns[0]] = type.ToString();
@@ -167,16 +167,16 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private void InitializeTable()
         {
             PredictionDataTable.Columns.Add("Type");
-            var landcoverArray = Enum.GetValues(typeof(LandcoverType)).Cast<LandcoverType>().Where(l => l != LandcoverType.None);
-            var landcoverTypes = landcoverArray as IList<LandcoverType> ?? landcoverArray.ToList();
+            
+            var landcoverTypes = MainWindowViewModel.Default.LandcoverTypes.Values.ToList();
 
-            foreach (LandcoverType type in landcoverTypes)
+            foreach (LandcoverTypeViewModel type in landcoverTypes)
             {
                 PredictionDataTable.Columns.Add(type.ToString());
             }
             PredictionDataTable.Columns.Add("Sum");
 
-            foreach (LandcoverType type in landcoverTypes)
+            foreach (LandcoverTypeViewModel type in landcoverTypes)
             {
                 var row = PredictionDataTable.NewRow();
                 row[PredictionDataTable.Columns[0]] = type.ToString();

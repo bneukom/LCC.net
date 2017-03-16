@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Ioc;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
@@ -10,21 +12,22 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 {
     public class ClassifiedFeatureVectorViewModel : ViewModelBase
     {
+        private LandcoverTypeViewModel _featureTypeViewModel;
 
         /// <summary>
         /// The feature vector model.
         /// </summary>
         public ClassifiedFeatureVector ClassifiedFeatureVector { get; }
 
-        /// <summary>
-        /// Brush for the feature.
-        /// </summary>
-        public Brush FeatureClassColorBrush => ClassifiedFeatureVector.Type.GetDefaultBrush();
 
         /// <summary>
         /// The class of this feature.
         /// </summary>
-        public LandcoverType FeatureType => ClassifiedFeatureVector.Type;
+        public LandcoverTypeViewModel FeatureTypeViewModel
+        {
+            get { return _featureTypeViewModel; }
+            set { _featureTypeViewModel = value; RaisePropertyChanged(); }
+        }
 
         /// <summary>
         /// Position of the feature.
@@ -39,6 +42,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         public ClassifiedFeatureVectorViewModel(ClassifiedFeatureVector classifiedFeatureVector)
         {
             ClassifiedFeatureVector = classifiedFeatureVector;
+            FeatureTypeViewModel = MainWindowViewModel.Default.LandcoverTypes.Values.ToList()[ClassifiedFeatureVector.FeatureClass];
         }
 
         private static string BandIntensitiesToFloat(ushort[] intensities)

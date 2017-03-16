@@ -17,7 +17,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
         /// </summary>
         /// <param name="feature"></param>
         /// <returns></returns>
-        LandcoverType Predict(FeatureVector feature);
+        int Predict(FeatureVector feature);
 
         /// <summary>
         /// Returns the probabilty for the given feature vector prediction.
