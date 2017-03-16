@@ -1,9 +1,0 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="pack://application:,,,/Selen.Wpf.Core;component/Resources.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
-    <Style TargetType="Window" x:Key="StandardWindow">
-        <Setter Property="Background" Value="{StaticResource Background}"/>
-    </Style>
-</ResourceDictionary>
