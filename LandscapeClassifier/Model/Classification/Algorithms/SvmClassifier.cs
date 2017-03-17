@@ -104,7 +104,7 @@ namespace LandscapeClassifier.Model.Classification.Algorithms
             if (Kernel == Kernel.Linear) return _lSvm.Decide(features);
             if (Kernel == Kernel.Polynomial) return _pSvm.Decide(features);
             if (Kernel == Kernel.Gaussian) return _gSvm.Decide(features);
-            return LandcoverTypeViewModel.None;
+            return -1;
         }
 
         public override double Probabilty(FeatureVector feature)

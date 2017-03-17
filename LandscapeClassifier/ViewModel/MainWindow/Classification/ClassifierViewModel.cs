@@ -275,9 +275,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
         {
             _mainWindowViewModel = mainWindowViewModel;
 
-            // TODO nono
-            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] { { 1, 0, 300000.0 }, { 0, -1, 5090220 }, { 0, 0, 1 } });
-            WorldToScreen = ScreenToWorld.Inverse();
+            ScreenToWorld = Matrix<double>.Build.DiagonalIdentity(3);
+            WorldToScreen = ScreenToWorld;
+
+            Messenger.Default.Register<Matrix<double>>(this, (m) =>
+            {
+                ScreenToWorld = m;
+                WorldToScreen = ScreenToWorld.Inverse();
+            });
 
             mainWindowViewModel.Layers.CollectionChanged += BandsOnCollectionChanged;
 
@@ -303,20 +308,6 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                     MarkClassifierNotTrained();
                 }
             };
-
-            /*
-            FeaturesViewModel.PropertyChanged += (sender, args) =>
-            {
-                if (args.PropertyName == FeaturesViewModel.FeatureProperty)
-                {
-                    MarkClassifierNotTrained();
-                    foreach (var bandViewModel in _mainWindowViewModel.Layers)
-                    {
-                        bandViewModel.CanChangeIsFeature = !FeaturesViewModel.HasFeatures();
-                    }
-                }
-            };
-            */
 
             ExportFeaturesCommand = new RelayCommand(ExportTrainingSet, CanExportTrainingSet);
             ImportFeatureCommand = new RelayCommand(ImportTrainingSet, CanImportTrainingSet);
@@ -382,6 +373,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                     bandViewModel.PropertyChanged -= BandViewModelOnPropertyChanged;
                     bandViewModel.IsVisible = false;
+                    
                     bandViewModel.PropertyChanged += BandViewModelOnPropertyChanged;
                 }
             }
@@ -514,7 +506,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                         if (dialog.ShowImportMissingBandsDialog(missingLayers) == true && dialog.DialogViewModel.Layers.Count > 0)
                         {
-                            _mainWindowViewModel.AddBands(dialog.DialogViewModel);
+                            _mainWindowViewModel.AddBandsAsync(dialog.DialogViewModel);
                         }
                         else
                         {

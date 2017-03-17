@@ -14,6 +14,7 @@ using Accord.Statistics.Analysis;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using GalaSoft.MvvmLight.Ioc;
+using GalaSoft.MvvmLight.Messaging;
 using LandscapeClassifier.Extensions;
 using LandscapeClassifier.Model;
 using LandscapeClassifier.Model.Classification;
@@ -71,9 +72,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Prediction
         {
             _mainWindowViewModel = mainWindowViewModel;
 
-            // TODO nono
-            ScreenToWorld = Matrix<double>.Build.DenseOfArray(new[,] { { 1, 0, 300000.0 }, { 0, -1, 5090220 }, { 0, 0, 1 } });
-            WorldToScreen = ScreenToWorld.Inverse();
+            ScreenToWorld = Matrix<double>.Build.DiagonalIdentity(3);
+            WorldToScreen = ScreenToWorld;
+
+            Messenger.Default.Register<Matrix<double>>(this, (m) =>
+            {
+                ScreenToWorld = m;
+                WorldToScreen = ScreenToWorld.Inverse();
+            });
 
             PredictAllCommand = new RelayCommand(PredictAll, CanPredictAll);
             ExportPredictionsCommand = new RelayCommand(ExportPredictionsAsync, CanExportPredictions);

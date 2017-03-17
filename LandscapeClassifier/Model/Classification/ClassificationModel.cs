@@ -23,7 +23,7 @@ namespace LandscapeClassifier.Model.Classification
             var features = allFeaturesView.Select(f =>
             {
                 var featureVector = new FeatureVector(indices.Select(i => f.ClassifiedFeatureVector.FeatureVector.BandIntensities[i]).ToArray());
-                return new ClassifiedFeatureVector(landcoverTypes.FindIndex(t => t.Id == f.FeatureTypeViewModel), featureVector, f.Position);
+                return new ClassifiedFeatureVector(landcoverTypes.FindIndex(t => t.Id == f.FeatureTypeViewModel.Id), featureVector, f.Position);
             }).ToList();
 
         Bands = layers.Where(b => b.UseFeature).Select(b => b.Name).ToList();

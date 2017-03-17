@@ -63,10 +63,6 @@ namespace LandscapeClassifier.Model
             Color = other.Color;
         }
 
-        public static implicit operator int(LandcoverTypeViewModel landcoverTypeViewModel)
-        {
-            return landcoverTypeViewModel.Id;
-        }
 
         public override string ToString()
         {

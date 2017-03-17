@@ -272,7 +272,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
 
             if (dialog.ShowAddBandsDialog() == true && dialog.DialogViewModel.Layers.Count > 0)
             {
-                AddBands(dialog.DialogViewModel);
+                AddBandsAsync(dialog.DialogViewModel);
             }
         }
 
@@ -280,7 +280,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// Adds the bands from the bands view model.
         /// </summary>
         /// <param name="viewModel"></param>
-        public void AddBands(AddLayersDialogViewModel viewModel)
+        public async void AddBandsAsync(AddLayersDialogViewModel viewModel)
         {
             try
             {
@@ -300,7 +300,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                 var firstDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
 
                 // Parallel band loading
-                Task loadBands = Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Layers, (currentLayer, _, bandIndex) =>
+                await Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Layers, (currentLayer, _, bandIndex) =>
                 {
                     // Load raster
                     var dataSet = Gdal.Open(currentLayer.Path, Access.GA_ReadOnly);
@@ -352,8 +352,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                     {
                         var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, currentLayer);
 
-                        Layers.AddSorted(imageBandViewModel,
-                            Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
+                        Layers.AddSorted(imageBandViewModel, Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
 
                         Marshal.FreeHGlobal(data);
                     });
@@ -364,7 +363,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                 // Load rgb image
                 if (viewModel.AddRgb)
                 {
-                    var addRgb = loadBands.ContinueWith(t =>
+                    await Task.Factory.StartNew(() =>
                     {
                         // Create RGB image
                         Application.Current.Dispatcher.Invoke(() =>
@@ -404,37 +403,27 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                             Layers.Insert(0, layerViewModel);
                         });
                     });
+                }
 
-                    addRgb.ContinueWith(t =>
+                await Task.Factory.StartNew(() =>
+                {
+                    // TODO use projection to get correct transformation?
+                    // Transformation
+                    double[] transform = new double[6];
+                    firstDataSet.GetGeoTransform(transform);
+                    double[,] matArray =
                     {
-                        // TODO use projection to get correct transformation?
-                        // Transformation
-                        double[] transform = new double[6];
-                        firstDataSet.GetGeoTransform(transform);
-                        double[,] matArray =
-                        {
                             {1, transform[2], transform[0]},
                             {transform[4], -1, transform[3]},
                             {0, 0, 1}
                         };
-                        var builder = Matrix<double>.Build;
-                        var transformMat = builder.DenseOfArray(matArray);
+                    var builder = Matrix<double>.Build;
+                    var transformMat = builder.DenseOfArray(matArray);
 
-                        var message = new BandsLoadedMessage
-                        {
-                            RgbContrastEnhancement = viewModel.RgbContrastEnhancement,
-                            ProjectionName = firstDataSet.GetProjection(),
-                            ScreenToWorld = transformMat,
-                        };
+                    Messenger.Default.Send<Matrix<double>>(transformMat);
 
-                        Messenger.Default.Send(message);
-                        WindowEnabled = true;
-                    });
-                }
-                else
-                {
                     WindowEnabled = true;
-                }
+                });
             }
             catch
             {
