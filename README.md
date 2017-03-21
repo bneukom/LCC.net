@@ -8,18 +8,18 @@ To classify the data we use a simple workflow: first download the necessary data
 The following sections describe the whole process from downloading the data to exporting them for further use.
 
 ## Download and Import Data
-The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral bands from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically [1]. Optionally the Sentinel2 can be preprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
+The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral imagery from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically [1]. Optionally the Sentinel2 can be preprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
 
-Next we also use a heightmap as a feature for the classifaction process. This has been shown to increase classifcation results especially for mountainous regions [2]. The heightmap can also be exported during a later step used for the visualization. The data we used here is the Global Digital Elevation Model (GDEM) which can be downloaded [here](https://gdex.cr.usgs.gov/gdex/).
+We also use a heightmap as a feature for the classifaction process. This has been shown to increase classifcation results especially for mountainous regions [2]. The heightmap can also be exported during a later step used for the visualization. The data we used here is the Global Digital Elevation Model (GDEM) which can be downloaded [here](https://gdex.cr.usgs.gov/gdex/).
 
-After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in the JP2 format as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
+After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in JP2 format as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
 
 ![Add Layer](http://i.imgur.com/ubxfuBx.png)
 
 Contrast enhancement is used for the Sentinel2 bands as they might contain very high intensities.
 
 ## Add Features
-The next step is adding features. The default landcover types are designed for a mountainous region in Switzerland but can be changed using the "Change Landcovertypes" button. To train a supervised machine learning algorithm we need about 250 features per class. These features can be added by right clicking into the image region at appropriate places using the appropriate landcover type. The features used for the training consist of the previously added Sentinel2 bands as well as the heightmap. The features can be seen on the righthand side which should now look something like this:
+The next step is adding features. The default landcover types are designed for a mountainous region in Switzerland but can be changed using the "Change Landcovertypes" button. To train a supervised machine learning algorithm we need about 250 features per class. These features can be added by right clicking into the image region at appropriate places using the appropriate landcover type. The feature vectors used for the machine learning algorithm consist of the previously added Sentinel2 bands as well as the heightmap. The features can be seen on the righthand side which should now look something like this:
 
 ![Features](http://i.imgur.com/nayFTu0.jpg)
 
