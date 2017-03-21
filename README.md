@@ -8,7 +8,7 @@ To classify the data we use a simple workflow: first download the necessary data
 The following sections describe the whole process from downloading the data to exporting them for further use.
 
 ## Download and Import Data
-The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral imagery from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically [1]. Optionally the Sentinel2 can be preprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
+The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral imagery from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically [1]. Optionally the Sentinel2 can be postprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
 
 We also use a heightmap as a feature for the classifaction process. This has been shown to increase classifcation results especially for mountainous regions [2]. The heightmap can also be exported during a later step used for the visualization. The data we used here is the Global Digital Elevation Model (GDEM) which can be downloaded [here](https://gdex.cr.usgs.gov/gdex/).
 
@@ -30,7 +30,7 @@ Our results as well as the litarture shows that a SVM achieves very high perform
 
 ![Accuracy](http://i.imgur.com/ykkyFXL.png)
 
-An accuracy of over 90% is in agreement with current studies using SVMs and is considered very good . We can now use this classifier to generate a landcover map for the whole region.
+An accuracy of over 90% is in agreement with current studies using SVMs and is considered very good. We can now use this classifier to generate a landcover map for the whole region.
 
 ## Prediction
 The whole region can be predicted using the "Predict All" button (which might take some time). The prediction is the rendered over the bands with a transparency set using the "Prediction Transparency" slider. Using a pixel based classifier might result in noise (single pixel missclassifications) which can be reduced using a simple majority filter using the "Apply Majority Filter" button. This results in more contiguous landcover regions. The prediction should look something like this:
