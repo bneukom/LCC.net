@@ -480,8 +480,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                         landCoverTypes.Add(id, landcoverType);
                     }
 
-                    _mainWindowViewModel.LandcoverTypes = landCoverTypes.ToImmutableDictionary();
-
+                    
                     int numLayers = int.Parse(file.ReadLine());
                     var layers = new List<CreateLayerViewModel>();
                     for (int i = 0; i < numLayers; ++i)
@@ -506,7 +505,8 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
 
                         if (dialog.ShowImportMissingBandsDialog(missingLayers) == true && dialog.DialogViewModel.Layers.Count > 0)
                         {
-                            _mainWindowViewModel.AddBandsAsync(dialog.DialogViewModel);
+                            var loadBandsTask = new LoadBandsTask(_mainWindowViewModel, dialog.DialogViewModel);
+                            _mainWindowViewModel.ExecuteLongRunningTask(loadBandsTask);
                         }
                         else
                         {
@@ -514,6 +514,9 @@ namespace LandscapeClassifier.ViewModel.MainWindow.Classification
                             return;
                         }
                     }
+
+                    _mainWindowViewModel.LandcoverTypes = landCoverTypes.ToImmutableDictionary();
+                    _mainWindowViewModel.SelectedLandCoverTypeViewModel = _mainWindowViewModel.LandcoverTypes.Values.FirstOrDefault();
 
                     string featureLine;
 

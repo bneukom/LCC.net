@@ -161,14 +161,16 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             ExportLayers.AddRange(layers.Select(l => new ExportLayerViewModel(l)));
 
             ExportLandCoverLayers.Clear();
-            var types = Enum.GetValues(typeof(LandcoverTypeViewModel));
-            foreach (LandcoverTypeViewModel type in types)
+
+            var types = MainWindowViewModel.Default.LandcoverTypes.Values.ToList();
+            for (int i = 0; i < types.Count; ++i)
             {
+                var type = types[i];
                 if (type == LandcoverTypeViewModel.None) continue;
 
                 var layer = new ExportLandCoverTypeViewModel(type + ".png", ExportLandCoverLayers);
 
-                layer.ExportedLandCoverTypes.Add(type);
+                layer.ExportedLandCoverTypes[i] = true;
                 ExportLandCoverLayers.Add(layer);
             }
         }
@@ -212,46 +214,29 @@ namespace LandscapeClassifier.ViewModel.Dialogs
         private readonly ObservableCollection<ExportLandCoverTypeViewModel> _existingLayers;
 
         private string _name;
-        
+        private bool[] _exportedLandCoverTypes;
+
         public string Name
         {
             get { return _name; }
             set { _name = value; RaisePropertyChanged(); }
         }
 
-        public ObservableCollection<LandcoverTypeViewModel> ExportedLandCoverTypes { get; } = new ObservableCollection<LandcoverTypeViewModel>();
+        public ObservableCollection<bool> ExportedLandCoverTypes { get; }
 
         public int[] SelectedTypeIndices
         {
-            get
-            {
-                return ExportedLandCoverTypes.Select(l => l.Id).ToArray();
-
-            }
+            get { return ExportedLandCoverTypes.Where(f => f).Select((b, i) => i).ToArray(); }
         }
 
-        public bool[] LandCoverTypes
-        {
-            get
-            {
-                var types = SimpleIoc.Default.GetInstance<MainWindowViewModel>().LandcoverTypes.Values.ToArray();
-                bool[] typesResult = new bool[types.Length - 1];
-                
-                for (int typeIndex = 0; typeIndex < types.Length; ++typeIndex)
-                {
-                    LandcoverTypeViewModel typeViewModel = types[typeIndex];
-                    typesResult[typeIndex] = ExportedLandCoverTypes.Contains(typeViewModel);
-                }
-
-                return typesResult;
-            }
-        }
+        public bool[] LandCoverTypes => ExportedLandCoverTypes.ToArray();
 
         public ExportLandCoverTypeViewModel(string name, ObservableCollection<ExportLandCoverTypeViewModel> existingLayers)
         {
             _existingLayers = existingLayers;
             Name = name;
-
+            ExportedLandCoverTypes = new ObservableCollection<bool>(Enumerable.Repeat(false, MainWindowViewModel.Default.LandcoverTypes.Values.Count()));
+            
             PropertyChanged += OnPropertyChanged;
         }
 
@@ -261,9 +246,13 @@ namespace LandscapeClassifier.ViewModel.Dialogs
             {
                 string newName = "";
 
-                foreach (LandcoverTypeViewModel type in ExportedLandCoverTypes)
+                var types = MainWindowViewModel.Default.LandcoverTypes.Values.ToList();
+                for (int i = 0; i < types.Count; ++i)
                 {
-                    newName += type.Name;
+                    if (ExportedLandCoverTypes[i])
+                    {
+                        newName += types[i].Name;
+                    }
                 }
 
                 if (newName.Length == 0)

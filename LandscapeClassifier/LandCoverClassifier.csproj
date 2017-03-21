@@ -397,6 +397,7 @@
     <Compile Include="View\Dialogs\Tools\WaterFootprintDialog.xaml.cs">
       <DependentUpon>WaterFootprintDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ViewModel\MainWindow\LongRunning.cs" />
     <Compile Include="View\ValidationRules\SmallerThanValidationRule.cs" />
     <Compile Include="View\ValidationRules\BiggerThanValidationRule.cs" />
     <Compile Include="View\ValidationRules\IntValidationRule.cs" />

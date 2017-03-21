@@ -44,11 +44,13 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         private ObservableCollection<LayerViewModel> _featureLayerView;
         private LandcoverTypeViewModel _selectedLandCoverTypeViewModel;
         private ImmutableDictionary<int, LandcoverTypeViewModel> _landcoverTypes = ImmutableDictionary.Create<int, LandcoverTypeViewModel>();
+        private Visibility _longRunningTaskVisibility = Visibility.Collapsed;
+        private LongRunning _longRunningTask;
 
         /// <summary>
         /// Default instance of the MainWindowViewModel
         /// </summary>
-        public static MainWindowViewModel Default => ((MainWindowViewModel) Application.Current.FindResource("MainWindowViewModel"));
+        public static MainWindowViewModel Default => ((MainWindowViewModel)Application.Current.FindResource("MainWindowViewModel"));
 
         /// <summary>
         /// The bands of the image.
@@ -157,7 +159,7 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         }
 
         /// <summary>
-        ///     The current land cover type.
+        /// The current land cover type.
         /// </summary>
         public LandcoverTypeViewModel SelectedLandCoverTypeViewModel
         {
@@ -167,6 +169,24 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                 _selectedLandCoverTypeViewModel = value;
                 RaisePropertyChanged();
             }
+        }
+
+        /// <summary>
+        /// Whether a long running task is currently visible or collapsed.
+        /// </summary>
+        public Visibility LongRunningTaskVisibility
+        {
+            get { return _longRunningTaskVisibility; }
+            set { _longRunningTaskVisibility = value; RaisePropertyChanged(); }
+        }
+
+        /// <summary>
+        /// The current long running task or null if none is active.
+        /// </summary>
+        public LongRunning LongRunningTask
+        {
+            get { return _longRunningTask; }
+            set { _longRunningTask = value; RaisePropertyChanged(); }
         }
 
         public MainWindowViewModel()
@@ -204,6 +224,32 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             PredictionViewModel = new PredictionViewModel(this);
         }
 
+        /// <summary>
+        /// Executes a long running task which blocks the user from further input until canceled. Only one task can be running at any given time.
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="name"></param>
+        public async void ExecuteLongRunningTask(LongRunning task)
+        {
+            if (LongRunningTask != null) throw new InvalidOperationException();
+
+            LongRunningTaskVisibility = Visibility.Visible;
+            LongRunningTask = task;
+
+            try
+            {
+                await Task.Run(() => task.Execute());
+                LongRunningTaskVisibility = Visibility.Collapsed;
+                LongRunningTask = null;
+            }
+            catch (Exception)
+            {
+                LongRunningTask = null;
+                LongRunningTaskVisibility = Visibility.Collapsed;
+                throw;
+            }
+        }
+
         private void ChangeLandCoverTypes()
         {
             EditLandCoverTypesDialog editLandCoverTypesDialog = new EditLandCoverTypesDialog();
@@ -220,12 +266,10 @@ namespace LandscapeClassifier.ViewModel.MainWindow
                 var oldSelection = SelectedLandCoverTypeViewModel;
                 LandcoverTypes = newLandcoverTypeViewModels.ToImmutableDictionary();
 
-                if (newLandcoverTypeViewModels.ContainsKey(oldSelection.Id))
+                if (oldSelection != null && newLandcoverTypeViewModels.ContainsKey(oldSelection.Id))
                     SelectedLandCoverTypeViewModel = newLandcoverTypeViewModels[oldSelection.Id];
                 else
                     SelectedLandCoverTypeViewModel = LandcoverTypes.Values.Any() ? LandcoverTypes.Values.First() : null;
-
-
             }
         }
 
@@ -265,14 +309,14 @@ namespace LandscapeClassifier.ViewModel.MainWindow
             Layers.Move(current, current + 1);
         }
 
-
         private void AddBands()
         {
             AddLayersDialog dialog = new AddLayersDialog();
 
             if (dialog.ShowAddBandsDialog() == true && dialog.DialogViewModel.Layers.Count > 0)
             {
-                AddBandsAsync(dialog.DialogViewModel);
+                var loadBandsTask = new LoadBandsTask(this, dialog.DialogViewModel);
+                ExecuteLongRunningTask(loadBandsTask);
             }
         }
 
@@ -280,155 +324,145 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         /// Adds the bands from the bands view model.
         /// </summary>
         /// <param name="viewModel"></param>
-        public async void AddBandsAsync(AddLayersDialogViewModel viewModel)
+        public void AddBands(AddLayersDialogViewModel viewModel, IProgress<double> progress)
         {
-            try
+            // Initialize RGB data
+            byte[] bgra = null;
+            Dataset rgbDataSet = null;
+            if (viewModel.AddRgb)
             {
-                WindowEnabled = false;
+                var firstRgbBand = viewModel.Layers.First(b => b.B || b.G || b.R);
+                rgbDataSet = Gdal.Open(firstRgbBand.Path, Access.GA_ReadOnly);
+                bgra = new byte[rgbDataSet.RasterXSize * rgbDataSet.RasterYSize * 4];
+            }
 
-                // Initialize RGB data
-                byte[] bgra = null;
-                Dataset rgbDataSet = null;
-                if (viewModel.AddRgb)
+            var firstBand = viewModel.Layers.First();
+            var firstDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
+
+            var builder = Matrix<double>.Build;
+
+            int totalBands = viewModel.Layers.Count + (viewModel.AddRgb ? 1 : 0);
+            int currentProgress = 0;
+
+            // Parallel band loading
+            Parallel.ForEach(viewModel.Layers, (currentLayer, _, bandIndex) =>
+            {
+                // Load raster
+                var dataSet = Gdal.Open(currentLayer.Path, Access.GA_ReadOnly);
+                var rasterBand = dataSet.GetRasterBand(1);
+
+                var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
+
+                int stride = (rasterBand.XSize * bitsPerPixel / 8);
+
+                IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
+
+                rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize, rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, stride);
+
+                // Cutoff
+                int minCutValue, maxCutValue;
+                CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff, currentLayer.MaxCutOff, out minCutValue, out maxCutValue);
+
+                // Apply RGB contrast enhancement
+                if (viewModel.AddRgb && viewModel.RgbContrastEnhancement && (currentLayer.B || currentLayer.G || currentLayer.R))
                 {
-                    var firstRgbBand = viewModel.Layers.First(b => b.B || b.G || b.R);
-                    rgbDataSet = Gdal.Open(firstRgbBand.Path, Access.GA_ReadOnly);
-                    bgra = new byte[rgbDataSet.RasterXSize * rgbDataSet.RasterYSize * 4];
+                    int colorOffset = currentLayer.B ? 0 : currentLayer.G ? 1 : currentLayer.R ? 2 : -1;
+                    unsafe
+                    {
+                        // TODO what if layer is not of type uint?
+                        ushort* dataPtr = (ushort*)data.ToPointer();
+                        Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize),
+                            (range) =>
+                            {
+                                for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
+                                {
+                                    ushort current = *(dataPtr + dataIndex);
+                                    byte val = (byte)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * byte.MaxValue, 0, byte.MaxValue - 1);
+
+                                    bgra[dataIndex * 4 + colorOffset] = val;
+                                    bgra[dataIndex * 4 + 3] = 255;
+                                }
+                            });
+                    }
                 }
 
-                var firstBand = viewModel.Layers.First();
-                var firstDataSet = Gdal.Open(firstBand.Path, Access.GA_ReadOnly);
-
-                // Parallel band loading
-                await Task.Factory.StartNew(() => Parallel.ForEach(viewModel.Layers, (currentLayer, _, bandIndex) =>
+                // Apply band contrast enhancement
+                if (currentLayer.ContrastEnhancement)
                 {
-                    // Load raster
-                    var dataSet = Gdal.Open(currentLayer.Path, Access.GA_ReadOnly);
-                    var rasterBand = dataSet.GetRasterBand(1);
+                    data = ApplyContrastEnhancement(rasterBand, data, minCutValue, maxCutValue);
+                }
 
-                    var bitsPerPixel = rasterBand.DataType.ToPixelFormat().BitsPerPixel;
 
-                    int stride = (rasterBand.XSize * bitsPerPixel / 8);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, currentLayer);
 
-                    IntPtr data = Marshal.AllocHGlobal(stride * rasterBand.YSize);
 
-                    rasterBand.ReadRaster(0, 0, rasterBand.XSize, rasterBand.YSize, data, rasterBand.XSize, rasterBand.YSize, rasterBand.DataType, bitsPerPixel / 8, stride);
+                    Layers.AddSorted(imageBandViewModel, Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
+                    progress.Report(++currentProgress);
 
-                    // Cutoff
-                    int minCutValue, maxCutValue;
-                    CalculateMinMaxCut(rasterBand, currentLayer.MinCutOff, currentLayer.MaxCutOff, out minCutValue, out maxCutValue);
+                    Marshal.FreeHGlobal(data);
+                });
 
-                    // Apply RGB contrast enhancement
-                    if (viewModel.AddRgb && viewModel.RgbContrastEnhancement && (currentLayer.B || currentLayer.G || currentLayer.R))
+
+            });
+
+            // Load rgb image
+            if (viewModel.AddRgb)
+            {
+                // Create RGB image
+                Application.Current.Dispatcher.Invoke(() =>
+            {
+                var rgbStride = rgbDataSet.RasterXSize * 4;
+
+                var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96, PixelFormats.Bgra32, null, bgra, rgbStride);
+
+                // Transformation
+                double[] rgbTransform = new double[6];
+                rgbDataSet.GetGeoTransform(rgbTransform);
+                var vecBuilder = Vector<double>.Build;
+                var upperLeft = vecBuilder.DenseOfArray(new[] { rgbTransform[0], rgbTransform[3], 1 });
+                var xRes = rgbTransform[1];
+                var yRes = rgbTransform[5];
+                var bottomRight =
+                    vecBuilder.DenseOfArray(new[]
                     {
-                        int colorOffset = currentLayer.B ? 0 : currentLayer.G ? 1 : currentLayer.R ? 2 : -1;
-                        unsafe
-                        {
-                            // TODO what if layer is not of type uint?
-                            ushort* dataPtr = (ushort*)data.ToPointer();
-                            Parallel.ForEach(Partitioner.Create(0, rasterBand.XSize * rasterBand.YSize),
-                                (range) =>
-                                {
-                                    for (int dataIndex = range.Item1; dataIndex < range.Item2; ++dataIndex)
-                                    {
-                                        ushort current = *(dataPtr + dataIndex);
-                                        byte val = (byte)MoreMath.Clamp((current - minCutValue) / (double)(maxCutValue - minCutValue) * byte.MaxValue, 0, byte.MaxValue - 1);
-
-                                        bgra[dataIndex * 4 + colorOffset] = val;
-                                        bgra[dataIndex * 4 + 3] = 255;
-                                    }
-                                });
-                        }
-                    }
-
-                    // Apply band contrast enhancement
-                    if (currentLayer.ContrastEnhancement)
-                    {
-                        data = ApplyContrastEnhancement(rasterBand, data, minCutValue, maxCutValue);
-                    }
-
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        var imageBandViewModel = CreateLayerViewModel(dataSet, rasterBand, stride, data, currentLayer);
-
-                        Layers.AddSorted(imageBandViewModel, Comparer<LayerViewModel>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal)));
-
-                        Marshal.FreeHGlobal(data);
+                                    upperLeft[0] + (rgbDataSet.RasterXSize*xRes),
+                                    upperLeft[1] + (rgbDataSet.RasterYSize*yRes), 1
                     });
 
 
-                }));
-
-                // Load rgb image
-                if (viewModel.AddRgb)
+                double[,] matArray =
                 {
-                    await Task.Factory.StartNew(() =>
-                    {
-                        // Create RGB image
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            var rgbStride = rgbDataSet.RasterXSize * 4;
-
-                            var rgbImage = BitmapSource.Create(rgbDataSet.RasterXSize, rgbDataSet.RasterYSize, 96, 96, PixelFormats.Bgra32, null, bgra, rgbStride);
-
-                            // Transformation
-                            double[] rgbTransform = new double[6];
-                            rgbDataSet.GetGeoTransform(rgbTransform);
-                            var vecBuilder = Vector<double>.Build;
-                            var upperLeft = vecBuilder.DenseOfArray(new[] { rgbTransform[0], rgbTransform[3], 1 });
-                            var xRes = rgbTransform[1];
-                            var yRes = rgbTransform[5];
-                            var bottomRight =
-                                vecBuilder.DenseOfArray(new[]
-                                {
-                                    upperLeft[0] + (rgbDataSet.RasterXSize*xRes),
-                                    upperLeft[1] + (rgbDataSet.RasterYSize*yRes), 1
-                                });
-
-
-                            double[,] matArray =
-                            {
                                 {rgbTransform[1], rgbTransform[2], rgbTransform[0]},
                                 {rgbTransform[4], rgbTransform[5], rgbTransform[3]},
                                 {0, 0, 1}
-                            };
+                };
 
-                            var builder = Matrix<double>.Build;
-                            var transformMat = builder.DenseOfArray(matArray);
+                var transformMat = builder.DenseOfArray(matArray);
 
-                            var layerViewModel = new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
-                                transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false, false);
+                var layerViewModel = new LayerViewModel("RGB", SatelliteType.None, null, viewModel.RgbContrastEnhancement, xRes, yRes, new WriteableBitmap(rgbImage),
+                    transformMat, upperLeft, bottomRight, 0, 0, false, false, false, true, false, false);
 
-                            Layers.Insert(0, layerViewModel);
-                        });
-                    });
-                }
+                Layers.Insert(0, layerViewModel);
 
-                await Task.Factory.StartNew(() =>
-                {
-                    // TODO use projection to get correct transformation?
-                    // Transformation
-                    double[] transform = new double[6];
-                    firstDataSet.GetGeoTransform(transform);
-                    double[,] matArray =
-                    {
+                progress.Report(++currentProgress);
+            });
+            }
+
+            // TODO use projection to get correct transformation?
+            double[] transform = new double[6];
+            firstDataSet.GetGeoTransform(transform);
+            double[,] transformArray =
+            {
                             {1, transform[2], transform[0]},
                             {transform[4], -1, transform[3]},
                             {0, 0, 1}
-                        };
-                    var builder = Matrix<double>.Build;
-                    var transformMat = builder.DenseOfArray(matArray);
+                };
+            
+            Messenger.Default.Send(builder.DenseOfArray(transformArray));
 
-                    Messenger.Default.Send<Matrix<double>>(transformMat);
-
-                    WindowEnabled = true;
-                });
-            }
-            catch
-            {
-                WindowEnabled = true;
-            }
+            WindowEnabled = true;
         }
 
         private LayerViewModel CreateLayerViewModel(Dataset dataSet, Band rasterBand, int stride, IntPtr data, CreateLayerViewModel layer)
@@ -596,5 +630,23 @@ namespace LandscapeClassifier.ViewModel.MainWindow
         public bool RgbContrastEnhancement { get; set; }
         public string ProjectionName { get; set; }
         public Matrix<double> ScreenToWorld { get; set; }
+    }
+
+    class LoadBandsTask : LongRunning
+    {
+        private readonly MainWindowViewModel _mainWindowViewModel;
+        private readonly AddLayersDialogViewModel _addLayersDialogViewModel;
+        public override int MaximumProgress => _addLayersDialogViewModel.Layers.Count + 1;
+
+        public LoadBandsTask(MainWindowViewModel mainWindowViewModel, AddLayersDialogViewModel addLayersDialogViewModel) : base("Load Bands")
+        {
+            _mainWindowViewModel = mainWindowViewModel;
+            _addLayersDialogViewModel = addLayersDialogViewModel;
+        }
+
+        public override void Execute()
+        {
+            _mainWindowViewModel.AddBands(_addLayersDialogViewModel, ProgressReporter);
+        }
     }
 }

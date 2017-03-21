@@ -73,36 +73,16 @@
                 <DataGridTemplateColumn Header="Pixel Format">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Grid>
-                                <ComboBox HorizontalAlignment="Center" ItemsSource="{Binding Source={x:Static dialogs:ExportPredictionDialogViewModel.PixelFormats}}"
+                            <ComboBox HorizontalAlignment="Center" ItemsSource="{Binding Source={x:Static dialogs:ExportPredictionDialogViewModel.PixelFormats}}"
                                            IsSynchronizedWithCurrentItem="False"  SelectedItem="{Binding Path=Format, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding Export}"/>
-                            </Grid>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <DataGrid Grid.Row="4" Grid.ColumnSpan="3" SelectedItem="{Binding SelectedLayer}"  AutoGenerateColumns="False" ItemsSource="{Binding ExportLandCoverLayers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
+        <DataGrid x:Name="ExportLandcoverTypesGrid" Grid.Row="4" Grid.ColumnSpan="3" SelectedItem="{Binding SelectedLayer}"  AutoGenerateColumns="False" ItemsSource="{Binding ExportLandCoverLayers, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5" Grid.Column="0" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" >
             <DataGrid.Columns>
                 <DataGridTextColumn Width="*" Header="Path" Binding="{Binding Name}" IsReadOnly="True" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Grass" Binding="{Binding Path=Grass, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Gravel" Binding="{Binding Path=Gravel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Rock" Binding="{Binding Path=Rock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Snow" Binding="{Binding Path=Snow, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Tree" Binding="{Binding Path=Tree, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Water" Binding="{Binding Path=Water, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Agriculture" Binding="{Binding Path=Agriculture, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Settlement" Binding="{Binding Path=Settlement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <DataGridCheckBoxColumn Width="Auto" ElementStyle="{DynamicResource MetroDataGridCheckBox}" EditingElementStyle="{DynamicResource MetroDataGridCheckBox}"
-                                        Header="Soil" Binding="{Binding Path=Soil, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </DataGrid.Columns>
         </DataGrid>
         <StackPanel Grid.Row="5" Grid.Column="0" x:Name="AddRemoveBandsStackPanel" Orientation="Horizontal">
