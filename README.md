@@ -14,7 +14,10 @@ We also use a heightmap as a feature for the classifaction process. This has bee
 
 After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in JP2 format as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
 
-![Add Layer](http://i.imgur.com/ubxfuBx.png)
+<p align="center">
+   <img src="http://i.imgur.com/ubxfuBx.png" alt="Add Layer" width="600"/>
+</p>
+
 
 Contrast enhancement is used for the Sentinel2 bands as they might contain very high intensities.
 
