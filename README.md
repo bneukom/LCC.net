@@ -15,7 +15,7 @@ We also use a heightmap as a feature for the classifaction process. This has bee
 After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in JP2 format as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
 
 <p align="center">
-   <img src="http://i.imgur.com/ubxfuBx.png" alt="Add Layer" width="600"/>
+   <img src="http://i.imgur.com/ubxfuBx.png" alt="Add Layer" width="800"/>
 </p>
 
 
@@ -31,7 +31,9 @@ The fetures can also be saved to the disk using the "Export Features" button and
 ## Training and Accuracy Assessement
 Our results as well as the litarture shows that a SVM achieves very high performance as well as appropriate performance [3]. The Gaussian Kernel achieves the best result but we recommend using the linear Kernel simply due to the better performance. The Complexity paramater of the SVM can be estimated using a simple grid search or by trial and error. The classifier can be trained using the "Train" button. The accuracy can be evaluated using the "Compute Confusion Matrix" button which uses cross validation to evaluate the accuracy of the classifier. The results should look something like this:
 
-![Accuracy](http://i.imgur.com/ykkyFXL.png)
+<p align="center">
+   <img src="http://i.imgur.com/ykkyFXL.png" alt="Add Layer" width="600"/>
+</p>
 
 An accuracy of over 90% is in agreement with current studies using SVMs and is considered very good. We can now use this classifier to generate a landcover map for the whole region.
 
