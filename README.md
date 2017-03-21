@@ -1,4 +1,4 @@
-# LCC (LandCoverClassifier)
+# LCC (Land Cover Classifier)
 
 A tool used to classify multi spectral satellite images with several classifiers and the possibilties to assess accuracy and export the results. This tool was developed together with the [UnrealLandscape](https://github.com/bneukom/UnrealLandscape) which is used to visualize landscapes using the landcover maps generated from this tool.
 
