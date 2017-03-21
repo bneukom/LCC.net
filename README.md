@@ -43,7 +43,9 @@ The whole region can be predicted using the "Predict All" button (which might ta
 ![Prediction](http://i.imgur.com/LmP6kgy.jpg)
 
 ## Export
-After the prediction we can now export the landcover types. If used for a visualization using [UnrealLandscape](https://github.com/bneukom/UnrealLandscape) the "Crop/Scale Output to Unreal Landscape Dimension" should be checked to crop the result to a dimension which leaves no borders when imported to the Unreal Engine. In the first list the bands previously loaded can be exported as well. For a visualization we need the RGB band (exported as Pbgra32) and the heightmap band (exported as Gray16). In the second list all the landcover types which can be exported are shown. Multiple landcover types can also be combined to form a single landcover map. For each layer a single binary image is generated where white pixels indicate that the given pixel belongs to the landcover type and black not.
+After the prediction we can now export the landcover types. If used for a visualization using [UnrealLandscape](https://github.com/bneukom/UnrealLandscape) the "Crop/Scale Output to Unreal Landscape Dimension" should be checked to crop the result to a dimension which leaves no borders when imported to the Unreal Engine. In the first list the bands previously loaded can be exported as well. For a visualization we need the RGB band (exported as Pbgra32) and the heightmap band (exported as Gray16). In the second list all the landcover types which can be exported are shown. Multiple landcover types can also be combined to form a single landcover map. For each layer a single binary image is generated where white pixels indicate that the given pixel belongs to the landcover type and black not. Follow the exported "Settlement" landcover type:
+
+![Export](http://i.imgur.com/yBcfoQJ.jpg)
 
 # Disclaimer
 Be aware that the tool is nowhere near complete and lacks several important features and might contain bugs.
