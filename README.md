@@ -8,9 +8,9 @@ To classify the data we use a simple workflow: first download the necessary data
 The following sections describe the whole process from downloading the data to exporting them for further use.
 
 ## Download and Import Data
-The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral imagery from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically [1]. Optionally the Sentinel2 can be postprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
+The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral imagery from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically. Optionally the Sentinel2 can be postprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
 
-We also use a heightmap as a feature for the classifaction process. This has been shown to increase classifcation results especially for mountainous regions [2]. The heightmap can also be exported during a later step used for the visualization. The data we used here is the Global Digital Elevation Model (GDEM) which can be downloaded [here](https://gdex.cr.usgs.gov/gdex/).
+We also use a heightmap as a feature for the classifaction process. This has been shown to increase classifcation results especially for mountainous regions [1]. The heightmap can also be exported during a later step used for the visualization. The data we used here is the Global Digital Elevation Model (GDEM) which can be downloaded [here](https://gdex.cr.usgs.gov/gdex/).
 
 After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in JP2 format as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
 
@@ -29,7 +29,7 @@ The next step is adding features. The default landcover types are designed for a
 The fetures can also be saved to the disk using the "Export Features" button and later be loaded again using the "Import Features" button.
 
 ## Training and Accuracy Assessement
-Our results as well as the litarture shows that a SVM achieves very high performance as well as appropriate performance [3]. The Gaussian Kernel achieves the best result but we recommend using the linear Kernel simply due to the better performance. The Complexity paramater of the SVM can be estimated using a simple grid search or by trial and error. The classifier can be trained using the "Train" button. The accuracy can be evaluated using the "Compute Confusion Matrix" button which uses cross validation to evaluate the accuracy of the classifier. The results should look something like this:
+Our results as well as the litarture shows that a SVM achieves very high performance as well as appropriate performance [2]. The Gaussian Kernel achieves the best result but we recommend using the linear Kernel simply due to the better performance. The Complexity paramater of the SVM can be estimated using a simple grid search or by trial and error. The classifier can be trained using the "Train" button. The accuracy can be evaluated using the "Compute Confusion Matrix" button which uses cross validation to evaluate the accuracy of the classifier. The results should look something like this:
 
 <p align="center">
    <img src="http://i.imgur.com/ykkyFXL.png" alt="Add Layer" width="600"/>
@@ -56,3 +56,9 @@ Be aware that the tool is nowhere near complete and lacks several important feat
 * Support for full reprojection of the input data, right now we only support scaling
 
 # References
+[1] Lu, D., & Weng, Q. (2007). A survey of image classification methods and techniques
+for improving classification performance. International journal of Remote sensing,
+28 (5), 823-870.
+
+[2] Pal, M., & Mather, P. (2005). Support vector machines for classification in remote
+sensing. International Journal of Remote Sensing, 26 (5), 1007-1011.
