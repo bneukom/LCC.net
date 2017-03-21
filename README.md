@@ -29,7 +29,7 @@ The next step is adding features. The default landcover types are designed for a
 The fetures can also be saved to the disk using the "Export Features" button and later be loaded again using the "Import Features" button.
 
 ## Training and Accuracy Assessement
-Our results as well as current literature show that SVMs achieve very high performance as well as appropriate performance [2]. The Gaussian Kernel achieves the best result but we recommend using the linear Kernel simply due to the better performance. The Complexity paramater of the SVM can be estimated using a simple grid search or by trial and error. The classifier can be trained using the "Train" button. The accuracy can be evaluated using the "Compute Confusion Matrix" button which uses cross validation to evaluate the accuracy of the classifier. The results should look something like this:
+Our results as well as current literature show that SVMs achieve very high accuracy as well as appropriate performance [2]. The Gaussian Kernel achieves the best result but we recommend using the linear Kernel simply due to the better performance. The Complexity paramater of the SVM can be estimated using a simple grid search or by trial and error. The classifier can be trained using the "Train" button. The accuracy can be evaluated using the "Compute Confusion Matrix" button which uses cross validation to evaluate the accuracy of the classifier. The results should look something like this:
 
 <p align="center">
    <img src="http://i.imgur.com/ykkyFXL.png" alt="Add Layer" width="600"/>
