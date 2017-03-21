@@ -11,15 +11,35 @@ The first step is downloading the data. For our purposes we used the Sentinel2 S
 
 Next we also use a heightmap as a feature for the classifaction process. This has been shown to increase classifcation results especially for mountainous regions [2]. The heightmap can also be exported during a later step used for the visualization. The data we used here is the Global Digital Elevation Model (GDEM) which can be downloaded [here](https://gdex.cr.usgs.gov/gdex/).
 
-After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in JP2 formats as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
+After downloading you should have several Sentinel2 bands (for example S2A_OPER_MSI_L1C_TL_SGS_20160823T173537_A006111_T32TLS_B\*) in the JP2 format as well as well as GeoTIFF heightmap. Theses layers can be added using the "Add Layer" button dialog which should look like this:
 
 ![Add Layer](http://i.imgur.com/ubxfuBx.png)
 
-Contrast enhancement is used only for the Sentinel2 bands as they might contain very high intensities.
+Contrast enhancement is used for the Sentinel2 bands as they might contain very high intensities.
 
 ## Add Features
-The next step is adding features. The default landcover types are designed for a mountainous region in Switzerland but can be changed using the "Change Landcovertypes" button. To train a supervised machine learning algorithm we need about 250 features per class. These features can be added by right clicking into the images at appropriate places using the appropriate landcover type. The features used for the training consist of the previously added Sentinel2 bands as well as the heightmap.
+The next step is adding features. The default landcover types are designed for a mountainous region in Switzerland but can be changed using the "Change Landcovertypes" button. To train a supervised machine learning algorithm we need about 250 features per class. These features can be added by right clicking into the images at appropriate places using the appropriate landcover type. The features used for the training consist of the previously added Sentinel2 bands as well as the heightmap. The features can be seen on the righthand side which should now look something like this:
+
+![Features](http://i.imgur.com/nayFTu0.jpg)
+
+The fetures can also be saved to the disk using the "Export Features" button and later be loaded again using the "Import Features" button.
+
+## Training and Accuracy Assessement
+Now we can train a classifier. Our results as well as the litarture shows that a SVM achieves very high performance as well as appropriate performance [3]. The Gaussian Kernel achieves the best result but we recommend using the linear Kernel simply due to the better performance. The Complexity paramater of the SVM can be estimated using a simple grid search or by trial and error. The accuracy can be evaluated using the "Compute Confusion Matrix" button which uses cross validation to evaluate the accuracy of the classifier. The results should look something like this:
+
+![Accuracy](http://i.imgur.com/ykkyFXL.png)
+
+An accuracy of over 90% is in agreement with current studies using SVMs and is considered very good. We can now use this classifier to generate a landcover map for the whole region.
+
+## Predict All and Export
+
+
+# Disclaimer
+Be aware that the tool is nowhere near complete and lacks several important features as well as
+
+
+
+
 
 # Future Work
-- Only WGS84 coordinate system for importing supported
-- Better post processing support (color space adjustments)
+* Improve grid search with custom ranges
