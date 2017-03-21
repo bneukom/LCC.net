@@ -5,7 +5,8 @@ A tool used to classify multi spectral satellite images with several classifiers
 To classify the data we use a simple workflow: first download the necessary data then add features for the supervised learning algorithm and finally train the algorithm and classify the whole image.
 
 # Process
-In this chapter the whole process from downloading the data to importing them into the Engine is described.
+The following sections describe the whole process from downloading the data to exporting them for further use.
+
 ## Download and Import Data
 The first step is downloading the data. For our purposes we used the Sentinel2 Satellite imagery which can be downloaded [here](https://scihub.copernicus.eu/dhus/#/home). Sentinel2 produces multispectral bands from the whole earth which are free to use. Using multispectral bands (not only the visible spectrum) increases the classification accuracy drastically [1]. Optionally the Sentinel2 can be preprocessed to remove artifacts from clouds or atmoshperic gasses as well as shadowing effects from the landscape using [Sen2Cor](http://step.esa.int/main/third-party-plugins-2/sen2cor/) (note that this requires a Python Anaconda installation).
 
