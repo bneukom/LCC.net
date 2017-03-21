@@ -4,7 +4,7 @@ A tool used to classify multi spectral satellite images with several classifiers
 
 To classify the data we use a simple workflow: first download the necessary data then add features for the supervised learning algorithm and finally train the algorithm and classify the whole image.
 
-# Process
+# Workflow
 The following sections describe the whole process from downloading the data to exporting them for further use.
 
 ## Download and Import Data
@@ -43,7 +43,7 @@ The whole region can be predicted using the "Predict All" button (which might ta
 ![Prediction](http://i.imgur.com/LmP6kgy.jpg)
 
 ## Export
-After the prediction we can now export the landcover types. If used for a visualization using [UnrealLandscape](https://github.com/bneukom/UnrealLandscape) the "Crop/Scale Output to Unreal Landscape Dimension" should be checked to crop the result to a dimension which leaves no borders when imported to the Unreal Engine. In the first list the bands previously loaded can be exported as well. For a visualization we need the RGB band (exported as PBGRA) and the heightmap band (exported as Grayscale16).
+After the prediction we can now export the landcover types. If used for a visualization using [UnrealLandscape](https://github.com/bneukom/UnrealLandscape) the "Crop/Scale Output to Unreal Landscape Dimension" should be checked to crop the result to a dimension which leaves no borders when imported to the Unreal Engine. In the first list the bands previously loaded can be exported as well. For a visualization we need the RGB band (exported as Pbgra32) and the heightmap band (exported as Gray16). In the second list all the landcover types which can be exported are shown. Multiple landcover types can also be combined to form a single landcover map. For each layer a single binary image is generated where white pixels indicate that the given pixel belongs to the landcover type and black not.
 
 # Disclaimer
 Be aware that the tool is nowhere near complete and lacks several important features and might contain bugs.
